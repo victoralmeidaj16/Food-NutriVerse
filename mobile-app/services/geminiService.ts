@@ -27,6 +27,18 @@ const retryOperation = async <T>(
 };
 
 export const identifyIngredientsFromImage = async (base64Image: string): Promise<string[]> => {
+    const ingredientSchema: Schema = {
+        type: Type.OBJECT,
+        properties: {
+            ingredients: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "Lista de ingredientes identificados em português"
+            }
+        },
+        required: ["ingredients"]
+    };
+
     try {
         const response = await retryOperation<GenerateContentResponse>(() => ai.models.generateContent({
             model: "gemini-2.5-flash",
@@ -34,21 +46,28 @@ export const identifyIngredientsFromImage = async (base64Image: string): Promise
                 parts: [
                     {
                         inlineData: {
-                            mimeType: 'image/jpeg', // Assuming JPEG, can be made dynamic
+                            mimeType: 'image/jpeg',
                             data: base64Image
                         }
                     },
                     {
-                        text: "Identifique todos os ingredientes alimentícios visíveis nesta imagem (geladeira, despensa ou mesa). Liste apenas os nomes dos ingredientes em português, separados por vírgula. Exemplo: Arroz, Feijão, Cenoura."
+                        text: "Analise esta imagem e identifique todos os ingredientes alimentícios visíveis (frutas, vegetais, embalagens, etc). Liste apenas os nomes em português, de forma genérica (ex: 'Leite' em vez de 'Leite Desnatado Marca X')."
                     }
                 ]
             },
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: ingredientSchema,
+                temperature: 0.5,
+            }
         }));
 
         const text = response.text;
         if (!text) return [];
 
-        return text.split(',').map(i => i.trim()).filter(i => i.length > 0);
+        const data = JSON.parse(text);
+        return data.ingredients || [];
+
     } catch (error) {
         console.error("Error identifying ingredients:", error);
         return [];

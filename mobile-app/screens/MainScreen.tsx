@@ -1,32 +1,47 @@
+import React, { useState, useRef, useEffect } from 'react';
+// ... imports
 
-import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, StyleSheet, Dimensions, ActivityIndicator, Alert, SafeAreaView, Modal } from 'react-native';
+// ... MainScreen component ...
+
+
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, StyleSheet, Dimensions, ActivityIndicator, Alert, SafeAreaView, Modal, LayoutAnimation, Platform, UIManager } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { UserProfile, Recipe, Tab, WeeklyPlan, ShoppingList, UserGoal, RECIPE_CATEGORIES } from '../types';
 import { RecipeCard } from '../components/RecipeCard';
 import {
     HomeIcon, SearchIcon, CalendarIcon, UserIcon, CameraIcon,
     ChefHatIcon, SparklesIcon, ArrowRightIcon, PlusIcon, CheckIcon,
-    CloseIcon, BookHeartIcon, ShoppingBagIcon, TrashIcon, TimerIcon, FlameIcon, CopyIcon, RefreshIcon
+    CloseIcon, BookHeartIcon, ShoppingBagIcon, TrashIcon, TimerIcon, FlameIcon, CopyIcon, RefreshIcon, SettingsIcon
 } from '../components/Icons';
 import { MOCK_RECIPES } from '../services/mockData';
 import { generateFitnessRecipe, identifyIngredientsFromImage, generateWeeklyPlan, generateShoppingList } from '../services/geminiService';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { PlanningWizard } from '../components/PlanningWizard';
+import { DailyTipCard } from '../components/DailyTipCard';
+import { EditProfileModal } from '../components/EditProfileModal';
 
 const { width } = Dimensions.get('window');
+
+import { storageService } from '../services/storage';
 
 export const MainScreen = ({
     user,
     userProfile,
     onRecipeClick,
-    onLogout
+    onLogout,
+    savedRecipes,
+    onToggleSave,
+    onUpdateProfile
 }: {
     user: { name: string } | null,
     userProfile: UserProfile | null,
     onRecipeClick: (r: Recipe) => void,
-    onLogout: () => void
+    onLogout: () => void,
+    savedRecipes: Set<string>,
+    onToggleSave: (r: Recipe) => void,
+    onUpdateProfile: (p: UserProfile) => void
 }) => {
     const [activeTab, setActiveTab] = useState<Tab>('HOME');
     const [exploreMode, setExploreMode] = useState<'TEXT' | 'PANTRY'>('TEXT');
@@ -44,8 +59,38 @@ export const MainScreen = ({
     const [activePlanningDay, setActivePlanningDay] = useState(0);
     const [showPlanningWizard, setShowPlanningWizard] = useState(false);
     const [showShoppingList, setShowShoppingList] = useState(false);
+    const [showTip, setShowTip] = useState(true);
+    const [showEditProfile, setShowEditProfile] = useState(false);
+
+    // Enable LayoutAnimation on Android
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+
+    // Load Planning Data
+    useEffect(() => {
+        const loadPlanningData = async () => {
+            const plan = await storageService.loadWeeklyPlan();
+            const list = await storageService.loadShoppingList();
+            if (plan) setWeeklyPlan(plan);
+            if (list) setShoppingList(list);
+        };
+        loadPlanningData();
+    }, []);
 
     // --- Handlers ---
+
+    const changeTab = (tab: Tab) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setActiveTab(tab);
+    };
+
+    const changeExploreMode = (mode: 'TEXT' | 'PANTRY') => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setExploreMode(mode);
+    };
 
     const handlePickImage = async () => {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -158,6 +203,7 @@ export const MainScreen = ({
             const plan = await generateWeeklyPlan(userProfile, preference, mealsCount, allowRepeats);
             if (plan) {
                 setWeeklyPlan(plan);
+                storageService.saveWeeklyPlan(plan); // Save
                 setActivePlanningDay(0);
             } else {
                 Alert.alert("Erro", "Não foi possível criar o plano. Tente novamente.");
@@ -178,6 +224,7 @@ export const MainScreen = ({
             const list = await generateShoppingList(weeklyPlan);
             if (list) {
                 setShoppingList(list);
+                storageService.saveShoppingList(list); // Save
                 setShowShoppingList(true);
             }
         } catch (e) {
@@ -188,11 +235,14 @@ export const MainScreen = ({
     };
 
     const toggleShoppingItem = (id: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         if (!shoppingList) return;
         const updatedItems = shoppingList.items.map(item =>
             item.id === id ? { ...item, checked: !item.checked } : item
         );
-        setShoppingList({ ...shoppingList, items: updatedItems });
+        const newList = { ...shoppingList, items: updatedItems };
+        setShoppingList(newList);
+        storageService.saveShoppingList(newList); // Save
     };
 
     // --- Render Content ---
@@ -210,14 +260,16 @@ export const MainScreen = ({
                         <Text style={styles.greeting}>Olá, {userProfile?.name?.split(' ')[0] || 'Atleta'}</Text>
                         <Text style={styles.subGreeting}>O que vamos cozinhar hoje?</Text>
                     </View>
-                    <TouchableOpacity onPress={() => setActiveTab('PROFILE')} style={styles.avatar}>
+                    <TouchableOpacity onPress={() => changeTab('PROFILE')} style={styles.avatar}>
                         <UserIcon size={24} color="#6B7280" />
                     </TouchableOpacity>
                 </View>
 
+                {showTip && <DailyTipCard onClose={() => setShowTip(false)} />}
+
                 {/* CTA */}
                 <TouchableOpacity
-                    onPress={() => { setActiveTab('EXPLORE'); setExploreMode('TEXT'); }}
+                    onPress={() => { changeTab('EXPLORE'); changeExploreMode('TEXT'); }}
                     style={styles.ctaCard}
                     activeOpacity={0.9}
                 >
@@ -283,13 +335,13 @@ export const MainScreen = ({
             {/* Mode Switch */}
             <View style={styles.modeSwitch}>
                 <TouchableOpacity
-                    onPress={() => setExploreMode('TEXT')}
+                    onPress={() => changeExploreMode('TEXT')}
                     style={[styles.modeButton, exploreMode === 'TEXT' && styles.modeButtonActive]}
                 >
                     <Text style={[styles.modeText, exploreMode === 'TEXT' && styles.modeTextActive]}>Desejo</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    onPress={() => setExploreMode('PANTRY')}
+                    onPress={() => changeExploreMode('PANTRY')}
                     style={[styles.modeButton, exploreMode === 'PANTRY' && styles.modeButtonActive]}
                 >
                     <Text style={[styles.modeText, exploreMode === 'PANTRY' && styles.modeTextActive]}>Despensa</Text>
@@ -499,37 +551,73 @@ export const MainScreen = ({
         </View>
     );
 
-    const renderProfile = () => (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-            <Text style={styles.pageTitle}>Perfil</Text>
+    const renderProfile = () => {
+        const savedList = [...MOCK_RECIPES, ...generatedRecipes].filter(r => savedRecipes.has(r.id));
 
-            <View style={styles.profileCard}>
-                <View style={styles.profileImageContainer}>
-                    <UserIcon size={48} color="#D1D5DB" />
+        return (
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                <View style={styles.header}>
+                    <Text style={styles.pageTitle}>Perfil</Text>
+                    <TouchableOpacity onPress={() => setShowEditProfile(true)}>
+                        <Text style={styles.editProfileText}>Editar</Text>
+                    </TouchableOpacity>
                 </View>
-                <Text style={styles.profileName}>{userProfile?.name}</Text>
-                <Text style={styles.profileGoal}>
-                    {userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Queimar Gordura' :
-                        userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Ganhar Massa' : 'Saudável'}
-                </Text>
-            </View>
 
-            <View style={styles.statsContainer}>
-                <View style={styles.statBox}>
-                    <Text style={styles.statValue}>{userProfile?.dietaryRestrictions.length || 0}</Text>
-                    <Text style={styles.statLabel}>Restrições</Text>
+                <View style={styles.profileCard}>
+                    <View style={styles.profileImageContainer}>
+                        {userProfile?.profilePicture ? (
+                            <Image source={{ uri: userProfile.profilePicture }} style={styles.profileImage} />
+                        ) : (
+                            <UserIcon size={48} color="#D1D5DB" />
+                        )}
+                    </View>
+                    <Text style={styles.profileName}>{userProfile?.name}</Text>
+                    <Text style={styles.profileGoal}>
+                        {userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Queimar Gordura' :
+                            userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Ganhar Massa' : 'Saudável'}
+                    </Text>
                 </View>
-                <View style={styles.statBox}>
-                    <Text style={styles.statValue}>{generatedRecipes.length}</Text>
-                    <Text style={styles.statLabel}>Receitas Criadas</Text>
-                </View>
-            </View>
 
-            <TouchableOpacity onPress={onLogout} style={styles.logoutButton}>
-                <Text style={styles.logoutText}>Sair da conta</Text>
-            </TouchableOpacity>
-        </ScrollView>
-    );
+                <View style={styles.statsContainer}>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statValue}>{userProfile?.dietaryRestrictions.length || 0}</Text>
+                        <Text style={styles.statLabel}>Restrições</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statValue}>{generatedRecipes.length}</Text>
+                        <Text style={styles.statLabel}>Receitas Criadas</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statValue}>{savedRecipes.size}</Text>
+                        <Text style={styles.statLabel}>Salvas</Text>
+                    </View>
+                </View>
+
+                <Text style={styles.sectionTitle}>Receitas Salvas</Text>
+                {savedList.length > 0 ? (
+                    <View style={styles.recipesList}>
+                        {savedList.map(recipe => (
+                            <RecipeCard
+                                key={recipe.id}
+                                recipe={recipe}
+                                onPress={() => onRecipeClick(recipe)}
+                            />
+                        ))}
+                    </View>
+                ) : (
+                    <View style={styles.emptyState}>
+                        <BookHeartIcon size={40} color="#D1D5DB" />
+                        <Text style={[styles.emptyTitle, { marginTop: 16 }]}>Nenhuma receita salva</Text>
+                        <Text style={styles.emptyDesc}>Suas receitas favoritas aparecerão aqui.</Text>
+                    </View>
+                )}
+
+                <TouchableOpacity onPress={onLogout} style={[styles.logoutButton, { marginTop: 32 }]}>
+                    <Text style={styles.logoutText}>Sair da conta</Text>
+                </TouchableOpacity>
+            </ScrollView>
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -542,28 +630,28 @@ export const MainScreen = ({
 
             {/* Bottom Nav */}
             <View style={styles.bottomNav}>
-                <TouchableOpacity onPress={() => setActiveTab('HOME')} style={styles.navItem}>
+                <TouchableOpacity onPress={() => changeTab('HOME')} style={styles.navItem}>
                     <HomeIcon size={24} color={activeTab === 'HOME' ? '#a6f000' : '#9CA3AF'} fill={activeTab === 'HOME' ? '#a6f000' : 'none'} />
                     <Text style={[styles.navLabel, activeTab === 'HOME' && styles.navLabelActive]}>Início</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => setActiveTab('EXPLORE')} style={styles.navItem}>
+                <TouchableOpacity onPress={() => changeTab('EXPLORE')} style={styles.navItem}>
                     <SearchIcon size={24} color={activeTab === 'EXPLORE' ? '#a6f000' : '#9CA3AF'} />
                     <Text style={[styles.navLabel, activeTab === 'EXPLORE' && styles.navLabelActive]}>Explorar</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => { setActiveTab('EXPLORE'); setExploreMode('PANTRY'); }} style={styles.fabContainer}>
+                <TouchableOpacity onPress={() => { changeTab('EXPLORE'); changeExploreMode('PANTRY'); }} style={styles.fabContainer}>
                     <View style={styles.fab}>
                         <CameraIcon size={24} color="#a6f000" />
                     </View>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => setActiveTab('PLANNING')} style={styles.navItem}>
+                <TouchableOpacity onPress={() => changeTab('PLANNING')} style={styles.navItem}>
                     <CalendarIcon size={24} color={activeTab === 'PLANNING' ? '#a6f000' : '#9CA3AF'} />
                     <Text style={[styles.navLabel, activeTab === 'PLANNING' && styles.navLabelActive]}>Agenda</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => setActiveTab('PROFILE')} style={styles.navItem}>
+                <TouchableOpacity onPress={() => changeTab('PROFILE')} style={styles.navItem}>
                     <UserIcon size={24} color={activeTab === 'PROFILE' ? '#a6f000' : '#9CA3AF'} fill={activeTab === 'PROFILE' ? '#a6f000' : 'none'} />
                     <Text style={[styles.navLabel, activeTab === 'PROFILE' && styles.navLabelActive]}>Perfil</Text>
                 </TouchableOpacity>
@@ -974,6 +1062,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,
+        overflow: 'hidden',
+    },
+    profileImage: {
+        width: '100%',
+        height: '100%',
     },
     profileName: {
         fontSize: 24,
@@ -1199,6 +1292,11 @@ const styles = StyleSheet.create({
         color: '#9CA3AF',
         fontWeight: '700',
         fontSize: 14,
+    },
+    editProfileText: {
+        color: '#a6f000',
+        fontWeight: '700',
+        fontSize: 16,
     },
     // Modal Styles
     modalContainer: {

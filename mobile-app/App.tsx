@@ -13,19 +13,52 @@ import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, Recipe } from './ty
 // --- Types ---
 type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL';
 
+import { storageService } from './services/storage';
+
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('LOGIN');
   const [user, setUser] = useState<{ name: string } | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [savedRecipes, setSavedRecipes] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load data on startup
+  useEffect(() => {
+    const loadData = async () => {
+      const profile = await storageService.loadProfile();
+      const savedIds = await storageService.loadSavedRecipes();
+
+      if (profile) {
+        setUserProfile(profile);
+        setUser({ name: profile.name });
+        setSavedRecipes(new Set(savedIds));
+        setCurrentScreen('MAIN');
+      }
+      setIsLoading(false);
+    };
+    loadData();
+  }, []);
 
   const handleLogin = (name: string) => {
+    // In a real app, you'd verify credentials. 
+    // Here we just check if we have a profile for this "user" or create a mock one if coming from login screen without onboarding
+
+    // If we already loaded a profile in useEffect, we are good.
+    // If not, and we are logging in, we might need to fetch or create one.
+
     setUser({ name });
-    // In a real app, we would fetch the profile here
+
     if (!userProfile) {
-      // Mock profile if none exists from onboarding
-      setUserProfile({
+      // If no profile exists (e.g. fresh install, skipped onboarding?), create a default one
+      // Ideally, Login should fetch the profile.
+      // For this demo, if they login, we assume they might be a returning user but we don't have a backend.
+      // So we'll just check if we have one in memory (we don't).
+      // Let's just create a default one if it's missing, or redirect to Onboarding?
+      // Let's redirect to Onboarding if no profile is found, or create a default one.
+      // Given the flow, let's create a default one to allow "Login" to work for demo purposes.
+
+      const newProfile: UserProfile = {
         name: name,
         goal: UserGoal.EAT_HEALTHY,
         activityLevel: ActivityLevel.MEDIUM,
@@ -34,14 +67,17 @@ export default function App() {
         dietaryRestrictions: [],
         dislikes: [],
         usageModes: [AppUsageMode.FIT_SWAP],
-      });
+      };
+      setUserProfile(newProfile);
+      storageService.saveProfile(newProfile);
     }
     setCurrentScreen('MAIN');
   };
 
   const handleOnboardingComplete = (profile: UserProfile) => {
     setUserProfile(profile);
-    setCurrentScreen('SIGNUP'); // Go to signup after onboarding to save account
+    storageService.saveProfile(profile);
+    setCurrentScreen('SIGNUP');
   };
 
   const handleRecipeClick = (recipe: Recipe) => {
@@ -56,12 +92,29 @@ export default function App() {
       newSaved.add(recipe.id);
     }
     setSavedRecipes(newSaved);
+    storageService.saveSavedRecipes(Array.from(newSaved));
   };
 
-  const handleLogout = () => {
+  const handleUpdateProfile = (profile: UserProfile) => {
+    setUserProfile(profile);
+    storageService.saveProfile(profile);
+  };
+
+  const handleLogout = async () => {
+    await storageService.clearAll();
     setUser(null);
+    setUserProfile(null);
+    setSavedRecipes(new Set());
     setCurrentScreen('LOGIN');
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#a6f000" />
+      </View>
+    );
+  }
 
   // If selectedRecipe is set, show detail screen overlay
   if (selectedRecipe) {
@@ -90,6 +143,9 @@ export default function App() {
             userProfile={userProfile}
             onRecipeClick={handleRecipeClick}
             onLogout={handleLogout}
+            savedRecipes={savedRecipes}
+            onToggleSave={handleSaveRecipe}
+            onUpdateProfile={handleUpdateProfile}
           />
         );
       default:
@@ -390,4 +446,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FAFAFA',
+  },
 });
+

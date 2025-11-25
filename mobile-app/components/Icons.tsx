@@ -32,7 +32,8 @@ import {
     Bell,
     ShoppingBag,
     Wand2,
-    Copy
+    Copy,
+    Settings
 } from 'lucide-react-native';
 
 export const HomeIcon = Home;
@@ -68,3 +69,4 @@ export const BellIcon = Bell;
 export const ShoppingBagIcon = ShoppingBag;
 export const WandIcon = Wand2;
 export const CopyIcon = Copy;
+export const SettingsIcon = Settings;
