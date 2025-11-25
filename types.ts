@@ -64,12 +64,43 @@ export interface UserProfile {
   mealsPerDay: number;
   mealSlots: string[]; // e.g., 'morning', 'lunch'
   dietaryRestrictions: string[];
-  dislikes: string;
+  dislikes: string[]; // Changed to array
   usageModes: AppUsageMode[];
   profilePicture?: string;
 }
 
-export type Tab = 'HOME' | 'EXPLORE' | 'LIBRARY' | 'PROFILE';
+export type Tab = 'HOME' | 'EXPLORE' | 'PLANNING' | 'LIBRARY' | 'PROFILE';
+
+// --- Planning Feature Types ---
+
+export interface MealSlot {
+  id: string;
+  timeSlot: 'Café da Manhã' | 'Almoço' | 'Lanche' | 'Jantar' | 'Ceia';
+  recipe: Recipe;
+}
+
+export interface DayPlan {
+  dayName: string; // e.g., "Segunda", "Terça"
+  meals: MealSlot[];
+}
+
+export interface WeeklyPlan {
+  id: string;
+  startDate: number;
+  days: DayPlan[];
+}
+
+export interface ShoppingItem {
+  id: string;
+  name: string;
+  quantity: string;
+  category: 'Hortifruti' | 'Proteínas' | 'Laticínios' | 'Mercearia' | 'Outros';
+  checked: boolean;
+}
+
+export interface ShoppingList {
+  items: ShoppingItem[];
+}
 
 export const RESTRICTION_OPTIONS = [
   "Sem Glúten",
