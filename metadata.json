@@ -1,0 +1,7 @@
+{
+  "name": "NutriVerse",
+  "description": "O universo da sua saúde e alimentação. Transforme receitas e cozinhe com o que tem em casa.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
