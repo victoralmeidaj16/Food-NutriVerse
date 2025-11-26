@@ -405,7 +405,12 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: '#E5E7EB',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     macroLabel: {
         fontSize: 10,
@@ -441,7 +446,12 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'transparent',
+        borderColor: '#E5E7EB',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     ingredientIcon: {
         width: 40,
@@ -463,10 +473,15 @@ const styles = StyleSheet.create({
     fitSwap: {
         backgroundColor: '#f0fdf4',
         borderWidth: 1,
-        borderColor: '#dcfce7',
+        borderColor: '#86efac', // Darker green
         borderRadius: 16,
         padding: 20,
         marginBottom: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     fitSwapHeader: {
         flexDirection: 'row',
@@ -487,16 +502,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 8,
         marginBottom: 4,
+        flexWrap: 'wrap',
     },
     subOriginal: {
         color: '#f87171',
         textDecorationLine: 'line-through',
         fontSize: 14,
+        flexShrink: 1,
     },
     subReplacement: {
         color: '#15803d',
         fontWeight: '700',
         fontSize: 14,
+        flexShrink: 1,
     },
     subReason: {
         color: '#16a34a',
@@ -504,12 +522,22 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
     },
     instructionsList: {
-        gap: 24,
+        gap: 12, // Reduced from 24
         marginBottom: 24,
     },
     stepItem: {
         flexDirection: 'row',
         gap: 16,
+        backgroundColor: 'white',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#F3F4F6', // Softer border
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03, // Softer shadow
+        shadowRadius: 4,
+        elevation: 1, // Softer elevation
     },
     stepNumber: {
         width: 32,
@@ -532,11 +560,16 @@ const styles = StyleSheet.create({
     chefTip: {
         backgroundColor: '#eff6ff',
         borderWidth: 1,
-        borderColor: '#dbeafe',
+        borderColor: '#93c5fd', // Darker blue
         borderRadius: 16,
         padding: 20,
         marginTop: 8,
         marginBottom: 32,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     chefTipHeader: {
         flexDirection: 'row',

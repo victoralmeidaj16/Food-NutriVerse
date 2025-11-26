@@ -1,8 +1,9 @@
 import { GoogleGenAI, Type, Schema, GenerateContentResponse } from "@google/genai";
 import * as Crypto from 'expo-crypto';
 import { UserGoal, Recipe, UserProfile, WeeklyPlan, ShoppingList, ShoppingItem } from "../types";
+import { generateAndSaveImage, getImageUrl } from './imageService';
+import { API_KEY } from './config';
 
-const API_KEY = 'AIzaSyBqSlX3_TMiH8vZpwPIN16k5IX2kgxbdEA';
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 // Helper function for exponential backoff
@@ -194,11 +195,19 @@ export const generateFitnessRecipe = async (
 
         const data = JSON.parse(text);
 
+        // Generate AI Image and save locally
+        let localImageUri = null;
+        try {
+            localImageUri = await generateAndSaveImage(data.name);
+        } catch (e) {
+            console.warn("Failed to generate image, using fallback URL");
+        }
+
         return {
             ...data,
             id: Crypto.randomUUID(),
             createdAt: Date.now(),
-            imageUrl: `https://picsum.photos/seed/${encodeURIComponent(data.name)}/600/400`
+            imageUrl: localImageUri || getImageUrl(data.name)
         } as Recipe;
 
     } catch (error) {
@@ -286,7 +295,7 @@ export const generateWeeklyPlan = async (
                     ...meal.recipe,
                     id: Crypto.randomUUID(),
                     createdAt: Date.now(),
-                    imageUrl: `https://picsum.photos/seed/${encodeURIComponent(meal.recipe.name)}/600/400`
+                    imageUrl: getImageUrl(meal.recipe.name)
                 }
             }))
         }));
