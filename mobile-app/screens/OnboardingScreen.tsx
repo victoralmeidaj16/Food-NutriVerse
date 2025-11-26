@@ -297,8 +297,8 @@ export const OnboardingScreen = ({
         </ScrollView>
     );
 
-    const renderResult = () => {
-        useEffect(() => {
+    useEffect(() => {
+        if (step === 5) {
             setTimeout(() => {
                 setShowPlanPreview(true);
                 Animated.timing(fadeAnim, {
@@ -307,8 +307,10 @@ export const OnboardingScreen = ({
                     useNativeDriver: true
                 }).start();
             }, 1500);
-        }, []);
+        }
+    }, [step]);
 
+    const renderResult = () => {
         if (!showPlanPreview) {
             return (
                 <View style={styles.centerStep}>
