@@ -7,6 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, StyleSheet, Dimensions, ActivityIndicator, Alert, SafeAreaView, Modal, LayoutAnimation, Platform, UIManager, Animated, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import { deleteUser } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { UserProfile, Recipe, Tab, WeeklyPlan, ShoppingList, UserGoal, RECIPE_CATEGORIES } from '../types';
 import { RecipeCard } from '../components/RecipeCard';
@@ -27,6 +28,8 @@ import { CopyMealModal } from '../components/CopyMealModal';
 const { width } = Dimensions.get('window');
 
 import { storageService } from '../services/storage';
+import { deleteUserData } from '../services/userService';
+import { auth } from '../services/firebaseConfig';
 
 export const MainScreen = ({
     user,
@@ -350,6 +353,36 @@ export const MainScreen = ({
                             Alert.alert("Erro", "Falha ao regenerar receita.");
                         } finally {
                             setRegeneratingMeal(null);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleDeleteAccount = () => {
+        Alert.alert(
+            "Excluir Conta",
+            "Tem certeza? Essa ação é irreversível e apagará todos os seus dados.",
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Excluir",
+                    style: "destructive",
+                    onPress: async () => {
+                        setLoading(true);
+                        setLoadingMsg("Excluindo conta...");
+                        try {
+                            if (auth.currentUser) {
+                                await deleteUserData(auth.currentUser.uid);
+                                await deleteUser(auth.currentUser);
+                                // Auth listener will handle navigation
+                            }
+                        } catch (error) {
+                            console.error(error);
+                            Alert.alert("Erro", "Falha ao excluir conta. Talvez seja necessário fazer login novamente.");
+                        } finally {
+                            setLoading(false);
                         }
                     }
                 }
@@ -862,6 +895,10 @@ export const MainScreen = ({
 
                 <TouchableOpacity onPress={onLogout} style={[styles.logoutButton, { marginTop: 32 }]}>
                     <Text style={styles.logoutText}>Sair da conta</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={handleDeleteAccount} style={styles.deleteAccountButton}>
+                    <Text style={styles.deleteAccountText}>Excluir minha conta</Text>
                 </TouchableOpacity>
             </ScrollView>
         );
@@ -1465,6 +1502,16 @@ const styles = StyleSheet.create({
     logoutText: {
         color: '#EF4444',
         fontWeight: '700',
+    },
+    deleteAccountButton: {
+        marginTop: 16,
+        alignItems: 'center',
+        padding: 12,
+    },
+    deleteAccountText: {
+        color: '#9CA3AF',
+        fontSize: 14,
+        textDecorationLine: 'underline',
     },
     menuSection: {
         marginBottom: 24,
