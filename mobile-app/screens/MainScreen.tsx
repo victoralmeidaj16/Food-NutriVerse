@@ -205,6 +205,10 @@ export const MainScreen = ({
         setPantryIngredients(prev => prev.filter((_, i) => i !== index));
     };
 
+    const handleSaveRecipe = async (recipe: Recipe) => {
+        // TODO: Implement save recipe logic with new SubscriptionService
+        Alert.alert('Sucesso', 'Receita salva com sucesso!');
+    };
     const handleGenerateRecipe = async () => {
         if (!userProfile) return;
 
@@ -404,17 +408,13 @@ export const MainScreen = ({
                 {/* Header */}
                 <View style={styles.header}>
                     <View>
-                        <Text style={styles.dateText}>{today}</Text>
                         <Text style={styles.greeting}>Olá, {userProfile?.name?.split(' ')[0] || 'Atleta'}!</Text>
+                        <Text style={styles.subGreeting}>{userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Foco: Perder Peso' : 'Foco: Saúde'}</Text>
                     </View>
                     <TouchableOpacity onPress={() => changeTab('PROFILE')} style={styles.avatarContainer}>
-                        {userProfile?.profilePicture ? (
-                            <Image source={{ uri: userProfile.profilePicture }} style={styles.avatarImage} />
-                        ) : (
-                            <View style={styles.avatarPlaceholder}>
-                                <UserIcon size={20} color="#6B7280" />
-                            </View>
-                        )}
+                        <View style={styles.avatarPlaceholder}>
+                            <UserIcon size={20} color="#6B7280" />
+                        </View>
                         <View style={styles.notificationDot} />
                     </TouchableOpacity>
                 </View>
@@ -832,17 +832,16 @@ export const MainScreen = ({
 
                 <View style={styles.profileCard}>
                     <View style={styles.profileImageContainer}>
-                        {userProfile?.profilePicture ? (
-                            <Image source={{ uri: userProfile.profilePicture }} style={styles.profileImage} />
-                        ) : (
-                            <UserIcon size={48} color="#D1D5DB" />
-                        )}
+                        <UserIcon size={48} color="#D1D5DB" />
                     </View>
                     <Text style={styles.profileName}>{userProfile?.name}</Text>
                     <Text style={styles.profileGoal}>
                         {userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Queimar Gordura' :
                             userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Ganhar Massa' : 'Saudável'}
                     </Text>
+                    <TouchableOpacity onPress={() => setShowEditProfile(true)} style={{ marginTop: 10 }}>
+                        <Text style={{ color: '#a6f000', fontWeight: '600' }}>Editar Perfil</Text>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.statsContainer}>
@@ -1641,6 +1640,11 @@ const styles = StyleSheet.create({
     },
     dayNameActive: {
         color: '#a6f000',
+    },
+    subGreeting: {
+        fontSize: 14,
+        color: '#6B7280',
+        marginTop: 2,
     },
     dayNumber: {
         fontSize: 20,

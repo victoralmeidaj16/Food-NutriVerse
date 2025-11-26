@@ -9,7 +9,7 @@ import { OnboardingScreen } from './screens/OnboardingScreen';
 import { MainScreen } from './screens/MainScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { SignUpScreen } from './screens/SignUpScreen';
-import { UserProfile, Recipe } from './types';
+import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan, Recipe } from './types';
 
 // --- Types ---
 type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL';
@@ -34,15 +34,34 @@ export default function App() {
           if (profile) {
             setUserProfile(profile);
             setUser({ name: profile.name });
-            setSavedRecipes(new Set(profile.savedRecipes || []));
             setCurrentScreen('MAIN');
           } else {
-            // If logged in but no profile, go to Onboarding (edge case)
-            // Or maybe we should just let them create one?
-            // For now, if they are logged in, we assume they should be in MAIN or creating a profile.
-            // If we have a pending profile, we might want to save it?
-            // But usually this happens inside SignUp.
-            setCurrentScreen('ONBOARDING');
+            // If logged in but no profile, create a default one and save it
+            const defaultProfile: UserProfile = {
+              name: 'Usuário',
+              goal: UserGoal.LOSE_WEIGHT,
+              activityLevel: ActivityLevel.MEDIUM,
+              mealsPerDay: 3,
+              mealSlots: ['Café', 'Almoço', 'Jantar'],
+              dietaryRestrictions: [],
+              dislikes: [],
+              usageModes: [AppUsageMode.FIT_SWAP],
+              plan: SubscriptionPlan.FREE,
+              isPro: false,
+              usageStats: {
+                recipesGeneratedToday: 0,
+                lastGenerationDate: new Date().toISOString(),
+                desiresTransformedToday: 0,
+                lastDesireDate: new Date().toISOString(),
+                pantryScansThisWeek: 0,
+                lastScanDate: new Date().toISOString(),
+                savedRecipesCount: 0
+              }
+            };
+            await saveUserProfile(currentUser.uid, defaultProfile);
+            setUserProfile(defaultProfile);
+            setUser({ name: defaultProfile.name });
+            setCurrentScreen('MAIN');
           }
         } catch (error) {
           console.error("Error loading profile:", error);
@@ -79,9 +98,12 @@ export default function App() {
     setSavedRecipes(newSaved);
 
     if (userProfile && firebaseUser) {
-      const updatedProfile = { ...userProfile, savedRecipes: Array.from(newSaved) };
+      const updatedProfile = { ...userProfile };
       setUserProfile(updatedProfile);
-      await updateUserProfile(firebaseUser.uid, { savedRecipes: Array.from(newSaved) });
+      // savedRecipes is no longer part of UserProfile, so we don't save it here.
+      // It should be handled via SubscriptionService or a separate collection if needed.
+      // For now, we just update the local state to reflect the UI change (if any).
+      await updateUserProfile(firebaseUser.uid, {});
     }
   };
 

@@ -17,33 +17,13 @@ export const EditProfileModal = ({
   const [goal, setGoal] = useState<UserGoal>(profile.goal);
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(profile.activityLevel);
   const [restrictions, setRestrictions] = useState<string[]>(profile.dietaryRestrictions);
-  const [profilePicture, setProfilePicture] = useState<string | undefined>(profile.profilePicture);
+  const [editedProfile, setEditedProfile] = useState<UserProfile>(profile);
 
   const toggleRestriction = (res: string) => {
     if (restrictions.includes(res)) {
       setRestrictions(prev => prev.filter(r => r !== res));
     } else {
       setRestrictions(prev => [...prev, res]);
-    }
-  };
-
-  const handlePickImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (permissionResult.granted === false) {
-      Alert.alert("Permissão necessária", "Precisamos de acesso à galeria para alterar sua foto.");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
-
-    if (!result.canceled) {
-      setProfilePicture(result.assets[0].uri);
     }
   };
 
@@ -58,7 +38,6 @@ export const EditProfileModal = ({
       goal,
       activityLevel,
       dietaryRestrictions: restrictions,
-      profilePicture
     });
     onClose();
   };
@@ -74,23 +53,6 @@ export const EditProfileModal = ({
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
-
-          {/* Profile Picture Section */}
-          <View style={styles.imageSection}>
-            <TouchableOpacity onPress={handlePickImage} style={styles.imageContainer}>
-              {profilePicture ? (
-                <Image source={{ uri: profilePicture }} style={styles.profileImage} />
-              ) : (
-                <View style={styles.placeholderImage}>
-                  <UserIcon size={40} color="#9CA3AF" />
-                </View>
-              )}
-              <View style={styles.cameraBadge}>
-                <CameraIcon size={16} color="white" />
-              </View>
-            </TouchableOpacity>
-            <Text style={styles.changePhotoText}>Alterar foto</Text>
-          </View>
 
           <View style={styles.section}>
             <Text style={styles.label}>Nome</Text>

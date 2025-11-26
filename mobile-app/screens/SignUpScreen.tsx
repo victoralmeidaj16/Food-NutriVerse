@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityInd
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { saveUserProfile } from '../services/userService';
-import { UserProfile, UserGoal, ActivityLevel, AppUsageMode } from '../types';
+import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan } from '../types';
 import { MailIcon, LockIcon, EyeIcon, EyeOffIcon, ArrowRightIcon, UserIcon } from '../components/Icons';
 
 export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigateToLogin: () => void, initialProfile?: UserProfile | null }) => {
@@ -25,29 +25,39 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
             const uid = userCredential.user.uid;
 
             // Use initialProfile if available, otherwise create default
-            const baseProfile = initialProfile || {
+            const baseProfile: UserProfile = initialProfile || {
                 name: name,
-                goal: UserGoal.EAT_HEALTHY,
+                email: email,
+                goal: UserGoal.LOSE_WEIGHT,
                 activityLevel: ActivityLevel.MEDIUM,
                 mealsPerDay: 3,
-                mealSlots: ['Café da Manhã', 'Almoço', 'Jantar'],
+                mealSlots: ['Café', 'Almoço', 'Jantar'],
                 dietaryRestrictions: [],
                 dislikes: [],
                 usageModes: [AppUsageMode.FIT_SWAP],
+                plan: SubscriptionPlan.FREE,
+                isPro: false,
+                usageStats: {
+                    recipesGeneratedToday: 0,
+                    lastGenerationDate: new Date().toISOString(),
+                    desiresTransformedToday: 0,
+                    lastDesireDate: new Date().toISOString(),
+                    pantryScansThisWeek: 0,
+                    lastScanDate: new Date().toISOString(),
+                    savedRecipesCount: 0
+                }
             };
 
             // Sanitize profile to remove undefined values (Firestore doesn't like them)
             const newProfile: UserProfile = {
                 ...baseProfile,
                 name: name, // Use the name from input
-                profilePicture: baseProfile.profilePicture || null as any,
             };
 
-            if (newProfile.profilePicture === undefined) {
-                delete newProfile.profilePicture;
-            }
+            // Ensure no undefined values
+            const cleanProfile = JSON.parse(JSON.stringify(newProfile));
 
-            await saveUserProfile(uid, newProfile);
+            await saveUserProfile(uid, cleanProfile);
             // Auth state listener in App.tsx will handle navigation
         } catch (error: any) {
             console.error(error);

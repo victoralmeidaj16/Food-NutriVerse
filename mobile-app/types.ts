@@ -57,26 +57,52 @@ export interface Recipe {
     createdAt: number;
 }
 
+export enum SubscriptionPlan {
+    FREE = 'FREE',
+    MONTHLY = 'MONTHLY',
+    YEARLY = 'YEARLY'
+}
+
+export interface UserUsageStats {
+    recipesGeneratedToday: number;
+    lastGenerationDate: string; // ISO Date string
+    desiresTransformedToday: number;
+    lastDesireDate: string;
+    pantryScansThisWeek: number;
+    lastScanDate: string;
+    savedRecipesCount: number;
+}
+
 export interface UserProfile {
-    name: string; // Captured implicitly or defaults to "Usuário" if strictly following the 7 screens which doesn't explicitly ask for name in the prompt descriptions provided, but we can keep it or derive it.
+    id?: string;
+    name: string;
+    email?: string;
     goal: UserGoal;
     activityLevel: ActivityLevel;
     mealsPerDay: number;
-    mealSlots: string[]; // e.g., 'morning', 'lunch'
+    mealSlots: string[];
     dietaryRestrictions: string[];
-    dislikes: string[]; // Changed to array
+    dislikes: string[];
     usageModes: AppUsageMode[];
-    profilePicture?: string;
-    height?: number;
-    weight?: number;
+
+    // Biometrics
+    height?: number; // cm
+    weight?: number; // kg
     age?: number;
+
+    // Onboarding Data
     painPoints?: string[];
     routine?: {
         cookingTime: 'FAST' | 'ELABORATE';
         useMicrowave: boolean;
         repeatMeals: boolean;
     };
-    savedRecipes?: string[];
+
+    // Subscription & Usage
+    plan: SubscriptionPlan;
+    isPro: boolean;
+    subscriptionExpiry?: string;
+    usageStats: UserUsageStats;
 }
 
 export type Tab = 'HOME' | 'EXPLORE' | 'PLANNING' | 'LIBRARY' | 'PROFILE';

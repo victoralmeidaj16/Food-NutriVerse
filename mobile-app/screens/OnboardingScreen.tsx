@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Dimensions, KeyboardAvoidingView, Platform, LayoutAnimation, UIManager, Image, Animated, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, RESTRICTION_OPTIONS } from '../types';
+import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, RESTRICTION_OPTIONS, SubscriptionPlan } from '../types';
 import { ArrowRightIcon, CheckIcon, StarIcon, TimerIcon, FlameIcon } from '../components/Icons';
 import { PaywallScreen } from './PaywallScreen';
 
@@ -74,6 +74,17 @@ export const OnboardingScreen = ({
                 cookingTime,
                 useMicrowave,
                 repeatMeals
+            },
+            plan: SubscriptionPlan.FREE,
+            isPro: false,
+            usageStats: {
+                recipesGeneratedToday: 0,
+                lastGenerationDate: new Date().toISOString(),
+                desiresTransformedToday: 0,
+                lastDesireDate: new Date().toISOString(),
+                pantryScansThisWeek: 0,
+                lastScanDate: new Date().toISOString(),
+                savedRecipesCount: 0
             }
         };
         onComplete(profile);

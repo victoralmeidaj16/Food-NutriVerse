@@ -49,10 +49,10 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
                         )}
                         <View style={styles.planHeader}>
                             <Text style={styles.planTitle}>Anual</Text>
-                            <Text style={styles.planSave}>Economize 58%</Text>
+                            <Text style={styles.planSave}>Economize 70%</Text>
                         </View>
-                        <Text style={styles.planPrice}>R$ 19,90<Text style={styles.planPerMonth}>/mês</Text></Text>
-                        <Text style={styles.planBilled}>Cobrado R$ 238,80 anualmente</Text>
+                        <Text style={styles.planPrice}>R$ 79,90<Text style={styles.planPerMonth}>/ano</Text></Text>
+                        <Text style={styles.planBilled}>Equivalente a R$ 6,66/mês</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -62,7 +62,7 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
                         <View style={styles.planHeader}>
                             <Text style={styles.planTitle}>Mensal</Text>
                         </View>
-                        <Text style={styles.planPrice}>R$ 39,90<Text style={styles.planPerMonth}>/mês</Text></Text>
+                        <Text style={styles.planPrice}>R$ 19,90<Text style={styles.planPerMonth}>/mês</Text></Text>
                     </TouchableOpacity>
                 </View>
 
