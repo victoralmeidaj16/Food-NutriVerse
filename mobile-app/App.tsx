@@ -7,13 +7,14 @@ import { MOCK_RECIPES } from './services/mockData';
 import { RecipeDetailScreen } from './screens/RecipeDetailScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { PaywallScreen } from './screens/PaywallScreen';
+import { RecipePackScreen } from './screens/RecipePackScreen';
 import { MainScreen } from './screens/MainScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { SignUpScreen } from './screens/SignUpScreen';
 import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan, Recipe } from './types';
 
 // --- Types ---
-type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL' | 'PAYWALL';
+type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL' | 'PAYWALL' | 'RECIPE_PACK';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('ONBOARDING');
@@ -195,6 +196,7 @@ export default function App() {
             onToggleSave={handleSaveRecipe}
             onUpdateProfile={handleUpdateProfile}
             onShowPaywall={() => setCurrentScreen('PAYWALL')}
+            onOpenRecipePack={() => setCurrentScreen('RECIPE_PACK')}
           />
         );
       default:

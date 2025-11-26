@@ -49,7 +49,8 @@ export const MainScreen = ({
     savedRecipes: Set<string>,
     onToggleSave: (r: Recipe) => void,
     onUpdateProfile: (p: UserProfile) => void,
-    onShowPaywall: () => void
+    onShowPaywall: () => void,
+    onOpenRecipePack: () => void
 }) => {
     const [activeTab, setActiveTab] = useState<Tab>('HOME');
     const fabScale = useRef(new Animated.Value(1)).current;
@@ -1679,6 +1680,48 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#6B7280',
         marginTop: 2,
+    },
+    packCard: {
+        backgroundColor: '#F0FDF4', // Light green bg
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: '#DCFCE7',
+    },
+    packContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    packIconContainer: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: 'white',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    packTextContainer: {
+        flex: 1,
+    },
+    packTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#166534', // Dark green text
+        marginBottom: 4,
+    },
+    packSubtitle: {
+        fontSize: 12,
+        color: '#15803D',
+    },
+    packArrow: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'white',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     dayNumber: {
         fontSize: 20,
