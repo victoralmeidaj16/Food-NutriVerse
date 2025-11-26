@@ -47,6 +47,9 @@ export const RecipePackScreen = ({
                             <View style={styles.recipeNumber}>
                                 <Text style={styles.numberText}>{index + 1}</Text>
                             </View>
+                            {recipe.imageSource && (
+                                <Image source={recipe.imageSource} style={styles.recipeImage} />
+                            )}
                             <View style={styles.recipeInfo}>
                                 <Text style={styles.recipeName}>{recipe.name}</Text>
                                 <View style={styles.metaRow}>
@@ -150,6 +153,12 @@ const styles = StyleSheet.create({
     numberText: {
         fontWeight: '700',
         color: 'black',
+    },
+    recipeImage: {
+        width: 60,
+        height: 60,
+        borderRadius: 8,
+        marginRight: 16,
     },
     recipeInfo: {
         flex: 1,

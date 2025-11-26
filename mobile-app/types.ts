@@ -45,6 +45,7 @@ export interface Recipe {
     originalName?: string; // Optional, might not exist in Pantry mode
     description: string;
     imageUrl?: string;
+    imageSource?: any; // For local assets
     prepTime: string;
     difficulty: 'Fácil' | 'Médio' | 'Difícil';
     category: string;
