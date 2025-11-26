@@ -33,7 +33,9 @@ import {
     ShoppingBag,
     Wand2,
     Copy,
-    Settings
+    Settings,
+    FileText,
+    HelpCircle
 } from 'lucide-react-native';
 
 export const HomeIcon = Home;
@@ -70,3 +72,5 @@ export const ShoppingBagIcon = ShoppingBag;
 export const WandIcon = Wand2;
 export const CopyIcon = Copy;
 export const SettingsIcon = Settings;
+export const FileTextIcon = FileText;
+export const HelpCircleIcon = HelpCircle;

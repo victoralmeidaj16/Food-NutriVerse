@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 // ... MainScreen component ...
 
 
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, StyleSheet, Dimensions, ActivityIndicator, Alert, SafeAreaView, Modal, LayoutAnimation, Platform, UIManager, Animated } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, StyleSheet, Dimensions, ActivityIndicator, Alert, SafeAreaView, Modal, LayoutAnimation, Platform, UIManager, Animated, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,7 +13,8 @@ import { RecipeCard } from '../components/RecipeCard';
 import {
     HomeIcon, SearchIcon, CalendarIcon, UserIcon, CameraIcon,
     ChefHatIcon, SparklesIcon, ArrowRightIcon, PlusIcon, CheckIcon,
-    CloseIcon, BookHeartIcon, ShoppingBagIcon, TrashIcon, TimerIcon, FlameIcon, CopyIcon, RefreshIcon, SettingsIcon
+    CloseIcon, BookHeartIcon, ShoppingBagIcon, TrashIcon, TimerIcon, FlameIcon, CopyIcon, RefreshIcon, SettingsIcon,
+    FileTextIcon, HelpCircleIcon, LockIcon
 } from '../components/Icons';
 import { MOCK_RECIPES } from '../services/mockData';
 import { generateFitnessRecipe, identifyIngredientsFromImage, generateWeeklyPlan, generateShoppingList } from '../services/geminiService';
@@ -822,6 +823,43 @@ export const MainScreen = ({
                     </View>
                 </View>
 
+                <View style={styles.menuSection}>
+                    <Text style={styles.menuTitle}>Suporte & Legal</Text>
+
+                    <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => Linking.openURL('https://victoralmeidaj16.github.io/Food-NutriVerse/support.html')}
+                    >
+                        <View style={styles.menuIconBox}>
+                            <HelpCircleIcon size={20} color="#4B5563" />
+                        </View>
+                        <Text style={styles.menuItemText}>Fale Conosco</Text>
+                        <ArrowRightIcon size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => Linking.openURL('https://victoralmeidaj16.github.io/Food-NutriVerse/terms.html')}
+                    >
+                        <View style={styles.menuIconBox}>
+                            <FileTextIcon size={20} color="#4B5563" />
+                        </View>
+                        <Text style={styles.menuItemText}>Termos de Uso</Text>
+                        <ArrowRightIcon size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => Linking.openURL('https://victoralmeidaj16.github.io/Food-NutriVerse/privacy.html')}
+                    >
+                        <View style={styles.menuIconBox}>
+                            <LockIcon size={20} color="#4B5563" />
+                        </View>
+                        <Text style={styles.menuItemText}>Política de Privacidade</Text>
+                        <ArrowRightIcon size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+                </View>
+
                 <TouchableOpacity onPress={onLogout} style={[styles.logoutButton, { marginTop: 32 }]}>
                     <Text style={styles.logoutText}>Sair da conta</Text>
                 </TouchableOpacity>
@@ -1427,6 +1465,40 @@ const styles = StyleSheet.create({
     logoutText: {
         color: '#EF4444',
         fontWeight: '700',
+    },
+    menuSection: {
+        marginBottom: 24,
+    },
+    menuTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#111827',
+        marginBottom: 16,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    menuIconBox: {
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    menuItemText: {
+        flex: 1,
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#374151',
     },
     // Planning Styles
     emptyState: {
