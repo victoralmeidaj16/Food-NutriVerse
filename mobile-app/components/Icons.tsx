@@ -35,7 +35,8 @@ import {
     Copy,
     Settings,
     FileText,
-    HelpCircle
+    HelpCircle,
+    Star
 } from 'lucide-react-native';
 
 export const HomeIcon = Home;
@@ -74,3 +75,4 @@ export const CopyIcon = Copy;
 export const SettingsIcon = Settings;
 export const FileTextIcon = FileText;
 export const HelpCircleIcon = HelpCircle;
+export const StarIcon = Star;

@@ -7,16 +7,14 @@ import { UserProfile, UserGoal, ActivityLevel, AppUsageMode } from '../types';
 import { MailIcon, LockIcon, EyeIcon, EyeOffIcon, ArrowRightIcon, UserIcon } from '../components/Icons';
 
 export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigateToLogin: () => void, initialProfile?: UserProfile | null }) => {
-    const [name, setName] = useState(initialProfile?.name || '');
+    const [name, setName] = useState(initialProfile?.name === 'Atleta' ? '' : (initialProfile?.name || ''));
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
     const handleSignUp = async () => {
-        // If we have initialProfile, we don't strictly need name input if it's already there.
-        // But if we don't have initialProfile, we need name.
-        if ((!initialProfile && !name) || !email || !password) {
+        if (!name || !email || !password) {
             Alert.alert('Erro', 'Preencha todos os campos');
             return;
         }
@@ -41,13 +39,9 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
             // Sanitize profile to remove undefined values (Firestore doesn't like them)
             const newProfile: UserProfile = {
                 ...baseProfile,
-                name: name || baseProfile.name,
-                profilePicture: baseProfile.profilePicture || null as any, // Cast to any to allow null if type is strict, or just null
+                name: name, // Use the name from input
+                profilePicture: baseProfile.profilePicture || null as any,
             };
-            // Note: UserProfile type says profilePicture?: string. 
-            // If we want to save null, we might need to adjust type or just omit it.
-            // But omitting it means it is undefined in the object? No, JSON.stringify removes it, but Firestore setDoc throws.
-            // Best is to delete the key if it is undefined.
 
             if (newProfile.profilePicture === undefined) {
                 delete newProfile.profilePicture;
@@ -73,22 +67,20 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
                 <View style={styles.logoContainer}>
                     <Text style={styles.authTitle}>Crie sua conta</Text>
                     <Text style={styles.authSubtitle}>
-                        {initialProfile ? `Quase lá, ${initialProfile.name}!` : 'Salve seu plano NutriVerse'}
+                        {initialProfile ? `Quase lá! Salve seu plano.` : 'Comece sua jornada saudável'}
                     </Text>
                 </View>
 
                 <View style={styles.form}>
-                    {!initialProfile && (
-                        <View style={styles.inputContainer}>
-                            <UserIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Nome completo"
-                                value={name}
-                                onChangeText={setName}
-                            />
-                        </View>
-                    )}
+                    <View style={styles.inputContainer}>
+                        <UserIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Nome completo"
+                            value={name}
+                            onChangeText={setName}
+                        />
+                    </View>
 
                     <View style={styles.inputContainer}>
                         <MailIcon size={20} color="#9CA3AF" style={styles.inputIcon} />

@@ -1,15 +1,22 @@
-
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Dimensions, KeyboardAvoidingView, Platform, LayoutAnimation, UIManager } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Dimensions, KeyboardAvoidingView, Platform, LayoutAnimation, UIManager, Image, Animated, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, RESTRICTION_OPTIONS } from '../types';
-import { ArrowRightIcon } from '../components/Icons';
+import { ArrowRightIcon, CheckIcon, StarIcon, TimerIcon, FlameIcon } from '../components/Icons';
+import { PaywallScreen } from './PaywallScreen';
 
 const { width } = Dimensions.get('window');
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+const PAIN_POINTS = [
+    "Não sei o que cozinhar no dia a dia.",
+    "Começo dietas e não consigo seguir.",
+    "Tenho ingredientes sobrando.",
+    "Gasto tempo demais planejando."
+];
 
 export const OnboardingScreen = ({
     onComplete,
@@ -19,183 +26,380 @@ export const OnboardingScreen = ({
     onLogin: () => void
 }) => {
     const [step, setStep] = useState(0);
-    const [name, setName] = useState('');
+
+    // Form State
+    const [painPoints, setPainPoints] = useState<string[]>([]);
     const [goal, setGoal] = useState<UserGoal>(UserGoal.LOSE_WEIGHT);
+
+    // Biometrics
+    const [height, setHeight] = useState('');
+    const [weight, setWeight] = useState('');
+    const [age, setAge] = useState('');
     const [activity, setActivity] = useState<ActivityLevel>(ActivityLevel.MEDIUM);
     const [restrictions, setRestrictions] = useState<string[]>([]);
 
-    const totalSteps = 4;
+    // Routine
+    const [mealsPerDay, setMealsPerDay] = useState(3);
+    const [cookingTime, setCookingTime] = useState<'FAST' | 'ELABORATE'>('FAST');
+    const [useMicrowave, setUseMicrowave] = useState(true);
+    const [repeatMeals, setRepeatMeals] = useState(true);
+
+    // Animation for Result
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const [showPlanPreview, setShowPlanPreview] = useState(false);
+
+    const totalSteps = 8; // 0 to 7 (Paywall is 7)
 
     const handleNext = () => {
-        if (step === 0 && !name.trim()) return;
-
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setStep(prev => prev + 1);
+    };
 
-        if (step < totalSteps - 1) {
-            setStep(step + 1);
+    const handleFinish = () => {
+        const profile: UserProfile = {
+            name: 'Atleta', // Default, can be updated later
+            goal,
+            activityLevel: activity,
+            mealsPerDay,
+            mealSlots: mealsPerDay === 3 ? ['Café', 'Almoço', 'Jantar'] : ['Café', 'Almoço', 'Lanche', 'Jantar'],
+            dietaryRestrictions: restrictions,
+            dislikes: [],
+            usageModes: [AppUsageMode.FIT_SWAP],
+            height: Number(height),
+            weight: Number(weight),
+            age: Number(age),
+            painPoints,
+            routine: {
+                cookingTime,
+                useMicrowave,
+                repeatMeals
+            }
+        };
+        onComplete(profile);
+    };
+
+    const toggleSelection = (list: string[], item: string, setter: (l: string[]) => void) => {
+        if (list.includes(item)) {
+            setter(list.filter(i => i !== item));
         } else {
-            // Complete
-            const profile: UserProfile = {
-                name: name || 'Atleta',
-                goal,
-                activityLevel: activity,
-                mealsPerDay: 3, // Default
-                mealSlots: ['Café da Manhã', 'Almoço', 'Jantar'],
-                dietaryRestrictions: restrictions,
-                dislikes: [],
-                usageModes: [AppUsageMode.FIT_SWAP],
-                profilePicture: undefined
-            };
-            onComplete(profile);
+            setter([...list, item]);
         }
     };
 
-    const handleOptionSelect = (setter: any, value: any) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setter(value);
-    };
+    // --- Steps Rendering ---
 
-    const toggleRestriction = (r: string) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        if (restrictions.includes(r)) {
-            setRestrictions(restrictions.filter(i => i !== r));
-        } else {
-            setRestrictions([...restrictions, r]);
-        }
-    };
+    const renderHero = () => (
+        <View style={styles.centerStep}>
+            <View style={styles.heroImagePlaceholder}>
+                <Text style={{ fontSize: 60 }}>🥗</Text>
+            </View>
+            <Text style={styles.heroTitle}>Coma bem todos os dias. Sem esforço.</Text>
+            <Text style={styles.heroSubtitle}>
+                O NutriVerse cria sua semana alimentar completa — baseada no seu corpo, objetivo e ingredientes que você já tem.
+            </Text>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
+                <Text style={styles.primaryButtonText}>Começar</Text>
+                <ArrowRightIcon size={20} color="black" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onLogin} style={{ marginTop: 20 }}>
+                <Text style={styles.loginLink}>Já tenho conta</Text>
+            </TouchableOpacity>
+        </View>
+    );
 
-    return (
-        <SafeAreaView style={styles.container}>
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={{ flex: 1 }}
+    const renderPainPoints = () => (
+        <View style={styles.stepContainer}>
+            <Text style={styles.title}>Qual dessas situações parece com você?</Text>
+            <View style={styles.optionsList}>
+                {PAIN_POINTS.map((point, i) => (
+                    <TouchableOpacity
+                        key={i}
+                        onPress={() => toggleSelection(painPoints, point, setPainPoints)}
+                        style={[styles.optionCard, painPoints.includes(point) && styles.optionCardSelected]}
+                    >
+                        <View style={[styles.checkbox, painPoints.includes(point) && styles.checkboxSelected]}>
+                            {painPoints.includes(point) && <CheckIcon size={12} color="black" />}
+                        </View>
+                        <Text style={styles.optionText}>{point}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+            <TouchableOpacity
+                style={[styles.primaryButton, painPoints.length === 0 && styles.buttonDisabled]}
+                onPress={handleNext}
+                disabled={painPoints.length === 0}
             >
-                <View style={styles.progressBarContainer}>
-                    <View style={styles.progressBarTrack}>
-                        <View style={[styles.progressBarFill, { width: `${((step + 1) / totalSteps) * 100}%` }]} />
+                <Text style={styles.primaryButtonText}>Continuar</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
+    const renderGoal = () => (
+        <View style={styles.stepContainer}>
+            <Text style={styles.title}>Qual seu objetivo principal?</Text>
+            <View style={styles.optionsList}>
+                {[
+                    { id: UserGoal.LOSE_WEIGHT, icon: '🔥', label: 'Perder peso' },
+                    { id: UserGoal.GAIN_MUSCLE, icon: '💪', label: 'Ganhar massa magra' },
+                    { id: UserGoal.MAINTAIN, icon: '⚖️', label: 'Manter peso' },
+                    { id: UserGoal.EAT_HEALTHY, icon: '🥗', label: 'Comer mais saudável' },
+                ].map((opt) => (
+                    <TouchableOpacity
+                        key={opt.id}
+                        onPress={() => { setGoal(opt.id); handleNext(); }}
+                        style={[styles.optionCard, goal === opt.id && styles.optionCardSelected]}
+                    >
+                        <Text style={{ fontSize: 24, marginRight: 12 }}>{opt.icon}</Text>
+                        <Text style={styles.optionText}>{opt.label}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+        </View>
+    );
+
+    const renderProfile = () => (
+        <ScrollView contentContainerStyle={styles.stepContainer}>
+            <Text style={styles.title}>Seu Perfil Nutricional</Text>
+            <Text style={styles.subtitle}>Para calcularmos suas calorias exatas.</Text>
+
+            <View style={styles.inputGroup}>
+                <Text style={styles.label}>Altura (cm)</Text>
+                <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    placeholder="175"
+                    value={height}
+                    onChangeText={setHeight}
+                />
+            </View>
+            <View style={styles.inputGroup}>
+                <Text style={styles.label}>Peso (kg)</Text>
+                <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    placeholder="70"
+                    value={weight}
+                    onChangeText={setWeight}
+                />
+            </View>
+            <View style={styles.inputGroup}>
+                <Text style={styles.label}>Idade</Text>
+                <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    placeholder="25"
+                    value={age}
+                    onChangeText={setAge}
+                />
+            </View>
+
+            <Text style={[styles.label, { marginTop: 16 }]}>Nível de Atividade</Text>
+            <View style={styles.rowOptions}>
+                {[
+                    { id: ActivityLevel.LOW, label: 'Sedentário' },
+                    { id: ActivityLevel.MEDIUM, label: 'Moderado' },
+                    { id: ActivityLevel.HIGH, label: 'Intenso' },
+                ].map(opt => (
+                    <TouchableOpacity
+                        key={opt.id}
+                        onPress={() => setActivity(opt.id)}
+                        style={[styles.smallOption, activity === opt.id && styles.smallOptionSelected]}
+                    >
+                        <Text style={[styles.smallOptionText, activity === opt.id && styles.smallOptionTextSelected]}>
+                            {opt.label}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
+            <Text style={[styles.label, { marginTop: 24 }]}>Restrições (Opcional)</Text>
+            <View style={styles.tagsContainer}>
+                {RESTRICTION_OPTIONS.map(opt => (
+                    <TouchableOpacity
+                        key={opt}
+                        onPress={() => toggleSelection(restrictions, opt, setRestrictions)}
+                        style={[styles.tag, restrictions.includes(opt) && styles.tagSelected]}
+                    >
+                        <Text style={[styles.tagText, restrictions.includes(opt) && styles.tagTextSelected]}>{opt}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
+            <TouchableOpacity
+                style={[styles.primaryButton, (!height || !weight || !age) && styles.buttonDisabled]}
+                onPress={handleNext}
+                disabled={!height || !weight || !age}
+            >
+                <Text style={styles.primaryButtonText}>Continuar</Text>
+            </TouchableOpacity>
+        </ScrollView>
+    );
+
+    const renderRoutine = () => (
+        <ScrollView contentContainerStyle={styles.stepContainer}>
+            <Text style={styles.title}>Rotina e Preferências</Text>
+
+            <Text style={styles.label}>Refeições por dia</Text>
+            <View style={styles.rowOptions}>
+                {[3, 4, 5, 6].map(num => (
+                    <TouchableOpacity
+                        key={num}
+                        onPress={() => setMealsPerDay(num)}
+                        style={[styles.circleOption, mealsPerDay === num && styles.circleOptionSelected]}
+                    >
+                        <Text style={[styles.circleText, mealsPerDay === num && styles.circleTextSelected]}>{num}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
+            <Text style={[styles.label, { marginTop: 24 }]}>Tempo para cozinhar</Text>
+            <View style={styles.optionsList}>
+                <TouchableOpacity
+                    onPress={() => setCookingTime('FAST')}
+                    style={[styles.optionCard, cookingTime === 'FAST' && styles.optionCardSelected]}
+                >
+                    <Text style={{ fontSize: 20, marginRight: 12 }}>⚡</Text>
+                    <Text style={styles.optionText}>Rápidas (até 20min)</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    onPress={() => setCookingTime('ELABORATE')}
+                    style={[styles.optionCard, cookingTime === 'ELABORATE' && styles.optionCardSelected]}
+                >
+                    <Text style={{ fontSize: 20, marginRight: 12 }}>👨‍🍳</Text>
+                    <Text style={styles.optionText}>Elaboradas</Text>
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Usa micro-ondas?</Text>
+                <TouchableOpacity
+                    onPress={() => setUseMicrowave(!useMicrowave)}
+                    style={[styles.switch, useMicrowave && styles.switchActive]}
+                >
+                    <View style={[styles.switchThumb, useMicrowave && styles.switchThumbActive]} />
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Repetir receitas na semana?</Text>
+                <TouchableOpacity
+                    onPress={() => setRepeatMeals(!repeatMeals)}
+                    style={[styles.switch, repeatMeals && styles.switchActive]}
+                >
+                    <View style={[styles.switchThumb, repeatMeals && styles.switchThumbActive]} />
+                </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
+                <Text style={styles.primaryButtonText}>Gerar meu plano</Text>
+            </TouchableOpacity>
+        </ScrollView>
+    );
+
+    const renderResult = () => {
+        useEffect(() => {
+            setTimeout(() => {
+                setShowPlanPreview(true);
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: 800,
+                    useNativeDriver: true
+                }).start();
+            }, 1500);
+        }, []);
+
+        if (!showPlanPreview) {
+            return (
+                <View style={styles.centerStep}>
+                    <Text style={{ fontSize: 60, marginBottom: 20 }}>🔮</Text>
+                    <Text style={styles.title}>Criando sua estratégia...</Text>
+                    <Text style={styles.subtitle}>A IA está analisando 10.000 combinações para você.</Text>
+                </View>
+            );
+        }
+
+        return (
+            <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
+                <Text style={styles.title}>Seu Plano NutriVerse está pronto 🎉</Text>
+                <Text style={styles.subtitle}>100% personalizado para {goal === UserGoal.LOSE_WEIGHT ? 'perder peso' : 'seu objetivo'}.</Text>
+
+                <View style={styles.previewCard}>
+                    <View style={styles.dayHeader}>
+                        <Text style={styles.dayTitle}>Dia 1</Text>
+                        <Text style={styles.calText}>~1800 kcal</Text>
+                    </View>
+                    <View style={styles.mealRow}>
+                        <View style={styles.dot} />
+                        <Text style={styles.mealText}>Omelete Proteico com Espinafre</Text>
+                    </View>
+                    <View style={styles.mealRow}>
+                        <View style={styles.dot} />
+                        <Text style={styles.mealText}>Frango Grelhado e Legumes</Text>
+                    </View>
+                    <View style={styles.mealRow}>
+                        <View style={styles.dot} />
+                        <Text style={styles.mealText}>Overnight Oats de Frutas Vermelhas</Text>
                     </View>
                 </View>
 
-                <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-                    {step === 0 && (
-                        <View style={styles.stepContainer}>
-                            <View style={styles.logoCircle}>
-                                <Text style={styles.logoEmoji}>👋</Text>
-                            </View>
-                            <Text style={styles.title}>Bem-vindo ao NutriVerse</Text>
-                            <Text style={styles.subtitle}>Sua jornada para uma alimentação inteligente e sem esforço começa agora.</Text>
+                <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
+                    <Text style={styles.primaryButtonText}>Ver plano completo</Text>
+                </TouchableOpacity>
+            </Animated.View>
+        );
+    };
 
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Como podemos te chamar?"
-                                value={name}
-                                onChangeText={setName}
-                                placeholderTextColor="#9CA3AF"
-                                autoFocus
-                            />
+    const renderSocialProof = () => (
+        <View style={styles.stepContainer}>
+            <Text style={styles.title}>Junte-se a +12.000 pessoas</Text>
+            <Text style={styles.subtitle}>Veja o que estão falando sobre o NutriVerse.</Text>
 
-                            <View style={styles.loginRow}>
-                                <Text style={styles.loginText}>Já tem uma conta?</Text>
-                                <TouchableOpacity onPress={onLogin}>
-                                    <Text style={styles.loginLink}>Fazer Login</Text>
-                                </TouchableOpacity>
-                            </View>
+            <View style={styles.testimonialCard}>
+                <Text style={styles.testimonialText}>"Finalmente consegui seguir uma dieta! As receitas são muito fáceis e uso tudo que tenho na geladeira."</Text>
+                <View style={styles.userRow}>
+                    <View style={styles.avatar}><Text>👩</Text></View>
+                    <Text style={styles.userName}>Mariana S., perdeu 5kg</Text>
+                </View>
+            </View>
+
+            <View style={styles.testimonialCard}>
+                <Text style={styles.testimonialText}>"O scanner de despensa é bruxaria! Economizo muito tempo e dinheiro."</Text>
+                <View style={styles.userRow}>
+                    <View style={styles.avatar}><Text>👨</Text></View>
+                    <Text style={styles.userName}>Carlos E., ganhou massa</Text>
+                </View>
+            </View>
+
+            <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
+                <Text style={styles.primaryButtonText}>Liberar meu acesso</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
+    if (step === 7) {
+        return <PaywallScreen onPurchase={handleFinish} onRestore={handleFinish} onClose={handleFinish} />;
+    }
+
+    return (
+        <SafeAreaView style={styles.container}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                {step > 0 && (
+                    <View style={styles.progressBarContainer}>
+                        <View style={styles.progressBarTrack}>
+                            <View style={[styles.progressBarFill, { width: `${(step / 7) * 100}%` }]} />
                         </View>
-                    )}
+                    </View>
+                )}
 
-                    {step === 1 && (
-                        <View style={styles.stepContainer}>
-                            <Text style={styles.title}>Qual seu objetivo principal?</Text>
-                            <Text style={styles.subtitle}>Vamos personalizar tudo para você chegar lá.</Text>
-
-                            <View style={styles.optionsList}>
-                                {[
-                                    { id: UserGoal.LOSE_WEIGHT, icon: '🔥', label: 'Queimar gordura', desc: 'Definição e perda de peso' },
-                                    { id: UserGoal.GAIN_MUSCLE, icon: '💪', label: 'Ganhar massa', desc: 'Hipertrofia e força' },
-                                    { id: UserGoal.EAT_HEALTHY, icon: '🥗', label: 'Comer melhor', desc: 'Reeducação alimentar' },
-                                ].map((opt) => (
-                                    <TouchableOpacity
-                                        key={opt.id}
-                                        onPress={() => handleOptionSelect(setGoal, opt.id)}
-                                        style={[styles.optionCard, goal === opt.id && styles.optionCardSelected]}
-                                    >
-                                        <View style={styles.optionIcon}>
-                                            <Text style={{ fontSize: 24 }}>{opt.icon}</Text>
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={styles.optionLabel}>{opt.label}</Text>
-                                            <Text style={styles.optionDesc}>{opt.desc}</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-                    )}
-
-                    {step === 2 && (
-                        <View style={styles.stepContainer}>
-                            <Text style={styles.title}>Nível de Atividade</Text>
-                            <Text style={styles.subtitle}>Para calcularmos suas calorias ideais.</Text>
-
-                            <View style={styles.optionsList}>
-                                {[
-                                    { id: ActivityLevel.LOW, icon: '🪑', label: 'Leve', desc: 'Trabalho sentado, pouco exercício' },
-                                    { id: ActivityLevel.MEDIUM, icon: '🚶', label: 'Moderado', desc: 'Caminhadas, exercícios 2-3x/sem' },
-                                    { id: ActivityLevel.HIGH, icon: '⚡', label: 'Intenso', desc: 'Treinos diários ou trabalho físico' },
-                                ].map((opt) => (
-                                    <TouchableOpacity
-                                        key={opt.id}
-                                        onPress={() => handleOptionSelect(setActivity, opt.id)}
-                                        style={[styles.optionCard, activity === opt.id && styles.optionCardSelected]}
-                                    >
-                                        <View style={styles.optionIcon}>
-                                            <Text style={{ fontSize: 24 }}>{opt.icon}</Text>
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={styles.optionLabel}>{opt.label}</Text>
-                                            <Text style={styles.optionDesc}>{opt.desc}</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-                    )}
-
-                    {step === 3 && (
-                        <View style={styles.stepContainer}>
-                            <Text style={styles.title}>Alguma restrição?</Text>
-                            <Text style={styles.subtitle}>Seleciona o que você NÃO pode comer.</Text>
-
-                            <View style={styles.tagsContainer}>
-                                {RESTRICTION_OPTIONS.map((opt) => {
-                                    const isSelected = restrictions.includes(opt);
-                                    return (
-                                        <TouchableOpacity
-                                            key={opt}
-                                            onPress={() => toggleRestriction(opt)}
-                                            style={[styles.tag, isSelected && styles.tagSelected]}
-                                        >
-                                            <Text style={[styles.tagText, isSelected && styles.tagTextSelected]}>{opt}</Text>
-                                        </TouchableOpacity>
-                                    )
-                                })}
-                            </View>
-                        </View>
-                    )}
-                </ScrollView>
-
-                <View style={styles.footer}>
-                    <TouchableOpacity
-                        style={[styles.button, (step === 0 && !name.trim()) && styles.buttonDisabled]}
-                        onPress={handleNext}
-                        disabled={step === 0 && !name.trim()}
-                    >
-                        <Text style={[styles.buttonText, (step === 0 && !name.trim()) && styles.buttonTextDisabled]}>
-                            {step === totalSteps - 1 ? 'Começar Jornada' : 'Continuar'}
-                        </Text>
-                        <ArrowRightIcon size={20} color={step === 0 && !name.trim() ? "#9CA3AF" : "black"} />
-                    </TouchableOpacity>
+                <View style={styles.content}>
+                    {step === 0 && renderHero()}
+                    {step === 1 && renderPainPoints()}
+                    {step === 2 && renderGoal()}
+                    {step === 3 && renderProfile()}
+                    {step === 4 && renderRoutine()}
+                    {step === 5 && renderResult()}
+                    {step === 6 && renderSocialProof()}
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -207,163 +411,57 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#FAFAFA',
     },
-    progressBarContainer: {
-        paddingHorizontal: 24,
-        paddingTop: 12,
-        paddingBottom: 24,
-    },
-    progressBarTrack: {
-        height: 4,
-        backgroundColor: '#E5E7EB',
-        borderRadius: 2,
-        overflow: 'hidden',
-    },
-    progressBarFill: {
-        height: '100%',
-        backgroundColor: '#a6f000',
-    },
     content: {
-        flexGrow: 1,
-        paddingHorizontal: 24,
+        flex: 1,
+        padding: 24,
+    },
+    centerStep: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     stepContainer: {
         flex: 1,
-        alignItems: 'center',
         paddingTop: 20,
     },
-    logoCircle: {
-        width: 96,
-        height: 96,
-        borderRadius: 32,
+    heroImagePlaceholder: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
         backgroundColor: '#a6f000',
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 32,
-        transform: [{ rotate: '3deg' }],
-        shadowColor: '#a6f000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
     },
-    logoEmoji: {
-        fontSize: 48,
+    heroTitle: {
+        fontSize: 36,
+        fontWeight: '800',
+        color: '#111827',
+        textAlign: 'center',
+        marginBottom: 16,
+        lineHeight: 42,
+    },
+    heroSubtitle: {
+        fontSize: 18,
+        color: '#6B7280',
+        textAlign: 'center',
+        marginBottom: 40,
+        lineHeight: 26,
     },
     title: {
-        fontSize: 32,
+        fontSize: 28,
         fontWeight: '800',
-        color: '#1F2937',
-        textAlign: 'center',
+        color: '#111827',
         marginBottom: 12,
     },
     subtitle: {
         fontSize: 16,
         color: '#6B7280',
-        textAlign: 'center',
-        marginBottom: 32,
-        lineHeight: 24,
-    },
-    input: {
-        width: '100%',
-        backgroundColor: 'white',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderRadius: 16,
-        padding: 20,
-        fontSize: 18,
-        fontWeight: '700',
-        textAlign: 'center',
-        color: '#1F2937',
         marginBottom: 32,
     },
-    loginRow: {
-        flexDirection: 'row',
-        gap: 4,
-    },
-    loginText: {
-        color: '#6B7280',
-    },
-    loginLink: {
-        fontWeight: '700',
-        color: 'black',
-    },
-    optionsList: {
-        width: '100%',
-        gap: 12,
-    },
-    optionCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'white',
-        padding: 20,
-        borderRadius: 16,
-        borderWidth: 2,
-        borderColor: 'transparent',
-        gap: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    optionCardSelected: {
-        borderColor: '#a6f000',
-        backgroundColor: 'rgba(166, 240, 0, 0.05)',
-    },
-    optionIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: '#FAFAFA',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
-    },
-    optionLabel: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#1F2937',
-        marginBottom: 4,
-    },
-    optionDesc: {
-        fontSize: 14,
-        color: '#6B7280',
-    },
-    tagsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        gap: 12,
-    },
-    tag: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 12,
-        backgroundColor: 'white',
-        borderWidth: 2,
-        borderColor: 'transparent',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    tagSelected: {
-        backgroundColor: 'black',
-        borderColor: 'black',
-    },
-    tagText: {
-        fontWeight: '700',
-        color: '#6B7280',
-    },
-    tagTextSelected: {
-        color: 'white',
-    },
-    footer: {
-        padding: 24,
-    },
-    button: {
+    primaryButton: {
         backgroundColor: '#a6f000',
+        width: '100%',
         height: 64,
         borderRadius: 20,
         flexDirection: 'row',
@@ -375,18 +473,280 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 16,
         elevation: 8,
+        marginBottom: 16,
     },
-    buttonText: {
+    primaryButtonText: {
         fontSize: 18,
         fontWeight: '800',
         color: 'black',
     },
     buttonDisabled: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: '#E5E7EB',
         shadowOpacity: 0,
-        elevation: 0,
     },
-    buttonTextDisabled: {
-        color: '#9CA3AF',
+    loginLink: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    optionsList: {
+        gap: 12,
+        marginBottom: 32,
+    },
+    optionCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        padding: 20,
+        borderRadius: 16,
+        borderWidth: 2,
+        borderColor: 'transparent',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    optionCardSelected: {
+        borderColor: '#a6f000',
+        backgroundColor: 'rgba(166, 240, 0, 0.05)',
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: '#E5E7EB',
+        marginRight: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkboxSelected: {
+        borderColor: '#a6f000',
+        backgroundColor: '#a6f000',
+    },
+    optionText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1F2937',
+        flex: 1,
+    },
+    inputGroup: {
+        marginBottom: 20,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#374151',
+        marginBottom: 8,
+    },
+    input: {
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 16,
+        padding: 16,
+        fontSize: 16,
+        color: '#1F2937',
+    },
+    rowOptions: {
+        flexDirection: 'row',
+        gap: 8,
+        flexWrap: 'wrap',
+    },
+    smallOption: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    smallOptionSelected: {
+        backgroundColor: 'black',
+        borderColor: 'black',
+    },
+    smallOptionText: {
+        fontWeight: '600',
+        color: '#374151',
+    },
+    smallOptionTextSelected: {
+        color: 'white',
+    },
+    tagsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 32,
+    },
+    tag: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    tagSelected: {
+        backgroundColor: '#a6f000',
+        borderColor: '#a6f000',
+    },
+    tagText: {
+        fontWeight: '600',
+        color: '#374151',
+    },
+    tagTextSelected: {
+        color: 'black',
+    },
+    circleOption: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    circleOptionSelected: {
+        backgroundColor: 'black',
+        borderColor: 'black',
+    },
+    circleText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#374151',
+    },
+    circleTextSelected: {
+        color: 'white',
+    },
+    switchRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+        backgroundColor: 'white',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    switchLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1F2937',
+    },
+    switch: {
+        width: 50,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: '#E5E7EB',
+        padding: 2,
+    },
+    switchActive: {
+        backgroundColor: '#a6f000',
+    },
+    switchThumb: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        backgroundColor: 'white',
+    },
+    switchThumbActive: {
+        transform: [{ translateX: 20 }],
+    },
+    previewCard: {
+        backgroundColor: 'white',
+        borderRadius: 24,
+        padding: 24,
+        marginBottom: 32,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 5,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+    },
+    dayHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+    },
+    dayTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#111827',
+    },
+    calText: {
+        color: '#6B7280',
+        fontWeight: '600',
+    },
+    mealRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        gap: 12,
+    },
+    dot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#a6f000',
+    },
+    mealText: {
+        fontSize: 16,
+        color: '#374151',
+    },
+    testimonialCard: {
+        backgroundColor: 'white',
+        padding: 20,
+        borderRadius: 20,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+    },
+    testimonialText: {
+        fontSize: 16,
+        fontStyle: 'italic',
+        color: '#374151',
+        marginBottom: 12,
+        lineHeight: 24,
+    },
+    userRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    avatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    userName: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    progressBarContainer: {
+        paddingHorizontal: 24,
+        paddingTop: 12,
+        paddingBottom: 12,
+    },
+    progressBarTrack: {
+        height: 4,
+        backgroundColor: '#E5E7EB',
+        borderRadius: 2,
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        backgroundColor: '#a6f000',
     },
 });

@@ -67,6 +67,15 @@ export interface UserProfile {
     dislikes: string[]; // Changed to array
     usageModes: AppUsageMode[];
     profilePicture?: string;
+    height?: number;
+    weight?: number;
+    age?: number;
+    painPoints?: string[];
+    routine?: {
+        cookingTime: 'FAST' | 'ELABORATE';
+        useMicrowave: boolean;
+        repeatMeals: boolean;
+    };
     savedRecipes?: string[];
 }
 
