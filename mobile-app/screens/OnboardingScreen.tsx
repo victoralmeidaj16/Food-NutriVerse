@@ -159,7 +159,7 @@ export const OnboardingScreen = ({
     );
 
     const renderProfile = () => (
-        <ScrollView contentContainerStyle={styles.stepContainer}>
+        <ScrollView contentContainerStyle={styles.scrollStepContainer} keyboardShouldPersistTaps="handled">
             <Text style={styles.title}>Seu Perfil Nutricional</Text>
             <Text style={styles.subtitle}>Para calcularmos suas calorias exatas.</Text>
 
@@ -237,7 +237,7 @@ export const OnboardingScreen = ({
     );
 
     const renderRoutine = () => (
-        <ScrollView contentContainerStyle={styles.stepContainer}>
+        <ScrollView contentContainerStyle={styles.scrollStepContainer} keyboardShouldPersistTaps="handled">
             <Text style={styles.title}>Rotina e Preferências</Text>
 
             <Text style={styles.label}>Refeições por dia</Text>
@@ -423,6 +423,11 @@ const styles = StyleSheet.create({
     stepContainer: {
         flex: 1,
         paddingTop: 20,
+    },
+    scrollStepContainer: {
+        flexGrow: 1,
+        paddingTop: 20,
+        paddingBottom: 40,
     },
     heroImagePlaceholder: {
         width: 120,
