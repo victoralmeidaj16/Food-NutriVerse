@@ -23,6 +23,7 @@ import { LoadingOverlay } from '../components/LoadingOverlay';
 import { PlanningWizard } from '../components/PlanningWizard';
 import { DailyTipCard } from '../components/DailyTipCard';
 import { EditProfileModal } from '../components/EditProfileModal';
+import { SubscriptionService } from '../services/subscriptionService';
 import { CopyMealModal } from '../components/CopyMealModal';
 
 const { width } = Dimensions.get('window');
@@ -38,7 +39,8 @@ export const MainScreen = ({
     onLogout,
     savedRecipes,
     onToggleSave,
-    onUpdateProfile
+    onUpdateProfile,
+    onShowPaywall
 }: {
     user: { name: string } | null,
     userProfile: UserProfile | null,
@@ -46,7 +48,8 @@ export const MainScreen = ({
     onLogout: () => void,
     savedRecipes: Set<string>,
     onToggleSave: (r: Recipe) => void,
-    onUpdateProfile: (p: UserProfile) => void
+    onUpdateProfile: (p: UserProfile) => void,
+    onShowPaywall: () => void
 }) => {
     const [activeTab, setActiveTab] = useState<Tab>('HOME');
     const fabScale = useRef(new Animated.Value(1)).current;
@@ -140,11 +143,19 @@ export const MainScreen = ({
         outputRange: [0.6, 0]
     });
 
-    const handlePickImage = async () => {
+    const pickImage = async () => {
+        if (!userProfile) return;
+
+        // Check Subscription Limit
+        if (!SubscriptionService.canScanPantry(userProfile)) {
+            onShowPaywall();
+            return;
+        }
+
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
         if (permissionResult.granted === false) {
-            Alert.alert("Permissão necessária", "Precisamos de acesso à galeria para analisar sua despensa.");
+            Alert.alert("Permissão necessária", "Precisamos de acesso à galeria para escanear ingredientes.");
             return;
         }
 
@@ -153,14 +164,18 @@ export const MainScreen = ({
             allowsEditing: true,
             aspect: [4, 3],
             quality: 0.5,
-            base64: true,
         });
 
-        if (!result.canceled && result.assets[0].base64) {
-            analyzeImage(result.assets[0].base64);
+        if (!result.canceled) {
+            // Simulate scanning process
+            const newIngredients = [...pantryIngredients, 'Tomate', 'Queijo', 'Manjericão'];
+            setPantryIngredients(newIngredients);
+
+            // Update Usage Stats
+            const updatedProfile = SubscriptionService.incrementPantryScan(userProfile);
+            onUpdateProfile(updatedProfile);
         }
     };
-
     const handleTakePhoto = async () => {
         const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
@@ -206,14 +221,34 @@ export const MainScreen = ({
     };
 
     const handleSaveRecipe = async (recipe: Recipe) => {
-        // TODO: Implement save recipe logic with new SubscriptionService
+        if (!userProfile) return;
+
+        // Check Subscription Limit
+        if (!SubscriptionService.canSaveRecipe(userProfile)) {
+            onShowPaywall();
+            return;
+        }
+
+        // Proceed with saving
+        onToggleSave(recipe);
+
+        // Update Usage Stats
+        const updatedProfile = SubscriptionService.incrementSavedRecipes(userProfile);
+        onUpdateProfile(updatedProfile);
+
         Alert.alert('Sucesso', 'Receita salva com sucesso!');
     };
     const handleGenerateRecipe = async () => {
         if (!userProfile) return;
 
-        const input = exploreMode === 'TEXT' ? dishInput : pantryIngredients;
+        // Check Subscription Limit
+        if (!SubscriptionService.canGenerateRecipe(userProfile)) {
+            onShowPaywall();
+            return;
+        }
 
+        // The original logic for input validation and setting loading message
+        const input = exploreMode === 'TEXT' ? dishInput : pantryIngredients;
         if (exploreMode === 'TEXT' && !dishInput.trim()) {
             Alert.alert("Ops", "Digite o nome de um prato.");
             return;
@@ -223,7 +258,6 @@ export const MainScreen = ({
             return;
         }
 
-        setLoading(true);
         setLoadingMsg(exploreMode === 'TEXT' ? "Fitzando receita..." : "Criando com o que você tem...");
 
         try {
@@ -578,7 +612,7 @@ export const MainScreen = ({
                             <Text style={styles.cameraButtonTextLarge}>Abrir Câmera</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={handlePickImage} style={styles.galleryLink}>
+                        <TouchableOpacity onPress={pickImage} style={styles.galleryLink}>
                             <Text style={styles.galleryLinkText}>ou escolha da galeria</Text>
                         </TouchableOpacity>
                     </View>

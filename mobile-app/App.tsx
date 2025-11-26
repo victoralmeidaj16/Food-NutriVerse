@@ -6,13 +6,14 @@ import { getUserProfile, saveUserProfile, updateUserProfile } from './services/u
 import { MOCK_RECIPES } from './services/mockData';
 import { RecipeDetailScreen } from './screens/RecipeDetailScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
+import { PaywallScreen } from './screens/PaywallScreen';
 import { MainScreen } from './screens/MainScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { SignUpScreen } from './screens/SignUpScreen';
 import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan, Recipe } from './types';
 
 // --- Types ---
-type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL';
+type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL' | 'PAYWALL';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('ONBOARDING');
@@ -23,6 +24,18 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [pendingProfile, setPendingProfile] = useState<UserProfile | null>(null);
+
+  const loadUserProfile = async (uid: string) => {
+    try {
+      const profile = await getUserProfile(uid);
+      if (profile) {
+        setUserProfile(profile);
+        setUser({ name: profile.name });
+      }
+    } catch (error) {
+      console.error("Error loading profile:", error);
+    }
+  };
 
   // Monitor Auth State
   useEffect(() => {
@@ -152,6 +165,25 @@ export default function App() {
         return <LoginScreen onNavigateToSignUp={() => setCurrentScreen('ONBOARDING')} />;
       case 'SIGNUP':
         return <SignUpScreen onNavigateToLogin={() => setCurrentScreen('LOGIN')} initialProfile={pendingProfile} />;
+      case 'PAYWALL':
+        return (
+          <PaywallScreen
+            onPurchase={() => {
+              // Refresh profile to get PRO status
+              if (firebaseUser) {
+                loadUserProfile(firebaseUser.uid);
+              }
+              setCurrentScreen('MAIN');
+            }}
+            onRestore={() => {
+              if (firebaseUser) {
+                loadUserProfile(firebaseUser.uid);
+              }
+              setCurrentScreen('MAIN');
+            }}
+            onClose={() => setCurrentScreen('MAIN')}
+          />
+        );
       case 'MAIN':
         return (
           <MainScreen
@@ -162,6 +194,7 @@ export default function App() {
             savedRecipes={savedRecipes}
             onToggleSave={handleSaveRecipe}
             onUpdateProfile={handleUpdateProfile}
+            onShowPaywall={() => setCurrentScreen('PAYWALL')}
           />
         );
       default:

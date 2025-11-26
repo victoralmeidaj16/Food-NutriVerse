@@ -109,6 +109,29 @@ export const SubscriptionService = {
         };
     },
 
+    incrementPantryScan: (profile: UserProfile): UserProfile => {
+        if (profile.isPro) return profile;
+
+        const now = new Date();
+        const lastScan = new Date(profile.usageStats.lastScanDate);
+        const diffTime = Math.abs(now.getTime() - lastScan.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        let newCount = profile.usageStats.pantryScansThisWeek + 1;
+        if (diffDays > 7) {
+            newCount = 1;
+        }
+
+        return {
+            ...profile,
+            usageStats: {
+                ...profile.usageStats,
+                pantryScansThisWeek: newCount,
+                lastScanDate: now.toISOString()
+            }
+        };
+    },
+
     upgradeToPro: (profile: UserProfile, plan: SubscriptionPlan.MONTHLY | SubscriptionPlan.YEARLY): UserProfile => {
         return {
             ...profile,
