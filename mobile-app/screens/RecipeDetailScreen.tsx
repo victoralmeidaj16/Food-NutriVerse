@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Modal, SafeAreaView } from 'react-native';
 import { Recipe } from '../types';
-import { ArrowRightIcon, BookHeartIcon, TimerIcon, FlameIcon, ExchangeIcon, LightbulbIcon, CheckIcon, CloseIcon, ChefHatIcon } from '../components/Icons';
+import { ArrowRightIcon, BookHeartIcon, TimerIcon, FlameIcon, ExchangeIcon, LightbulbIcon, CheckIcon, CloseIcon, ChefHatIcon, AlertTriangleIcon, CalendarIcon } from '../components/Icons';
+import { AddToPlanModal } from '../components/AddToPlanModal';
+import { WeeklyPlan } from '../types';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
@@ -11,14 +13,28 @@ export const RecipeDetailScreen = ({
     recipe,
     onClose,
     onSave,
-    isSaved
+
+    isSaved,
+    userDislikes = [],
+    weeklyPlan = null,
+    onAddToPlan
 }: {
     recipe: Recipe;
     onClose: () => void;
     onSave: (r: Recipe) => void;
-    isSaved: boolean
+    isSaved: boolean;
+    userDislikes?: string[];
+    weeklyPlan?: WeeklyPlan | null;
+    onAddToPlan?: (recipe: Recipe, dayIndex: number, slotIndex: number) => void;
 }) => {
     const [cookingMode, setCookingMode] = useState(false);
+    const [showAddToPlan, setShowAddToPlan] = useState(false);
+
+    const conflictingIngredients = recipe.ingredients.filter(ing =>
+        userDislikes.some(dislike => ing.name.toLowerCase().includes(dislike.toLowerCase()))
+    );
+
+    const hasConflict = conflictingIngredients.length > 0;
 
     return (
         <View style={styles.container}>
@@ -26,7 +42,7 @@ export const RecipeDetailScreen = ({
             <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
                 {/* Header Image */}
                 <View style={styles.imageContainer}>
-                    <Image source={{ uri: recipe.imageUrl }} style={styles.image} />
+                    <Image source={recipe.imageSource ? recipe.imageSource : { uri: recipe.imageUrl }} style={styles.image} />
                     <LinearGradient
                         colors={['transparent', 'rgba(0,0,0,0.8)']}
                         style={styles.gradient}
@@ -37,38 +53,58 @@ export const RecipeDetailScreen = ({
                         <TouchableOpacity onPress={onClose} style={styles.iconButton}>
                             <ArrowRightIcon size={24} color="white" style={{ transform: [{ rotate: '180deg' }] }} />
                         </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => onSave(recipe)}
-                            style={[styles.iconButton, isSaved && styles.savedButton]}
-                        >
-                            <BookHeartIcon size={24} color={isSaved ? "black" : "white"} fill={isSaved ? "black" : "none"} />
+                        <TouchableOpacity onPress={() => onSave(recipe)} style={styles.iconBtn}>
+                            <BookHeartIcon size={24} color={isSaved ? "#a6f000" : "white"} fill={isSaved ? "#a6f000" : "none"} />
                         </TouchableOpacity>
+                        {onAddToPlan && weeklyPlan && (
+                            <TouchableOpacity onPress={() => setShowAddToPlan(true)} style={styles.iconBtn}>
+                                <CalendarIcon size={24} color="white" />
+                            </TouchableOpacity>
+                        )}
                     </View>
+                </View>
 
-                    {/* Title & Info */}
-                    <View style={styles.headerInfo}>
-                        <View style={styles.categoryTag}>
-                            <Text style={styles.categoryText}>{recipe.category}</Text>
+                {/* Add to Plan Modal */}
+                {weeklyPlan && onAddToPlan && (
+                    <AddToPlanModal
+                        visible={showAddToPlan}
+                        onClose={() => setShowAddToPlan(false)}
+                        plan={weeklyPlan}
+                        onConfirm={(day, slot) => onAddToPlan(recipe, day, slot)}
+                    />
+                )}         {/* Title & Info */}
+                <View style={styles.headerInfo}>
+                    <View style={styles.categoryTag}>
+                        <Text style={styles.categoryText}>{recipe.category}</Text>
+                    </View>
+                    <Text style={styles.title}>{recipe.name}</Text>
+                    <View style={styles.metaRow}>
+                        <View style={styles.metaItem}>
+                            <TimerIcon size={16} color="rgba(255,255,255,0.8)" />
+                            <Text style={styles.metaText}>{recipe.prepTime}</Text>
                         </View>
-                        <Text style={styles.title}>{recipe.name}</Text>
-                        <View style={styles.metaRow}>
-                            <View style={styles.metaItem}>
-                                <TimerIcon size={16} color="rgba(255,255,255,0.8)" />
-                                <Text style={styles.metaText}>{recipe.prepTime}</Text>
-                            </View>
-                            <View style={styles.metaItem}>
-                                <FlameIcon size={16} color="rgba(255,255,255,0.8)" />
-                                <Text style={styles.metaText}>{recipe.macros.calories} kcal</Text>
-                            </View>
-                            <View style={styles.metaItem}>
-                                <Text style={styles.metaText}>{recipe.difficulty}</Text>
-                            </View>
+                        <View style={styles.metaItem}>
+                            <FlameIcon size={16} color="rgba(255,255,255,0.8)" />
+                            <Text style={styles.metaText}>{recipe.macros.calories} kcal</Text>
+                        </View>
+                        <View style={styles.metaItem}>
+                            <Text style={styles.metaText}>{recipe.difficulty}</Text>
                         </View>
                     </View>
                 </View>
 
+
                 {/* Content Body */}
                 <View style={styles.body}>
+
+                    {hasConflict && (
+                        <View style={styles.warningBanner}>
+                            <AlertTriangleIcon size={20} color="#B45309" />
+                            <Text style={styles.warningText}>
+                                Contém ingredientes que você não gosta: {conflictingIngredients.map(i => i.name).join(', ')}
+                            </Text>
+                        </View>
+                    )}
 
                     <Text style={styles.description}>{recipe.description}</Text>
 
@@ -152,13 +188,13 @@ export const RecipeDetailScreen = ({
                     </View>
 
                 </View>
-            </ScrollView>
+            </ScrollView >
 
             {/* Cooking Mode Modal */}
-            <Modal visible={cookingMode} animationType="slide" presentationStyle="fullScreen">
+            < Modal visible={cookingMode} animationType="slide" presentationStyle="fullScreen" >
                 <CookingMode recipe={recipe} onClose={() => setCookingMode(false)} />
-            </Modal>
-        </View>
+            </Modal >
+        </View >
     );
 };
 
@@ -334,6 +370,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         // backdropFilter: 'blur(10px)', 
     },
+    iconBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     savedButton: {
         backgroundColor: '#a6f000',
     },
@@ -427,6 +471,23 @@ const styles = StyleSheet.create({
     macroUnit: {
         fontSize: 10,
         color: '#9CA3AF',
+    },
+    warningBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: '#FFFBEB',
+        borderWidth: 1,
+        borderColor: '#FCD34D',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 24,
+    },
+    warningText: {
+        color: '#B45309',
+        fontSize: 14,
+        fontWeight: '600',
+        flex: 1,
     },
     sectionTitle: {
         fontSize: 18,

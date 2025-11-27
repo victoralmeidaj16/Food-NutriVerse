@@ -1,10 +1,31 @@
-import { GoogleGenAI, Type, Schema, GenerateContentResponse } from "@google/genai";
-import * as Crypto from 'expo-crypto';
+import { randomUUID } from 'expo-crypto';
 import { UserGoal, Recipe, UserProfile, WeeklyPlan, ShoppingList, ShoppingItem } from "../types";
 import { generateAndSaveImage, getImageUrl } from './imageService';
-import { API_KEY } from './config';
+import { BACKEND_URL } from './config';
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+// Helper to call backend
+const callBackend = async (endpoint: string, body: any) => {
+    console.log(`Calling backend: ${BACKEND_URL}${endpoint}`);
+    try {
+        const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Backend error ${response.status}: ${errorText}`);
+            throw new Error(`Backend error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data; // Expected { text: "..." }
+    } catch (error) {
+        console.error("Backend call failed:", error);
+        throw error;
+    }
+};
 
 // Helper function for exponential backoff
 const retryOperation = async <T>(
@@ -27,6 +48,24 @@ const retryOperation = async <T>(
     }
 };
 
+// Define types locally to avoid SDK dependency
+enum Type {
+    OBJECT = "OBJECT",
+    ARRAY = "ARRAY",
+    STRING = "STRING",
+    NUMBER = "NUMBER",
+    BOOLEAN = "BOOLEAN"
+}
+
+interface Schema {
+    type: Type;
+    properties?: Record<string, Schema>;
+    items?: Schema;
+    enum?: string[];
+    required?: string[];
+    description?: string;
+}
+
 export const identifyIngredientsFromImage = async (base64Image: string): Promise<string[]> => {
     const ingredientSchema: Schema = {
         type: Type.OBJECT,
@@ -41,21 +80,19 @@ export const identifyIngredientsFromImage = async (base64Image: string): Promise
     };
 
     try {
-        const response = await retryOperation<GenerateContentResponse>(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: {
-                parts: [
-                    {
-                        inlineData: {
-                            mimeType: 'image/jpeg',
-                            data: base64Image
-                        }
-                    },
-                    {
-                        text: "Analise esta imagem e identifique todos os ingredientes alimentícios visíveis (frutas, vegetais, embalagens, etc). Liste apenas os nomes em português, de forma genérica (ex: 'Leite' em vez de 'Leite Desnatado Marca X')."
+        const response = await retryOperation(() => callBackend('/api/generate-recipe', {
+            model: "gemini-1.5-flash",
+            contents: [
+                {
+                    inlineData: {
+                        mimeType: 'image/jpeg',
+                        data: base64Image
                     }
-                ]
-            },
+                },
+                {
+                    text: "Analise esta imagem e identifique todos os ingredientes alimentícios visíveis (frutas, vegetais, embalagens, etc). Liste apenas os nomes em português, de forma genérica (ex: 'Leite' em vez de 'Leite Desnatado Marca X')."
+                }
+            ],
             config: {
                 responseMimeType: "application/json",
                 responseSchema: ingredientSchema,
@@ -133,7 +170,8 @@ const recipeSchema: Schema = {
 export const generateFitnessRecipe = async (
     input: string | string[], // Can be a dish name (string) or ingredients list (string[])
     goal: UserGoal,
-    restrictions: string[] = []
+    restrictions: string[] = [],
+    dislikes: string[] = []
 ): Promise<Recipe | null> => {
 
     const goalPromptMap = {
@@ -164,7 +202,9 @@ export const generateFitnessRecipe = async (
     Atue como o Chef NutriVerse, especialista em nutrição esportiva e gastronomia funcional.
     
     Objetivo do Usuário: ${goalPromptMap[goal]}.
+    Objetivo do Usuário: ${goalPromptMap[goal]}.
     Restrições/Alergias: ${restrictions.join(", ") || "Nenhuma"}.
+    Aversões (NÃO USAR): ${dislikes.join(", ") || "Nenhuma"}.
 
     ${coreInstruction}
 
@@ -180,8 +220,8 @@ export const generateFitnessRecipe = async (
   `;
 
     try {
-        const response = await retryOperation<GenerateContentResponse>(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
+        const response = await retryOperation(() => callBackend('/api/generate-recipe', {
+            model: "gemini-1.5-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -205,7 +245,7 @@ export const generateFitnessRecipe = async (
 
         return {
             ...data,
-            id: Crypto.randomUUID(),
+            id: randomUUID(),
             createdAt: Date.now(),
             imageUrl: localImageUri || getImageUrl(data.name)
         } as Recipe;
@@ -270,8 +310,8 @@ export const generateWeeklyPlan = async (
     };
 
     try {
-        const response = await retryOperation<GenerateContentResponse>(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
+        const response = await retryOperation(() => callBackend('/api/generate-recipe', {
+            model: "gemini-1.5-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -289,11 +329,11 @@ export const generateWeeklyPlan = async (
         const days = data.days.map((day: any) => ({
             ...day,
             meals: day.meals.map((meal: any) => ({
-                id: Crypto.randomUUID(),
+                id: randomUUID(),
                 timeSlot: meal.timeSlot,
                 recipe: {
                     ...meal.recipe,
-                    id: Crypto.randomUUID(),
+                    id: randomUUID(),
                     createdAt: Date.now(),
                     imageUrl: getImageUrl(meal.recipe.name)
                 }
@@ -301,7 +341,7 @@ export const generateWeeklyPlan = async (
         }));
 
         return {
-            id: Crypto.randomUUID(),
+            id: randomUUID(),
             startDate: Date.now(),
             days
         } as WeeklyPlan;
@@ -352,8 +392,8 @@ export const generateShoppingList = async (plan: WeeklyPlan): Promise<ShoppingLi
     };
 
     try {
-        const response = await retryOperation<GenerateContentResponse>(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
+        const response = await retryOperation(() => callBackend('/api/generate-recipe', {
+            model: "gemini-1.5-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -367,7 +407,7 @@ export const generateShoppingList = async (plan: WeeklyPlan): Promise<ShoppingLi
         const data = JSON.parse(text);
 
         return {
-            items: data.items.map((i: any) => ({ ...i, id: Crypto.randomUUID(), checked: false }))
+            items: data.items.map((i: any) => ({ ...i, id: randomUUID(), checked: false }))
         } as ShoppingList;
 
     } catch (error) {

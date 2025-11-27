@@ -5,55 +5,77 @@ import { TimerIcon, FlameIcon, BookHeartIcon } from './Icons';
 
 const { width } = Dimensions.get('window');
 
-export const RecipeCard = ({ recipe, onPress }: { recipe: Recipe; onPress: () => void }) => (
-    <TouchableOpacity onPress={onPress} style={styles.card} activeOpacity={0.95}>
-        <View style={styles.imageContainer}>
-            <Image
-                source={{ uri: recipe.imageUrl }}
-                style={styles.image}
-                onError={(e) => console.log('Error loading image:', recipe.name, e.nativeEvent.error)}
-            />
-            <View style={styles.overlay} />
+export const RecipeCard = ({
+    recipe,
+    onPress,
+    onSave,
+    isSaved,
+    userDislikes = []
+}: {
+    recipe: Recipe;
+    onPress: () => void;
+    onSave?: (r: Recipe) => void;
+    isSaved?: boolean;
+    userDislikes?: string[];
+}) => {
+    const hasConflict = userDislikes.some(dislike =>
+        recipe.ingredients.some(ing => ing.name.toLowerCase().includes(dislike.toLowerCase()))
+    );
 
-            <View style={styles.topRow}>
-                <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryText}>{recipe.category}</Text>
+    return (
+        <TouchableOpacity onPress={onPress} style={styles.card} activeOpacity={0.95}>
+            <View style={styles.imageContainer}>
+                <Image
+                    source={recipe.imageSource ? recipe.imageSource : { uri: recipe.imageUrl }}
+                    style={styles.image}
+                    onError={(e) => console.log('Error loading image:', recipe.name, e.nativeEvent.error)}
+                />
+                <View style={styles.overlay} />
+
+                <View style={styles.topRow}>
+                    <View style={styles.categoryBadge}>
+                        <Text style={styles.categoryText}>{recipe.category}</Text>
+                    </View>
+                    {onSave && (
+                        <TouchableOpacity onPress={() => onSave(recipe)} style={styles.saveBadge}>
+                            <BookHeartIcon size={16} color={isSaved ? "#a6f000" : "white"} fill={isSaved ? "#a6f000" : "none"} />
+                        </TouchableOpacity>
+                    )}
                 </View>
-                <View style={styles.saveBadge}>
-                    <BookHeartIcon size={16} color="white" />
+
+                <View style={styles.bottomRow}>
+                    <View style={styles.timeBadge}>
+                        <TimerIcon size={12} color="white" />
+                        <Text style={styles.timeText}>{recipe.prepTime}</Text>
+                    </View>
                 </View>
             </View>
 
-            <View style={styles.bottomRow}>
-                <View style={styles.timeBadge}>
-                    <TimerIcon size={12} color="white" />
-                    <Text style={styles.timeText}>{recipe.prepTime}</Text>
+            <View style={styles.content}>
+                <View style={styles.headerRow}>
+                    <Text style={styles.title} numberOfLines={2}>{recipe.name}</Text>
+                    {hasConflict && (
+                        <View style={styles.warningBadge}>
+                            <Text style={styles.warningText}>⚠️</Text>
+                        </View>
+                    )}
                 </View>
-            </View>
-        </View>
 
-        <View style={styles.content}>
-            <View style={styles.headerRow}>
-                <Text style={styles.title} numberOfLines={2}>{recipe.name}</Text>
-                <View style={styles.ratingBadge}>
-                    <Text style={styles.ratingText}>4.9 ★</Text>
+                <View style={styles.metaRow}>
+                    <View style={styles.metaItem}>
+                        <FlameIcon size={14} color="#F97316" />
+                        <Text style={styles.metaText}>{recipe.macros.calories} kcal</Text>
+                    </View>
+                    <View style={styles.divider} />
+                    <View style={styles.metaItem}>
+                        <View style={[styles.dot, { backgroundColor: getDifficultyColor(recipe.difficulty) }]} />
+                        <Text style={styles.metaText}>{recipe.difficulty}</Text>
+                    </View>
                 </View>
             </View>
-
-            <View style={styles.metaRow}>
-                <View style={styles.metaItem}>
-                    <FlameIcon size={14} color="#F97316" />
-                    <Text style={styles.metaText}>{recipe.macros.calories} kcal</Text>
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.metaItem}>
-                    <View style={[styles.dot, { backgroundColor: getDifficultyColor(recipe.difficulty) }]} />
-                    <Text style={styles.metaText}>{recipe.difficulty}</Text>
-                </View>
-            </View>
-        </View>
-    </TouchableOpacity>
-);
+        </TouchableOpacity>
+    );
+};
 
 const getDifficultyColor = (diff: string) => {
     switch (diff) {
@@ -199,5 +221,16 @@ const styles = StyleSheet.create({
         width: 6,
         height: 6,
         borderRadius: 3,
+    },
+    warningBadge: {
+        backgroundColor: '#FEF2F2',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#FECACA',
+    },
+    warningText: {
+        fontSize: 12,
     },
 });

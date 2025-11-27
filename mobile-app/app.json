@@ -14,6 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.victoralmeidaj16.foodnutriverse",
       "infoPlist": {
         "NSCameraUsageDescription": "Precisamos de acesso à câmera para você escanear ingredientes.",
         "NSPhotoLibraryUsageDescription": "Precisamos de acesso à galeria para você escolher fotos de ingredientes."
@@ -24,11 +25,17 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "package": "com.victoralmeidaj16.foodnutriverse",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "fed4e9a4-ad21-43af-bfb6-e76330a74e2e"
+      }
     }
   }
 }

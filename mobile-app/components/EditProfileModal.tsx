@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, Alert, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { UserProfile, UserGoal, ActivityLevel, RESTRICTION_OPTIONS } from '../types';
-import { CloseIcon, CheckIcon, CameraIcon, UserIcon } from './Icons';
+import { CloseIcon, CheckIcon, CameraIcon, UserIcon, PlusIcon, TrashIcon } from './Icons';
 
 export const EditProfileModal = ({
   profile,
@@ -17,6 +17,8 @@ export const EditProfileModal = ({
   const [goal, setGoal] = useState<UserGoal>(profile.goal);
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(profile.activityLevel);
   const [restrictions, setRestrictions] = useState<string[]>(profile.dietaryRestrictions);
+  const [dislikes, setDislikes] = useState<string[]>(profile.dislikes || []);
+  const [newDislike, setNewDislike] = useState('');
   const [editedProfile, setEditedProfile] = useState<UserProfile>(profile);
 
   const toggleRestriction = (res: string) => {
@@ -25,6 +27,19 @@ export const EditProfileModal = ({
     } else {
       setRestrictions(prev => [...prev, res]);
     }
+  };
+
+  const addDislike = () => {
+    if (newDislike.trim()) {
+      if (!dislikes.includes(newDislike.trim())) {
+        setDislikes(prev => [...prev, newDislike.trim()]);
+      }
+      setNewDislike('');
+    }
+  };
+
+  const removeDislike = (item: string) => {
+    setDislikes(prev => prev.filter(i => i !== item));
   };
 
   const handleSave = () => {
@@ -38,6 +53,7 @@ export const EditProfileModal = ({
       goal,
       activityLevel,
       dietaryRestrictions: restrictions,
+      dislikes,
     });
     onClose();
   };
@@ -120,6 +136,35 @@ export const EditProfileModal = ({
                     {opt}
                   </Text>
                 </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>O que você NÃO gosta/come?</Text>
+            <Text style={styles.helperText}>Esses alimentos serão evitados nas receitas.</Text>
+
+            <View style={styles.addDislikeRow}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                value={newDislike}
+                onChangeText={setNewDislike}
+                placeholder="Ex: Cebola, Pimentão..."
+                onSubmitEditing={addDislike}
+              />
+              <TouchableOpacity onPress={addDislike} style={styles.addBtn}>
+                <PlusIcon size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.dislikesList}>
+              {dislikes.map((item, index) => (
+                <View key={index} style={styles.dislikeChip}>
+                  <Text style={styles.dislikeText}>{item}</Text>
+                  <TouchableOpacity onPress={() => removeDislike(item)}>
+                    <TrashIcon size={14} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
           </View>
@@ -212,6 +257,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1F2937',
   },
+  helperText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: -8,
+    marginBottom: 4,
+  },
   input: {
     backgroundColor: 'white',
     borderWidth: 1,
@@ -264,5 +315,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: 'black',
+  },
+  addDislikeRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  addBtn: {
+    width: 56,
+    height: 56,
+    backgroundColor: 'black',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dislikesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  dislikeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 16,
+    paddingRight: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+  },
+  dislikeText: {
+    color: '#EF4444',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

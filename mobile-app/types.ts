@@ -113,7 +113,7 @@ export type Tab = 'HOME' | 'EXPLORE' | 'PLANNING' | 'LIBRARY' | 'PROFILE';
 export interface MealSlot {
     id: string;
     timeSlot: 'Café da Manhã' | 'Almoço' | 'Lanche' | 'Jantar' | 'Ceia';
-    recipe: Recipe;
+    recipe: Recipe | null;
 }
 
 export interface DayPlan {

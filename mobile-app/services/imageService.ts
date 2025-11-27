@@ -40,7 +40,6 @@ export const generateAndSaveImage = async (prompt: string): Promise<string | nul
 
         console.log("Generating image using Google Gemini (Imagen 4)...");
 
-        // Imagen 4 endpoint on Google AI Studio
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-preview-06-06:predict?key=${GOOGLE_API_KEY}`, {
             method: "POST",
             headers: {
@@ -48,7 +47,11 @@ export const generateAndSaveImage = async (prompt: string): Promise<string | nul
             },
             body: JSON.stringify({
                 instances: [
-                    { prompt: enhancedPrompt }
+                    {
+                        prompt: {
+                            text: enhancedPrompt
+                        }
+                    }
                 ],
                 parameters: {
                     aspectRatio: "1:1",

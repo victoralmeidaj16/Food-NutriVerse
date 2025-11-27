@@ -5,10 +5,10 @@ import { getImageUrl } from "./imageService";
 export const MOCK_RECIPES: Recipe[] = [
     // --- Café da Manhã ---
     {
-        id: 'mock-1',
+        id: '1',
         name: 'Panqueca de Banana e Aveia',
         description: 'Energia limpa para começar o dia, rica em fibras e potássio.',
-        imageUrl: getImageUrl('Panqueca de Banana e Aveia'),
+        imageSource: require('../assets/images/recipes/panqueca_banana.png'),
         prepTime: '15 min',
         difficulty: 'Fácil',
         category: 'Café da Manhã',
@@ -24,7 +24,7 @@ export const MOCK_RECIPES: Recipe[] = [
             'Misture o ovo e a aveia até ficar homogêneo.',
             'Aqueça uma frigideira antiaderente.',
             'Despeje a massa e doure dos dois lados.',
-            'Sirva com um fio de mel se desejar.'
+            'Serve com um fio de mel se desejar.'
         ],
         substitutions: [
             { original: 'Farinha de Trigo', replacement: 'Aveia', reason: 'Mais fibras e menor índice glicêmico' }
@@ -34,10 +34,10 @@ export const MOCK_RECIPES: Recipe[] = [
         createdAt: Date.now()
     },
     {
-        id: 'mock-2',
+        id: '2',
         name: 'Ovos Mexidos Cremosos',
         description: 'Proteína pura com cremosidade sem excesso de gordura.',
-        imageUrl: getImageUrl('Ovos Mexidos Cremosos'),
+        imageSource: require('../assets/images/recipes/ovos_mexidos.png'),
         prepTime: '10 min',
         difficulty: 'Fácil',
         category: 'Café da Manhã',
@@ -50,9 +50,8 @@ export const MOCK_RECIPES: Recipe[] = [
         instructions: [
             'Bata os ovos levemente.',
             'Coloque na frigideira em fogo baixo.',
-            'Coloque na frigideira fria com a manteiga.',
-            'Ligue o fogo baixo e mexa sem parar.',
-            'Tire do fogo antes de secar totalmente.'
+            'Mexa sempre para não secar.',
+            'Adicione o requeijão no final para cremosidade.'
         ],
         substitutions: [],
         healthTips: 'Rico em colina, essencial para o cérebro.',
@@ -63,7 +62,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '3',
         name: 'Bowl de Salmão e Quinoa',
         description: 'Refeição completa com proteínas de alto valor biológico.',
-        imageSource: require('../assets/images/recipes/bowl.png'),
+        imageSource: require('../assets/images/recipes/bowl_salmao.png'),
         prepTime: '25 min',
         difficulty: 'Médio',
         category: 'Almoço',
@@ -81,8 +80,8 @@ export const MOCK_RECIPES: Recipe[] = [
             'Finalize com azeite.'
         ],
         substitutions: [
-            { original: 'Ovo', replacement: 'Linhaça hidratada', reason: 'Vegano' },
-            { original: 'Aveia', replacement: 'Farinha de amêndoas', reason: 'Low carb' }
+            { original: 'Salmão', replacement: 'Atum ou Frango', reason: 'Custo ou preferência' },
+            { original: 'Quinoa', replacement: 'Arroz integral', reason: 'Acessibilidade' }
         ],
         healthTips: 'Rico em Ômega-3, anti-inflamatório natural.',
         tags: ['Pescatariano', 'Superfood'],
@@ -92,7 +91,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '4',
         name: 'Escondidinho de Patinho e Abóbora',
         description: 'Confort food em versão fit e low carb.',
-        imageSource: require('../assets/images/recipes/frango.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/escondidinho_patinho.png'), // Placeholder
         prepTime: '40 min',
         difficulty: 'Médio',
         category: 'Almoço',
@@ -116,7 +115,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '5',
         name: 'Crepioca de Frango',
         description: 'Lanche proteico prático para levar.',
-        imageSource: require('../assets/images/recipes/frango_abobrinha.png'),
+        imageSource: require('../assets/images/recipes/crepioca_frango.png'),
         prepTime: '15 min',
         difficulty: 'Fácil',
         category: 'Lanches',
@@ -140,7 +139,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '6',
         name: 'Iogurte com Whey e Frutas',
         description: 'Pós-treino rápido e refrescante.',
-        imageSource: require('../assets/images/recipes/smoothie_verde.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/iogurte_whey.png'), // Placeholder
         prepTime: '5 min',
         difficulty: 'Fácil',
         category: 'Lanches',
@@ -163,7 +162,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '7',
         name: 'Chips de Coco',
         description: 'Snack crocante rico em gorduras boas.',
-        imageSource: require('../assets/images/recipes/bowl.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/chips_coco.png'), // Placeholder
         prepTime: '20 min',
         difficulty: 'Fácil',
         category: 'Lanches',
@@ -186,7 +185,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '8',
         name: 'Omelete de Forno com Vegetais',
         description: 'Jantar leve para aproveitar sobras de vegetais.',
-        imageSource: require('../assets/images/recipes/omelete.png'),
+        imageSource: require('../assets/images/recipes/omelete_forno.png'),
         prepTime: '25 min',
         difficulty: 'Fácil',
         category: 'Jantar',
@@ -211,7 +210,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '9',
         name: 'Sopa de Abóbora com Gengibre',
         description: 'Jantar leve e termogênico.',
-        imageSource: require('../assets/images/recipes/bowl.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/sopa_abobora.png'), // Placeholder
         prepTime: '30 min',
         difficulty: 'Fácil',
         category: 'Jantar',
@@ -235,7 +234,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '10',
         name: 'Salada Caesar com Iogurte',
         description: 'Versão leve do clássico, sem maionese.',
-        imageSource: require('../assets/images/recipes/salada_atum.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/salada_caesar.png'), // Placeholder
         prepTime: '15 min',
         difficulty: 'Fácil',
         category: 'Jantar',

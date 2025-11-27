@@ -11,7 +11,8 @@ import { RecipePackScreen } from './screens/RecipePackScreen';
 import { MainScreen } from './screens/MainScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { SignUpScreen } from './screens/SignUpScreen';
-import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan, Recipe } from './types';
+import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan, Recipe, WeeklyPlan } from './types';
+import { storageService } from './services/storage';
 
 // --- Types ---
 type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL' | 'PAYWALL' | 'RECIPE_PACK';
@@ -25,6 +26,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [pendingProfile, setPendingProfile] = useState<UserProfile | null>(null);
+  const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
 
   const loadUserProfile = async (uid: string) => {
     try {
@@ -32,9 +34,86 @@ export default function App() {
       if (profile) {
         setUserProfile(profile);
         setUser({ name: profile.name });
+        await storageService.saveProfile(profile); // Save to local storage
       }
     } catch (error) {
       console.error("Error loading profile:", error);
+    }
+  };
+
+  const loadUserSpecificData = async (uid: string) => {
+    try {
+      // Load profile from Firestore first, then local storage
+      const profile = await getUserProfile(uid);
+      if (profile) {
+        setUserProfile(profile);
+        setUser({ name: profile.name });
+        await storageService.saveProfile(profile);
+      } else {
+        // If no profile in Firestore, check local storage
+        const localProfile = await storageService.loadProfile();
+        if (localProfile) {
+          setUserProfile(localProfile);
+          setUser({ name: localProfile.name });
+          // Optionally, save this local profile to Firestore if it's missing there
+          await saveUserProfile(uid, localProfile);
+        } else {
+          // If no profile anywhere, create a default one
+          const defaultProfile: UserProfile = {
+            name: 'Usuário',
+            goal: UserGoal.LOSE_WEIGHT,
+            activityLevel: ActivityLevel.MEDIUM,
+            mealsPerDay: 3,
+            mealSlots: ['Café', 'Almoço', 'Jantar'],
+            dietaryRestrictions: [],
+            dislikes: [],
+            usageModes: [AppUsageMode.FIT_SWAP],
+            plan: SubscriptionPlan.FREE,
+            isPro: false,
+            usageStats: {
+              recipesGeneratedToday: 0,
+              lastGenerationDate: new Date().toISOString(),
+              desiresTransformedToday: 0,
+              lastDesireDate: new Date().toISOString(),
+              pantryScansThisWeek: 0,
+              lastScanDate: new Date().toISOString(),
+              savedRecipesCount: 0
+            }
+          };
+          await saveUserProfile(uid, defaultProfile);
+          await storageService.saveProfile(defaultProfile);
+          setUserProfile(defaultProfile);
+          setUser({ name: defaultProfile.name });
+        }
+      }
+
+      const saved = await storageService.loadSavedRecipes();
+      setSavedRecipes(new Set(saved));
+
+      const plan = await storageService.loadWeeklyPlan();
+      if (plan) setWeeklyPlan(plan);
+      else {
+        // Initialize a default weekly plan if none exists
+        const defaultPlan: WeeklyPlan = {
+          id: 'default-plan',
+          startDate: Date.now(),
+          days: Array.from({ length: 7 }, (_, dayIndex) => ({
+            dayIndex,
+            dayName: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dayIndex],
+            meals: Array.from({ length: userProfile?.mealsPerDay || 3 }, (_, mealIndex) => ({
+              slotIndex: mealIndex,
+              recipe: null,
+              timeSlot: (['Café da Manhã', 'Almoço', 'Lanche', 'Jantar', 'Ceia'][mealIndex] || 'Lanche') as any,
+              id: Math.random().toString(36).substr(2, 9)
+            })),
+          })),
+        };
+        setWeeklyPlan(defaultPlan);
+        await storageService.saveWeeklyPlan(defaultPlan);
+      }
+
+    } catch (error) {
+      console.error("Error loading user specific data:", error);
     }
   };
 
@@ -43,47 +122,13 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setFirebaseUser(currentUser);
       if (currentUser) {
-        try {
-          const profile = await getUserProfile(currentUser.uid);
-          if (profile) {
-            setUserProfile(profile);
-            setUser({ name: profile.name });
-            setCurrentScreen('MAIN');
-          } else {
-            // If logged in but no profile, create a default one and save it
-            const defaultProfile: UserProfile = {
-              name: 'Usuário',
-              goal: UserGoal.LOSE_WEIGHT,
-              activityLevel: ActivityLevel.MEDIUM,
-              mealsPerDay: 3,
-              mealSlots: ['Café', 'Almoço', 'Jantar'],
-              dietaryRestrictions: [],
-              dislikes: [],
-              usageModes: [AppUsageMode.FIT_SWAP],
-              plan: SubscriptionPlan.FREE,
-              isPro: false,
-              usageStats: {
-                recipesGeneratedToday: 0,
-                lastGenerationDate: new Date().toISOString(),
-                desiresTransformedToday: 0,
-                lastDesireDate: new Date().toISOString(),
-                pantryScansThisWeek: 0,
-                lastScanDate: new Date().toISOString(),
-                savedRecipesCount: 0
-              }
-            };
-            await saveUserProfile(currentUser.uid, defaultProfile);
-            setUserProfile(defaultProfile);
-            setUser({ name: defaultProfile.name });
-            setCurrentScreen('MAIN');
-          }
-        } catch (error) {
-          console.error("Error loading profile:", error);
-        }
+        await loadUserSpecificData(currentUser.uid);
+        setCurrentScreen('MAIN');
       } else {
         setUser(null);
         setUserProfile(null);
         setSavedRecipes(new Set());
+        setWeeklyPlan(null); // Clear weekly plan on logout
         // If we just logged out, go to ONBOARDING (or LOGIN? User asked for Onboarding first)
         setCurrentScreen('ONBOARDING');
       }
@@ -110,6 +155,7 @@ export default function App() {
       newSaved.add(recipe.id);
     }
     setSavedRecipes(newSaved);
+    await storageService.saveSavedRecipes(Array.from(newSaved));
 
     if (userProfile && firebaseUser) {
       const updatedProfile = { ...userProfile };
@@ -126,6 +172,7 @@ export default function App() {
     setUser({ name: profile.name });
     if (firebaseUser) {
       await updateUserProfile(firebaseUser.uid, profile);
+      await storageService.saveProfile(profile);
     }
   };
 
@@ -136,6 +183,18 @@ export default function App() {
     } catch (error) {
       console.error("Error signing out: ", error);
     }
+  };
+
+  const handleAddToPlan = async (recipe: Recipe, dayIndex: number, slotIndex: number) => {
+    if (!weeklyPlan) return;
+
+    const newPlan = { ...weeklyPlan };
+    // Generate a new ID for the recipe instance to avoid conflicts
+    const recipeInstance = { ...recipe, id: Math.random().toString(36).substr(2, 9) };
+    newPlan.days[dayIndex].meals[slotIndex].recipe = recipeInstance;
+
+    setWeeklyPlan(newPlan);
+    await storageService.saveWeeklyPlan(newPlan);
   };
 
   if (isLoading) {
@@ -154,6 +213,9 @@ export default function App() {
         onClose={() => setSelectedRecipe(null)}
         onSave={handleSaveRecipe}
         isSaved={savedRecipes.has(selectedRecipe.id)}
+        userDislikes={userProfile?.dislikes || []}
+        weeklyPlan={weeklyPlan}
+        onAddToPlan={handleAddToPlan}
       />
     );
   }
@@ -205,6 +267,8 @@ export default function App() {
             onUpdateProfile={handleUpdateProfile}
             onShowPaywall={() => setCurrentScreen('PAYWALL')}
             onOpenRecipePack={() => setCurrentScreen('RECIPE_PACK')}
+            weeklyPlan={weeklyPlan}
+            setWeeklyPlan={setWeeklyPlan}
           />
         );
       default:

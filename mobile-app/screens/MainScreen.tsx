@@ -41,7 +41,9 @@ export const MainScreen = ({
     onToggleSave,
     onUpdateProfile,
     onShowPaywall,
-    onOpenRecipePack
+    onOpenRecipePack,
+    weeklyPlan,
+    setWeeklyPlan
 }: {
     user: { name: string } | null,
     userProfile: UserProfile | null,
@@ -51,7 +53,9 @@ export const MainScreen = ({
     onToggleSave: (r: Recipe) => void,
     onUpdateProfile: (p: UserProfile) => void,
     onShowPaywall: () => void,
-    onOpenRecipePack: () => void
+    onOpenRecipePack: () => void,
+    weeklyPlan: WeeklyPlan | null,
+    setWeeklyPlan: (plan: WeeklyPlan | null) => void
 }) => {
     const [activeTab, setActiveTab] = useState<Tab>('HOME');
     const fabScale = useRef(new Animated.Value(1)).current;
@@ -67,7 +71,7 @@ export const MainScreen = ({
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
     // Planning State
-    const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
+    // weeklyPlan is now a prop
     const [shoppingList, setShoppingList] = useState<ShoppingList | null>(null);
     const [activePlanningDay, setActivePlanningDay] = useState(0);
     const [showPlanningWizard, setShowPlanningWizard] = useState(false);
@@ -87,9 +91,8 @@ export const MainScreen = ({
     // Load Planning Data
     useEffect(() => {
         const loadPlanningData = async () => {
-            const plan = await storageService.loadWeeklyPlan();
+            // Plan is loaded in App.tsx
             const list = await storageService.loadShoppingList();
-            if (plan) setWeeklyPlan(plan);
             if (list) setShoppingList(list);
         };
         loadPlanningData();
@@ -263,7 +266,12 @@ export const MainScreen = ({
         setLoadingMsg(exploreMode === 'TEXT' ? "Fitzando receita..." : "Criando com o que você tem...");
 
         try {
-            const result = await generateFitnessRecipe(input, userProfile.goal, userProfile.dietaryRestrictions);
+            const result = await generateFitnessRecipe(
+                input,
+                userProfile.goal,
+                userProfile.dietaryRestrictions,
+                userProfile.dislikes || []
+            );
             if (result) {
                 setGeneratedRecipes(prev => [result, ...prev]);
                 onRecipeClick(result); // Open immediately
@@ -376,7 +384,8 @@ export const MainScreen = ({
                             const newRecipe = await generateFitnessRecipe(
                                 mealSlot.timeSlot,
                                 userProfile.goal,
-                                userProfile.dietaryRestrictions
+                                userProfile.dietaryRestrictions,
+                                userProfile.dislikes || []
                             );
 
                             if (newRecipe) {
@@ -753,21 +762,27 @@ export const MainScreen = ({
                         <View style={styles.mealsList}>
                             {weeklyPlan.days[activePlanningDay].meals.map((meal, idx) => (
                                 <View key={meal.id} style={styles.mealCard}>
-                                    <TouchableOpacity onPress={() => onRecipeClick(meal.recipe)}>
-                                        <Image source={{ uri: meal.recipe.imageUrl || 'https://via.placeholder.com/150' }} style={styles.mealImage} />
-                                    </TouchableOpacity>
+                                    {meal.recipe ? (
+                                        <TouchableOpacity onPress={() => onRecipeClick(meal.recipe!)}>
+                                            <Image source={{ uri: meal.recipe.imageUrl || 'https://via.placeholder.com/150' }} style={styles.mealImage} />
+                                        </TouchableOpacity>
+                                    ) : (
+                                        <View style={[styles.mealImage, { backgroundColor: '#E5E7EB' }]} />
+                                    )}
                                     <View style={styles.mealInfo}>
                                         <View style={styles.mealHeader}>
                                             <View style={styles.timeSlotBadge}>
                                                 <Text style={styles.timeSlotText}>{meal.timeSlot}</Text>
                                             </View>
                                             <View style={styles.mealActions}>
-                                                <TouchableOpacity
-                                                    onPress={() => handleOpenCopyModal(activePlanningDay, idx, meal.recipe)}
-                                                    style={styles.actionBtn}
-                                                >
-                                                    <CopyIcon size={16} color="#6B7280" />
-                                                </TouchableOpacity>
+                                                {meal.recipe && (
+                                                    <TouchableOpacity
+                                                        onPress={() => handleOpenCopyModal(activePlanningDay, idx, meal.recipe!)}
+                                                        style={styles.actionBtn}
+                                                    >
+                                                        <CopyIcon size={16} color="#6B7280" />
+                                                    </TouchableOpacity>
+                                                )}
                                                 <TouchableOpacity
                                                     onPress={() => handleRegenerateMeal(activePlanningDay, idx)}
                                                     style={styles.actionBtn}
@@ -781,17 +796,17 @@ export const MainScreen = ({
                                                 </TouchableOpacity>
                                             </View>
                                         </View>
-                                        <TouchableOpacity onPress={() => onRecipeClick(meal.recipe)}>
-                                            <Text numberOfLines={2} style={styles.mealName}>{meal.recipe.name}</Text>
+                                        <TouchableOpacity onPress={() => meal.recipe && onRecipeClick(meal.recipe)}>
+                                            <Text numberOfLines={2} style={styles.mealName}>{meal.recipe?.name}</Text>
                                         </TouchableOpacity>
                                         <View style={styles.mealMeta}>
                                             <View style={styles.metaItem}>
                                                 <TimerIcon size={12} color="#6B7280" />
-                                                <Text style={styles.metaText}>{meal.recipe.prepTime}</Text>
+                                                <Text style={styles.metaText}>{meal.recipe?.prepTime}</Text>
                                             </View>
                                             <View style={styles.metaItem}>
                                                 <FlameIcon size={12} color="#6B7280" />
-                                                <Text style={styles.metaText}>{meal.recipe.macros.calories} kcal</Text>
+                                                <Text style={styles.metaText}>{meal.recipe?.macros.calories} kcal</Text>
                                             </View>
                                         </View>
                                     </View>
@@ -875,6 +890,9 @@ export const MainScreen = ({
                                 key={recipe.id}
                                 recipe={recipe}
                                 onPress={() => onRecipeClick(recipe)}
+                                onSave={onToggleSave}
+                                isSaved={savedRecipes.has(recipe.id)}
+                                userDislikes={userProfile?.dislikes || []}
                             />
                         ))}
                     </View>
