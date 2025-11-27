@@ -33,76 +33,80 @@ const LOSE_WEIGHT_RECIPES: Recipe[] = [
         id: 'lw_2',
         name: 'Frango Grelhado com Abobrinha e Limão',
         description: 'Prato básico e delicioso; abobrinha dá volume e saciedade.',
-        // imageSource: require('../assets/images/recipes/frango.png'), // Using placeholder for now
+        imageSource: require('../assets/images/recipes/frango_abobrinha.png'),
         prepTime: '20 min',
         difficulty: 'Fácil',
         category: 'Almoço',
-        macros: { calories: 280, protein: 30, carbs: 8, fats: 10 },
+        macros: { calories: 350, protein: 35, carbs: 10, fats: 8 },
         ingredients: [
             { name: 'Peito de Frango', quantity: '150g', icon: '🍗' },
             { name: 'Abobrinha', quantity: '1 un', icon: '🥒' },
-            { name: 'Limão Siciliano', quantity: '1/2 un', icon: '🍋' }
+            { name: 'Limão', quantity: '1/2 un', icon: '🍋' }
         ],
-        instructions: ['Grelhe o frango.', 'Refogue a abobrinha.', 'Tempere com limão.'],
+        instructions: ['Tempere o frango.', 'Grelhe com a abobrinha.', 'Finalize com limão.'],
         substitutions: [],
-        healthTips: 'Vitamina C e fibras.',
-        tags: ['Low Carb', 'Leve'],
+        healthTips: 'Baixa caloria.',
+        tags: ['Low Carb', 'Rápido'],
         createdAt: Date.now()
     },
     {
         id: 'lw_3',
-        name: 'Salada Morna de Grão-de-Bico',
-        description: 'Grão-de-bico dá saciedade, tahine traz cremosidade sem exagero.',
-        prepTime: '15 min',
+        name: 'Salada de Atum com Grão de Bico',
+        description: 'Refeição fria, prática e rica em fibras.',
+        imageSource: require('../assets/images/recipes/salada_atum.png'),
+        prepTime: '10 min',
         difficulty: 'Fácil',
         category: 'Jantar',
-        macros: { calories: 320, protein: 12, carbs: 40, fats: 10 },
+        macros: { calories: 380, protein: 30, carbs: 25, fats: 10 },
         ingredients: [
-            { name: 'Grão-de-bico', quantity: '1 xícara', icon: '🥘' },
-            { name: 'Pimentão', quantity: '1/2 un', icon: '🌶️' },
-            { name: 'Tahine', quantity: '1 colher', icon: '🥜' }
+            { name: 'Atum em água', quantity: '1 lata', icon: '🐟' },
+            { name: 'Grão de Bico', quantity: '1/2 xícara', icon: '🫘' },
+            { name: 'Tomate', quantity: '1 un', icon: '🍅' }
         ],
-        instructions: ['Misture tudo.', 'Sirva morno.'],
+        instructions: ['Misture tudo.', 'Tempere com azeite e sal.'],
         substitutions: [],
-        healthTips: 'Fibras e proteína vegetal.',
-        tags: ['Vegano', 'Fibras'],
+        healthTips: 'Ômega-3 e fibras.',
+        tags: ['Sem Fogão', 'Prático'],
         createdAt: Date.now()
     },
     {
         id: 'lw_4',
-        name: 'Sopa Detox de Abóbora com Gengibre',
-        description: 'Baixa caloria, anti-inflamatória e perfeita para refeições rápidas.',
-        prepTime: '30 min',
+        name: 'Espaguete de Abobrinha à Bolonhesa',
+        description: 'Substituição inteligente de massa por vegetal.',
+        imageSource: require('../assets/images/recipes/espaguete_abobrinha.png'),
+        prepTime: '25 min',
         difficulty: 'Médio',
         category: 'Jantar',
-        macros: { calories: 200, protein: 5, carbs: 35, fats: 4 },
+        macros: { calories: 320, protein: 25, carbs: 15, fats: 12 },
         ingredients: [
-            { name: 'Abóbora', quantity: '200g', icon: '🎃' },
-            { name: 'Gengibre', quantity: '1 pedaço', icon: '🫚' }
+            { name: 'Abobrinha', quantity: '2 un', icon: '🥒' },
+            { name: 'Carne Moída', quantity: '150g', icon: '🥩' },
+            { name: 'Molho de Tomate', quantity: '1/2 xícara', icon: '🍅' }
         ],
-        instructions: ['Cozinhe a abóbora.', 'Bata com gengibre.', 'Sirva.'],
+        instructions: ['Faça fios de abobrinha.', 'Refogue a carne com molho.', 'Sirva por cima.'],
         substitutions: [],
-        healthTips: 'Anti-inflamatório.',
-        tags: ['Detox', 'Leve'],
+        healthTips: 'Volume alto, caloria baixa.',
+        tags: ['Low Carb', 'Conforto'],
         createdAt: Date.now()
     },
     {
         id: 'lw_5',
-        name: 'Wrap de Atum Fit',
-        description: 'Substitui maionese por iogurte e usa tortilla integral.',
-        prepTime: '10 min',
+        name: 'Smoothie Verde Detox',
+        description: 'Bebida densa em nutrientes para desinchar.',
+        imageSource: require('../assets/images/recipes/smoothie_verde.png'),
+        prepTime: '5 min',
         difficulty: 'Fácil',
         category: 'Lanches',
-        macros: { calories: 250, protein: 20, carbs: 25, fats: 6 },
+        macros: { calories: 180, protein: 5, carbs: 30, fats: 2 },
         ingredients: [
-            { name: 'Atum', quantity: '1 lata', icon: '🐟' },
-            { name: 'Tortilla Integral', quantity: '1 un', icon: '🌮' },
-            { name: 'Iogurte Natural', quantity: '1 colher', icon: '🥛' }
+            { name: 'Couve', quantity: '1 folha', icon: '🥬' },
+            { name: 'Maçã', quantity: '1 un', icon: '🍎' },
+            { name: 'Gengibre', quantity: 'a gosto', icon: '🫚' }
         ],
-        instructions: ['Misture atum e iogurte.', 'Recheie a tortilla.'],
+        instructions: ['Bata tudo no liquidificador com gelo.'],
         substitutions: [],
-        healthTips: 'Ômega-3.',
-        tags: ['Prático', 'Proteico'],
+        healthTips: 'Anti-inflamatório.',
+        tags: ['Detox', 'Vegano'],
         createdAt: Date.now()
     }
 ];
@@ -229,78 +233,82 @@ const HEALTHY_RECIPES: Recipe[] = [
     },
     {
         id: 'h_2',
-        name: 'Stir-fry de Legumes com Frango',
-        description: 'Leve, crocante e muito rápido de fazer.',
-        prepTime: '15 min',
-        difficulty: 'Fácil',
+        name: 'Salmão ao Molho de Maracujá',
+        description: 'Sofisticado, saudável e cheio de gorduras boas.',
+        imageSource: require('../assets/images/recipes/bowl.png'), // Placeholder
+        prepTime: '25 min',
+        difficulty: 'Médio',
         category: 'Jantar',
-        macros: { calories: 350, protein: 25, carbs: 20, fats: 12 },
+        macros: { calories: 450, protein: 30, carbs: 15, fats: 25 },
         ingredients: [
-            { name: 'Frango', quantity: '150g', icon: '🍗' },
-            { name: 'Legumes Variados', quantity: '2 xícaras', icon: '🥦' },
-            { name: 'Gergelim', quantity: '1 colher', icon: '🌰' }
+            { name: 'Salmão', quantity: '150g', icon: '🐟' },
+            { name: 'Maracujá', quantity: '1 un', icon: '🍈' },
+            { name: 'Mel', quantity: '1 colher', icon: '🍯' }
         ],
-        instructions: ['Refogue frango e legumes.', 'Finalize com gergelim.'],
+        instructions: ['Grelhe o salmão.', 'Faça uma redução com maracujá e mel.', 'Sirva por cima.'],
         substitutions: [],
-        healthTips: 'Fibras e vitaminas.',
-        tags: ['Rápido', 'Leve'],
+        healthTips: 'Calmante natural.',
+        tags: ['Jantar', 'Sofisticado'],
         createdAt: Date.now()
     },
     {
         id: 'h_3',
-        name: 'Tilápia ao Forno com Ervas',
-        description: 'Proteína magra e digestão leve.',
-        prepTime: '25 min',
+        name: 'Wrap de Couve com Frango e Ricota',
+        description: 'Substitua o pão pela couve para mais nutrientes.',
+        imageSource: require('../assets/images/recipes/smoothie_verde.png'), // Placeholder
+        prepTime: '15 min',
         difficulty: 'Fácil',
-        category: 'Almoço',
-        macros: { calories: 300, protein: 30, carbs: 10, fats: 8 },
+        category: 'Lanches',
+        macros: { calories: 200, protein: 20, carbs: 5, fats: 10 },
         ingredients: [
-            { name: 'Tilápia', quantity: '150g', icon: '🐟' },
-            { name: 'Ervas', quantity: 'a gosto', icon: '🌿' },
-            { name: 'Vegetais', quantity: '1 xícara', icon: '🥕' }
+            { name: 'Folha de Couve', quantity: '2 un', icon: '🥬' },
+            { name: 'Frango Desfiado', quantity: '100g', icon: '🍗' },
+            { name: 'Ricota', quantity: '2 colheres', icon: '🧀' }
         ],
-        instructions: ['Asse o peixe com ervas e vegetais.'],
+        instructions: ['Branqueie a couve.', 'Recheie e enrole.'],
         substitutions: [],
-        healthTips: 'Proteína magra.',
-        tags: ['Leve', 'Almoço'],
+        healthTips: 'Low carb total.',
+        tags: ['Lanche', 'Leve'],
         createdAt: Date.now()
     },
     {
         id: 'h_4',
-        name: 'Tapioca Recheada',
-        description: 'Ótimo para café ou lanche saudável.',
-        prepTime: '10 min',
-        difficulty: 'Fácil',
-        category: 'Café da Manhã',
-        macros: { calories: 350, protein: 12, carbs: 45, fats: 10 },
+        name: 'Risoto de Quinoa com Cogumelos',
+        description: 'Falso risoto rico em proteínas vegetais.',
+        imageSource: require('../assets/images/recipes/omelete.png'), // Placeholder
+        prepTime: '30 min',
+        difficulty: 'Médio',
+        category: 'Jantar',
+        macros: { calories: 350, protein: 15, carbs: 45, fats: 10 },
         ingredients: [
-            { name: 'Goma de Tapioca', quantity: '3 colheres', icon: '⚪' },
-            { name: 'Ovo', quantity: '1 un', icon: '🥚' },
-            { name: 'Queijo Branco', quantity: '1 fatia', icon: '🧀' }
+            { name: 'Quinoa', quantity: '1 xícara', icon: '🌾' },
+            { name: 'Cogumelos variados', quantity: '1 xícara', icon: '🍄' },
+            { name: 'Caldo de legumes', quantity: '500ml', icon: '🥘' }
         ],
-        instructions: ['Faça a tapioca.', 'Recheie com ovo e queijo.'],
+        instructions: ['Cozinhe a quinoa no caldo.', 'Refogue cogumelos e misture.'],
         substitutions: [],
-        healthTips: 'Sem glúten.',
-        tags: ['Café', 'Rápido'],
+        healthTips: 'Substituto perfeito do arroz.',
+        tags: ['Vegano', 'Jantar'],
         createdAt: Date.now()
     },
     {
         id: 'h_5',
-        name: 'Iogurte com Chia e Frutas',
-        description: 'Lanche saudável, antioxidante e com boa saciedade.',
-        prepTime: '5 min',
+        name: 'Tacos de Alface com Carne Desfiada',
+        description: 'Diversão para comer com as mãos, sem farinha.',
+        imageSource: require('../assets/images/recipes/salada_atum.png'), // Placeholder
+        prepTime: '20 min',
         difficulty: 'Fácil',
-        category: 'Lanches',
-        macros: { calories: 200, protein: 8, carbs: 25, fats: 6 },
+        category: 'Jantar',
+        macros: { calories: 280, protein: 25, carbs: 5, fats: 15 },
         ingredients: [
-            { name: 'Iogurte Natural', quantity: '1 pote', icon: '🥛' },
-            { name: 'Chia', quantity: '1 colher', icon: '🌱' },
-            { name: 'Morango', quantity: '5 un', icon: '🍓' }
+            { name: 'Alface Americana', quantity: 'Folhas', icon: '🥬' },
+            { name: 'Carne Desfiada', quantity: '150g', icon: '🥩' },
+            { name: 'Vinagrete', quantity: 'a gosto', icon: '🍅' }
         ],
-        instructions: ['Misture tudo.'],
+        instructions: ['Use a folha de alface como concha.', 'Recheie com carne e vinagrete.'],
         substitutions: [],
-        healthTips: 'Probióticos.',
-        tags: ['Lanche', 'Fresco'],
+        healthTips: 'Zero glúten.',
+        tags: ['Keto', 'Divertido'],
         createdAt: Date.now()
     }
 ];
