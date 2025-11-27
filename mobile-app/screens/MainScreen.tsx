@@ -40,7 +40,8 @@ export const MainScreen = ({
     savedRecipes,
     onToggleSave,
     onUpdateProfile,
-    onShowPaywall
+    onShowPaywall,
+    onOpenRecipePack
 }: {
     user: { name: string } | null,
     userProfile: UserProfile | null,
@@ -481,6 +482,31 @@ export const MainScreen = ({
                             <ArrowRightIcon size={20} color="#a6f000" />
                         </View>
                     </LinearGradient>
+                </TouchableOpacity>
+
+                {/* Recipe Pack Card */}
+                <TouchableOpacity
+                    style={styles.packCard}
+                    onPress={onOpenRecipePack}
+                >
+                    <View style={styles.packContent}>
+                        <View style={styles.packIconContainer}>
+                            <Text style={{ fontSize: 32 }}>
+                                {userProfile?.goal === UserGoal.LOSE_WEIGHT ? '🍏' :
+                                    userProfile?.goal === UserGoal.GAIN_MUSCLE ? '💪' : '🥑'}
+                            </Text>
+                        </View>
+                        <View style={styles.packTextContainer}>
+                            <Text style={styles.packTitle}>
+                                {userProfile?.goal === UserGoal.LOSE_WEIGHT ? '5 Receitas para Perda de Peso' :
+                                    userProfile?.goal === UserGoal.GAIN_MUSCLE ? '5 Receitas para Ganho de Massa' : '5 Receitas Saudáveis'}
+                            </Text>
+                            <Text style={styles.packSubtitle}>Selecionadas para seu objetivo</Text>
+                        </View>
+                        <View style={styles.packArrow}>
+                            <ArrowRightIcon size={20} color="#1F2937" />
+                        </View>
+                    </View>
                 </TouchableOpacity>
 
                 {/* Categories */}
