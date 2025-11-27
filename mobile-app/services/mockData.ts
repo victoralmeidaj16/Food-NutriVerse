@@ -50,269 +50,210 @@ export const MOCK_RECIPES: Recipe[] = [
         instructions: [
             'Bata os ovos levemente.',
             'Coloque na frigideira em fogo baixo.',
-            'Mexa sempre para não secar.',
-            'Adicione o requeijão no final para cremosidade.'
+            'Coloque na frigideira fria com a manteiga.',
+            'Ligue o fogo baixo e mexa sem parar.',
+            'Tire do fogo antes de secar totalmente.'
         ],
         substitutions: [],
-        healthTips: 'Café da manhã low carb ideal.',
-        tags: ['Low Carb', 'Proteico'],
+        healthTips: 'Rico em colina, essencial para o cérebro.',
+        tags: ['Keto', 'Proteico'],
         createdAt: Date.now()
     },
     {
-        id: 'mock-3',
-        name: 'Overnight Oats de Frutas Vermelhas',
-        description: 'Prático para deixar pronto na noite anterior.',
-        imageUrl: getImageUrl('Overnight Oats de Frutas Vermelhas'),
-        prepTime: '5 min',
-        difficulty: 'Fácil',
-        category: 'Café da Manhã',
-        macros: { calories: 280, protein: 10, carbs: 40, fats: 6 },
-        ingredients: [
-            { name: 'Aveia', quantity: '1/2 xícara', icon: '🌾' },
-            { name: 'Leite desnatado', quantity: '1/2 xícara', icon: '🥛' },
-            { name: 'Frutas vermelhas', quantity: '1/4 xícara', icon: '🍓' },
-            { name: 'Chia', quantity: '1 colher chá', icon: '🌱' }
-        ],
-        instructions: [
-            'Misture aveia, chia e leite em um pote.',
-            'Adicione as frutas por cima.',
-            'Deixe na geladeira durante a noite.',
-            'Coma frio pela manhã.'
-        ],
-        substitutions: [],
-        healthTips: 'Rico em antioxidantes e fibras.',
-        tags: ['Frio', 'Prático'],
-        createdAt: Date.now()
-    },
-
-    // --- Almoço ---
-    {
-        id: 'mock-4',
-        name: 'Frango Grelhado com Batata Doce',
-        description: 'O clássico fit. Simples, eficiente e nutritivo.',
-        imageUrl: getImageUrl('Frango Grelhado com Batata Doce'),
-        prepTime: '25 min',
-        difficulty: 'Fácil',
-        category: 'Almoço',
-        macros: { calories: 450, protein: 40, carbs: 50, fats: 8 },
-        ingredients: [
-            { name: 'Peito de Frango', quantity: '150g', icon: '🍗' },
-            { name: 'Batata Doce', quantity: '150g', icon: '🥔' },
-            { name: 'Brócolis', quantity: '100g', icon: '🥦' }
-        ],
-        instructions: [
-            'Tempere o frango com limão e sal.',
-            'Cozinhe a batata doce no vapor ou água.',
-            'Grelhe o frango até dourar.',
-            'Sirva com o brócolis cozido.'
-        ],
-        substitutions: [],
-        healthTips: 'Padrão ouro para ganho de massa magra.',
-        tags: ['Hipertrofia', 'Clássico'],
-        createdAt: Date.now()
-    },
-    {
-        id: 'mock-5',
+        id: '3',
         name: 'Bowl de Salmão e Quinoa',
-        description: 'Rico em ômega-3 e proteínas de alta qualidade.',
-        imageUrl: getImageUrl('Bowl de Salmão e Quinoa'),
-        prepTime: '20 min',
+        description: 'Refeição completa com proteínas de alto valor biológico.',
+        imageSource: require('../assets/images/recipes/bowl.png'),
+        prepTime: '25 min',
         difficulty: 'Médio',
         category: 'Almoço',
-        macros: { calories: 520, protein: 35, carbs: 45, fats: 20 },
+        macros: { calories: 450, protein: 35, carbs: 40, fats: 15 },
         ingredients: [
-            { name: 'Salmão', quantity: '120g', icon: '🐟' },
+            { name: 'Filé de Salmão', quantity: '150g', icon: '🐟' },
             { name: 'Quinoa cozida', quantity: '1 xícara', icon: '🌾' },
-            { name: 'Abacate', quantity: '1/4 unidade', icon: '🥑' }
+            { name: 'Abacate', quantity: '1/4 un', icon: '🥑' },
+            { name: 'Pepino', quantity: '1/2 un', icon: '🥒' }
         ],
         instructions: [
-            'Grelhe o salmão.',
+            'Grelhe o salmão temperado com limão.',
             'Monte o bowl com a quinoa como base.',
-            'Adicione o salmão e fatias de abacate.',
-            'Tempere com azeite e limão.'
+            'Adicione os vegetais e o salmão.',
+            'Finalize com azeite.'
         ],
         substitutions: [
-            { original: 'Arroz Branco', replacement: 'Quinoa', reason: 'Mais proteína e menor índice glicêmico' }
+            { original: 'Ovo', replacement: 'Linhaça hidratada', reason: 'Vegano' },
+            { original: 'Aveia', replacement: 'Farinha de amêndoas', reason: 'Low carb' }
         ],
-        healthTips: 'Gorduras boas para o cérebro e coração.',
-        tags: ['Ômega-3', 'Bowl'],
+        healthTips: 'Rico em Ômega-3, anti-inflamatório natural.',
+        tags: ['Pescatariano', 'Superfood'],
         createdAt: Date.now()
     },
     {
-        id: 'mock-6',
+        id: '4',
         name: 'Escondidinho de Patinho e Abóbora',
-        description: 'Confort food em versão leve e low carb.',
-        imageUrl: getImageUrl('Escondidinho de Patinho e Abóbora'),
+        description: 'Confort food em versão fit e low carb.',
+        imageSource: require('../assets/images/recipes/frango.png'), // Placeholder
         prepTime: '40 min',
         difficulty: 'Médio',
         category: 'Almoço',
-        macros: { calories: 380, protein: 30, carbs: 25, fats: 12 },
+        macros: { calories: 380, protein: 40, carbs: 25, fats: 12 },
         ingredients: [
             { name: 'Patinho moído', quantity: '150g', icon: '🥩' },
             { name: 'Abóbora Cabotiá', quantity: '200g', icon: '🎃' },
-            { name: 'Queijo Cottage', quantity: '1 colher', icon: '🧀' }
+            { name: 'Queijo Cottage', quantity: '2 colheres', icon: '🧀' }
         ],
         instructions: [
-            'Refogue a carne moída com temperos.',
+            'Refogue a carne com temperos.',
             'Cozinhe a abóbora e faça um purê.',
-            'Em um refratário, coloque a carne e cubra com o purê.',
-            'Leve ao forno para gratinar.'
-        ],
-        substitutions: [
-            { original: 'Batata Inglesa', replacement: 'Abóbora', reason: 'Menos calorias e carboidratos' }
-        ],
-        healthTips: 'Baixa densidade calórica, pode comer um volume maior.',
-        tags: ['Confort Food', 'Low Carb'],
-        createdAt: Date.now()
-    },
-
-    // --- Lanches ---
-    {
-        id: 'mock-7',
-        name: 'Crepioca de Frango',
-        description: 'O lanche proteico mais famoso do Brasil.',
-        imageUrl: getImageUrl('Crepioca de Frango'),
-        prepTime: '10 min',
-        difficulty: 'Fácil',
-        category: 'Lanches',
-        macros: { calories: 250, protein: 15, carbs: 20, fats: 8 },
-        ingredients: [
-            { name: 'Ovo', quantity: '1 unidade', icon: '🥚' },
-            { name: 'Goma de Tapioca', quantity: '1 colher', icon: '⚪' },
-            { name: 'Frango desfiado', quantity: '2 colheres', icon: '🍗' }
-        ],
-        instructions: [
-            'Misture o ovo e a tapioca.',
-            'Coloque na frigideira como uma panqueca.',
-            'Quando firmar, adicione o frango e dobre.',
-            'Deixe dourar.'
-        ],
-        substitutions: [
-            { original: 'Pão Francês', replacement: 'Crepioca', reason: 'Sem glúten e mais proteína' }
-        ],
-        healthTips: 'Ótimo pós-treino rápido.',
-        tags: ['Sem Glúten', 'Prático'],
-        createdAt: Date.now()
-    },
-    {
-        id: 'mock-8',
-        name: 'Iogurte com Whey e Frutas',
-        description: 'Sobremesa ou lanche anabólico.',
-        imageUrl: getImageUrl('Iogurte com Whey e Frutas'),
-        prepTime: '2 min',
-        difficulty: 'Fácil',
-        category: 'Lanches',
-        macros: { calories: 180, protein: 25, carbs: 15, fats: 2 },
-        ingredients: [
-            { name: 'Iogurte Desnatado', quantity: '1 potinho', icon: '🥛' },
-            { name: 'Whey Protein', quantity: '1 scoop', icon: '💪' },
-            { name: 'Morango', quantity: '5 unidades', icon: '🍓' }
-        ],
-        instructions: [
-            'Misture o Whey no iogurte até dissolver.',
-            'Pique os morangos e coloque por cima.'
+            'Monte camadas e gratine.'
         ],
         substitutions: [],
-        healthTips: 'Mata a vontade de doce com muita proteína.',
-        tags: ['Doce Fit', 'Rápido'],
+        healthTips: 'A abóbora é rica em vitamina A e baixa em calorias.',
+        tags: ['Low Carb', 'Congelável'],
         createdAt: Date.now()
     },
     {
-        id: 'mock-9',
-        name: 'Chips de Coco',
-        description: 'Gorduras boas para saciedade.',
-        imageUrl: getImageUrl('Chips de Coco'),
+        id: '5',
+        name: 'Crepioca de Frango',
+        description: 'Lanche proteico prático para levar.',
+        imageSource: require('../assets/images/recipes/frango_abobrinha.png'),
+        prepTime: '15 min',
+        difficulty: 'Fácil',
+        category: 'Lanches',
+        macros: { calories: 300, protein: 25, carbs: 20, fats: 10 },
+        ingredients: [
+            { name: 'Ovo', quantity: '1 un', icon: '🥚' },
+            { name: 'Goma de Tapioca', quantity: '2 colheres', icon: '⚪' },
+            { name: 'Frango Desfiado', quantity: '100g', icon: '🍗' }
+        ],
+        instructions: [
+            'Misture ovo e tapioca.',
+            'Faça o disco na frigideira.',
+            'Recheie com frango e dobre.'
+        ],
+        substitutions: [],
+        healthTips: 'Sem glúten e alta saciedade.',
+        tags: ['Sem Glúten', 'Lanche'],
+        createdAt: Date.now()
+    },
+    {
+        id: '6',
+        name: 'Iogurte com Whey e Frutas',
+        description: 'Pós-treino rápido e refrescante.',
+        imageSource: require('../assets/images/recipes/smoothie_verde.png'), // Placeholder
         prepTime: '5 min',
         difficulty: 'Fácil',
         category: 'Lanches',
-        macros: { calories: 200, protein: 2, carbs: 5, fats: 18 },
+        macros: { calories: 250, protein: 25, carbs: 30, fats: 2 },
         ingredients: [
-            { name: 'Coco seco em lâminas', quantity: '50g', icon: '🥥' }
+            { name: 'Iogurte Desnatado', quantity: '1 pote', icon: '🥛' },
+            { name: 'Whey Protein', quantity: '1 scoop', icon: '💪' },
+            { name: 'Morango', quantity: '5 un', icon: '🍓' }
         ],
         instructions: [
-            'Compre pronto ou asse lâminas de coco até dourar.',
-            'Ótimo para levar na bolsa.'
+            'Misture o whey no iogurte até dissolver.',
+            'Adicione as frutas picadas.'
         ],
         substitutions: [],
-        healthTips: 'Fonte de energia rápida (TCM).',
+        healthTips: 'Recuperação muscular imediata.',
+        tags: ['Rápido', 'Proteico'],
+        createdAt: Date.now()
+    },
+    {
+        id: '7',
+        name: 'Chips de Coco',
+        description: 'Snack crocante rico em gorduras boas.',
+        imageSource: require('../assets/images/recipes/bowl.png'), // Placeholder
+        prepTime: '20 min',
+        difficulty: 'Fácil',
+        category: 'Lanches',
+        macros: { calories: 150, protein: 2, carbs: 5, fats: 14 },
+        ingredients: [
+            { name: 'Coco em lâminas', quantity: '50g', icon: '🥥' },
+            { name: 'Canela', quantity: 'a gosto', icon: '🧂' }
+        ],
+        instructions: [
+            'Espalhe o coco numa assadeira.',
+            'Polvilhe canela.',
+            'Asse em fogo baixo até dourar.'
+        ],
+        substitutions: [],
+        healthTips: 'Gorduras TCM que dão energia rápida.',
         tags: ['Keto', 'Vegano'],
         createdAt: Date.now()
     },
-
-    // --- Jantar ---
     {
-        id: 'mock-10',
+        id: '8',
         name: 'Omelete de Forno com Vegetais',
-        description: 'Jantar leve para dormir bem.',
-        imageUrl: getImageUrl('Omelete de Forno com Vegetais'),
-        prepTime: '20 min',
+        description: 'Jantar leve para aproveitar sobras de vegetais.',
+        imageSource: require('../assets/images/recipes/omelete.png'),
+        prepTime: '25 min',
         difficulty: 'Fácil',
         category: 'Jantar',
-        macros: { calories: 220, protein: 16, carbs: 8, fats: 12 },
+        macros: { calories: 220, protein: 15, carbs: 8, fats: 12 },
+
         ingredients: [
-            { name: 'Ovos', quantity: '2 unidades', icon: '🥚' },
-            { name: 'Espinafre', quantity: '1 xícara', icon: '🌿' },
-            { name: 'Tomate cereja', quantity: '5 unidades', icon: '🍅' }
+            { name: 'Ovos', quantity: '3 un', icon: '🥚' },
+            { name: 'Espinafre', quantity: '1 xícara', icon: '🥬' },
+            { name: 'Tomate', quantity: '1 un', icon: '🍅' }
         ],
         instructions: [
-            'Bata os ovos com sal e pimenta.',
+            'Bata os ovos com temperos.',
             'Misture os vegetais picados.',
-            'Coloque em forminhas de silicone.',
-            'Asse por 15 min ou até firmar.'
+            'Asse em forminhas de muffin.'
         ],
         substitutions: [],
-        healthTips: 'Fácil digestão à noite.',
-        tags: ['Low Carb', 'Leve'],
+        healthTips: 'Baixa caloria e alta densidade nutricional.',
+        tags: ['Low Carb', 'Vegetariano'],
         createdAt: Date.now()
     },
     {
-        id: 'mock-11',
+        id: '9',
         name: 'Sopa de Abóbora com Gengibre',
-        description: 'Termogênica e reconfortante.',
-        imageUrl: getImageUrl('Sopa de Abóbora com Gengibre'),
+        description: 'Jantar leve e termogênico.',
+        imageSource: require('../assets/images/recipes/bowl.png'), // Placeholder
         prepTime: '30 min',
-        difficulty: 'Médio',
+        difficulty: 'Fácil',
         category: 'Jantar',
-        macros: { calories: 150, protein: 4, carbs: 25, fats: 2 },
+        macros: { calories: 180, protein: 5, carbs: 30, fats: 4 },
         ingredients: [
             { name: 'Abóbora', quantity: '300g', icon: '🎃' },
             { name: 'Gengibre', quantity: '1 pedaço', icon: '🫚' },
-            { name: 'Caldo de legumes', quantity: '500ml', icon: '🥘' }
+            { name: 'Cebola', quantity: '1/2 un', icon: '🧅' }
         ],
         instructions: [
-            'Cozinhe a abóbora no caldo.',
-            'Bata no liquidificador com o gengibre.',
+            'Cozinhe a abóbora com cebola.',
+            'Bata no liquidificador com gengibre.',
             'Aqueça e sirva.'
         ],
         substitutions: [],
-        healthTips: 'Baixa caloria, ideal para emagrecimento.',
+        healthTips: 'Gengibre acelera o metabolismo.',
         tags: ['Detox', 'Vegano'],
         createdAt: Date.now()
     },
     {
-        id: 'mock-12',
+        id: '10',
         name: 'Salada Caesar com Iogurte',
-        description: 'Versão leve do clássico molho.',
-        imageUrl: getImageUrl('Salada Caesar com Iogurte'),
+        description: 'Versão leve do clássico, sem maionese.',
+        imageSource: require('../assets/images/recipes/salada_atum.png'), // Placeholder
         prepTime: '15 min',
         difficulty: 'Fácil',
         category: 'Jantar',
-        macros: { calories: 300, protein: 25, carbs: 10, fats: 15 },
+        macros: { calories: 350, protein: 30, carbs: 10, fats: 15 },
         ingredients: [
-            { name: 'Alface Americana', quantity: '1/2 maço', icon: '🥬' },
-            { name: 'Tiras de frango', quantity: '100g', icon: '🍗' },
-            { name: 'Molho de Iogurte', quantity: '2 colheres', icon: '🥣' }
+            { name: 'Alface Romana', quantity: '1 maço', icon: '🥬' },
+            { name: 'Peito de Frango', quantity: '150g', icon: '🍗' },
+            { name: 'Iogurte Natural', quantity: '1 pote', icon: '🥛' },
+            { name: 'Parmesão', quantity: '1 colher', icon: '🧀' }
         ],
         instructions: [
-            'Misture iogurte, limão e mostarda para o molho.',
-            'Rasgue a alface e adicione o frango.',
-            'Misture o molho na hora de servir.'
+            'Grelhe o frango em tiras.',
+            'Faça o molho com iogurte, limão e parmesão.',
+            'Misture com a alface.'
         ],
-        substitutions: [
-            { original: 'Maionese', replacement: 'Iogurte Natural', reason: 'Menos gordura saturada' }
-        ],
-        healthTips: 'Jantar fresco e proteico.',
-        tags: ['Salada', 'Fresco'],
+        substitutions: [],
+        healthTips: 'Probióticos do iogurte.',
+        tags: ['Salada', 'Clássico'],
         createdAt: Date.now()
     }
 ];

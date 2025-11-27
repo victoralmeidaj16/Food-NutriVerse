@@ -489,24 +489,32 @@ export const MainScreen = ({
                     style={styles.packCard}
                     onPress={onOpenRecipePack}
                 >
-                    <View style={styles.packContent}>
-                        <View style={styles.packIconContainer}>
-                            <Text style={{ fontSize: 32 }}>
-                                {userProfile?.goal === UserGoal.LOSE_WEIGHT ? '🍏' :
-                                    userProfile?.goal === UserGoal.GAIN_MUSCLE ? '💪' : '🥑'}
-                            </Text>
+                    <Image
+                        source={
+                            userProfile?.goal === UserGoal.LOSE_WEIGHT ? require('../assets/images/recipes/omelete.png') :
+                                userProfile?.goal === UserGoal.GAIN_MUSCLE ? require('../assets/images/recipes/frango.png') :
+                                    require('../assets/images/recipes/bowl.png')
+                        }
+                        style={styles.packCardBackground}
+                        resizeMode="cover"
+                    />
+                    <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.8)']}
+                        style={styles.packCardOverlay}
+                    >
+                        <View style={styles.packContent}>
+                            <View style={styles.packTextContainer}>
+                                <Text style={styles.packTitleLight}>
+                                    {userProfile?.goal === UserGoal.LOSE_WEIGHT ? '5 Receitas para Perda de Peso' :
+                                        userProfile?.goal === UserGoal.GAIN_MUSCLE ? '5 Receitas para Ganho de Massa' : '5 Receitas Saudáveis'}
+                                </Text>
+                                <Text style={styles.packSubtitleLight}>Selecionadas para seu objetivo</Text>
+                            </View>
+                            <View style={styles.packArrowLight}>
+                                <ArrowRightIcon size={20} color="black" />
+                            </View>
                         </View>
-                        <View style={styles.packTextContainer}>
-                            <Text style={styles.packTitle}>
-                                {userProfile?.goal === UserGoal.LOSE_WEIGHT ? '5 Receitas para Perda de Peso' :
-                                    userProfile?.goal === UserGoal.GAIN_MUSCLE ? '5 Receitas para Ganho de Massa' : '5 Receitas Saudáveis'}
-                            </Text>
-                            <Text style={styles.packSubtitle}>Selecionadas para seu objetivo</Text>
-                        </View>
-                        <View style={styles.packArrow}>
-                            <ArrowRightIcon size={20} color="#1F2937" />
-                        </View>
-                    </View>
+                    </LinearGradient>
                 </TouchableOpacity>
 
                 {/* Categories */}
@@ -1708,44 +1716,50 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     packCard: {
-        backgroundColor: '#F0FDF4', // Light green bg
-        borderRadius: 16,
-        padding: 16,
+        height: 160,
+        borderRadius: 24,
         marginBottom: 24,
-        borderWidth: 1,
-        borderColor: '#DCFCE7',
+        overflow: 'hidden',
+        position: 'relative',
+    },
+    packCardBackground: {
+        width: '100%',
+        height: '100%',
+        position: 'absolute',
+    },
+    packCardOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        padding: 20,
     },
     packContent: {
         flexDirection: 'row',
         alignItems: 'center',
-    },
-    packIconContainer: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: 'white',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 16,
+        justifyContent: 'space-between',
     },
     packTextContainer: {
         flex: 1,
+        marginRight: 16,
     },
-    packTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#166534', // Dark green text
+    packTitleLight: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: 'white',
         marginBottom: 4,
+        textShadowColor: 'rgba(0, 0, 0, 0.3)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
     },
-    packSubtitle: {
-        fontSize: 12,
-        color: '#15803D',
+    packSubtitleLight: {
+        fontSize: 14,
+        color: '#E5E7EB',
+        fontWeight: '500',
     },
-    packArrow: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: 'white',
+    packArrowLight: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#a6f000',
         alignItems: 'center',
         justifyContent: 'center',
     },
