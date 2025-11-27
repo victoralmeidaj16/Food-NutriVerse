@@ -185,6 +185,14 @@ export default function App() {
             onClose={() => setCurrentScreen('MAIN')}
           />
         );
+      case 'RECIPE_PACK':
+        return (
+          <RecipePackScreen
+            goal={userProfile?.goal || UserGoal.LOSE_WEIGHT}
+            onBack={() => setCurrentScreen('MAIN')}
+            onRecipeClick={handleRecipeClick}
+          />
+        );
       case 'MAIN':
         return (
           <MainScreen
