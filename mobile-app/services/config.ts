@@ -1,3 +1,3 @@
-export const API_KEY = ''; // Removed for security
-export const GOOGLE_API_KEY = ''; // Removed for security
-export const BACKEND_URL = 'https://food-nutriverse.onrender.com';
+export const API_KEY = 'AIzaSyBqSlX3_TMiH8vZpwPIN16k5IX2kgxbdEA';
+export const OPENAI_API_KEY = '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';
+export const GOOGLE_API_KEY = 'AIzaSyA8J3Z1hD14NgMCoTJKzz3MMf0IG5WiAEE'; // the existing Google Key

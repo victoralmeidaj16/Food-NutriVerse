@@ -12,7 +12,7 @@ const LOSE_WEIGHT_RECIPES: Recipe[] = [
     {
         id: 'lw_1',
         name: 'Omelete Proteico de Espinafre e Cogumelos',
-        description: 'Leve, rico em fibras e proteína; sustenta por horas.',
+        description: 'Comece o dia com energia total! Esta omelete é uma bomba de nutrientes, combinando a leveza do espinafre com o sabor terroso dos cogumelos.',
         imageSource: require('../assets/images/recipes/omelete.png'),
         prepTime: '15 min',
         difficulty: 'Fácil',
@@ -23,16 +23,16 @@ const LOSE_WEIGHT_RECIPES: Recipe[] = [
             { name: 'Espinafre', quantity: '1 xícara', icon: '🌿' },
             { name: 'Cogumelos', quantity: '1/2 xícara', icon: '🍄' }
         ],
-        instructions: ['Bata os ovos.', 'Refogue espinafre e cogumelos.', 'Misture e cozinhe.'],
+        instructions: ['Bata os ovos vigorosamente.', 'Refogue o espinafre e os cogumelos até murcharem.', 'Despeje os ovos e cozinhe em fogo baixo até firmar.'],
         substitutions: [],
-        healthTips: 'Rico em ferro.',
+        healthTips: 'O espinafre é rico em ferro e fibras, ajudando na saciedade.',
         tags: ['Low Carb', 'Proteico'],
         createdAt: Date.now()
     },
     {
         id: 'lw_2',
         name: 'Frango Grelhado com Abobrinha e Limão',
-        description: 'Prato básico e delicioso; abobrinha dá volume e saciedade.',
+        description: 'Simplicidade que funciona. O limão traz um frescor incrível ao frango, enquanto a abobrinha garante volume ao prato sem adicionar calorias extras.',
         imageSource: require('../assets/images/recipes/frango_abobrinha.png'),
         prepTime: '20 min',
         difficulty: 'Fácil',
@@ -43,16 +43,16 @@ const LOSE_WEIGHT_RECIPES: Recipe[] = [
             { name: 'Abobrinha', quantity: '1 un', icon: '🥒' },
             { name: 'Limão', quantity: '1/2 un', icon: '🍋' }
         ],
-        instructions: ['Tempere o frango.', 'Grelhe com a abobrinha.', 'Finalize com limão.'],
+        instructions: ['Tempere o frango com limão e ervas.', 'Grelhe o frango até dourar.', 'Refogue a abobrinha na mesma frigideira para pegar o sabor.'],
         substitutions: [],
-        healthTips: 'Baixa caloria.',
+        healthTips: 'Excelente fonte de proteína magra para manutenção muscular.',
         tags: ['Low Carb', 'Rápido'],
         createdAt: Date.now()
     },
     {
         id: 'lw_3',
         name: 'Salada de Atum com Grão de Bico',
-        description: 'Refeição fria, prática e rica em fibras.',
+        description: 'Praticidade em forma de refeição. Uma salada robusta que não te deixa com fome 1 hora depois, graças à combinação de fibras e proteínas.',
         imageSource: require('../assets/images/recipes/salada_atum.png'),
         prepTime: '10 min',
         difficulty: 'Fácil',
@@ -63,16 +63,16 @@ const LOSE_WEIGHT_RECIPES: Recipe[] = [
             { name: 'Grão de Bico', quantity: '1/2 xícara', icon: '🫘' },
             { name: 'Tomate', quantity: '1 un', icon: '🍅' }
         ],
-        instructions: ['Misture tudo.', 'Tempere com azeite e sal.'],
+        instructions: ['Drene o atum e o grão de bico.', 'Misture todos os ingredientes em uma tigela.', 'Tempere com azeite, sal e limão a gosto.'],
         substitutions: [],
-        healthTips: 'Ômega-3 e fibras.',
+        healthTips: 'Rico em Ômega-3, essencial para a saúde cardiovascular.',
         tags: ['Sem Fogão', 'Prático'],
         createdAt: Date.now()
     },
     {
         id: 'lw_4',
         name: 'Espaguete de Abobrinha à Bolonhesa',
-        description: 'Substituição inteligente de massa por vegetal.',
+        description: 'Sinta o prazer de comer uma macarronada sem a culpa dos carboidratos. O molho à bolonhesa caseiro transforma a abobrinha em um prato de chef.',
         imageSource: require('../assets/images/recipes/espaguete_abobrinha.png'),
         prepTime: '25 min',
         difficulty: 'Médio',
@@ -83,16 +83,16 @@ const LOSE_WEIGHT_RECIPES: Recipe[] = [
             { name: 'Carne Moída', quantity: '150g', icon: '🥩' },
             { name: 'Molho de Tomate', quantity: '1/2 xícara', icon: '🍅' }
         ],
-        instructions: ['Faça fios de abobrinha.', 'Refogue a carne com molho.', 'Sirva por cima.'],
+        instructions: ['Use um espiralizador ou descascador para fazer fios de abobrinha.', 'Refogue a carne moída e adicione o molho.', 'Sirva o molho quente sobre a abobrinha crua ou levemente refogada.'],
         substitutions: [],
-        healthTips: 'Volume alto, caloria baixa.',
+        healthTips: 'Reduz drasticamente as calorias comparado à massa tradicional.',
         tags: ['Low Carb', 'Conforto'],
         createdAt: Date.now()
     },
     {
         id: 'lw_5',
         name: 'Smoothie Verde Detox',
-        description: 'Bebida densa em nutrientes para desinchar.',
+        description: 'O botão de reset para o seu corpo. Ideal para desinchar e começar o dia leve, mas nutrido.',
         imageSource: require('../assets/images/recipes/smoothie_verde.png'),
         prepTime: '5 min',
         difficulty: 'Fácil',
@@ -103,9 +103,9 @@ const LOSE_WEIGHT_RECIPES: Recipe[] = [
             { name: 'Maçã', quantity: '1 un', icon: '🍎' },
             { name: 'Gengibre', quantity: 'a gosto', icon: '🫚' }
         ],
-        instructions: ['Bata tudo no liquidificador com gelo.'],
+        instructions: ['Lave bem os ingredientes.', 'Bata tudo no liquidificador com água e gelo até ficar homogêneo.'],
         substitutions: [],
-        healthTips: 'Anti-inflamatório.',
+        healthTips: 'O gengibre acelera o metabolismo e a couve é anti-inflamatória.',
         tags: ['Detox', 'Vegano'],
         createdAt: Date.now()
     }
@@ -115,7 +115,7 @@ const GAIN_MUSCLE_RECIPES: Recipe[] = [
     {
         id: 'gm_1',
         name: 'Frango Cremoso com Cottage',
-        description: 'Cottage aumenta proteína sem pesar no sabor.',
+        description: 'A cremosidade que você ama, com a proteína que você precisa. O queijo cottage eleva o teor proteico deste prato sem adicionar gorduras pesadas.',
         imageSource: require('../assets/images/recipes/frango.png'),
         prepTime: '25 min',
         difficulty: 'Médio',
@@ -126,16 +126,16 @@ const GAIN_MUSCLE_RECIPES: Recipe[] = [
             { name: 'Queijo Cottage', quantity: '2 colheres', icon: '🧀' },
             { name: 'Arroz Integral', quantity: '1 xícara', icon: '🍚' }
         ],
-        instructions: ['Grelhe o frango.', 'Misture cottage.', 'Sirva com arroz.'],
+        instructions: ['Tempere e grelhe os filés de frango.', 'Adicione o cottage sobre o frango quente para derreter levemente.', 'Sirva acompanhado do arroz integral soltinho.'],
         substitutions: [],
-        healthTips: 'Alta proteína.',
+        healthTips: 'O cottage é uma das melhores fontes de caseína, proteína de lenta absorção.',
         tags: ['Hipertrofia', 'Almoço'],
         createdAt: Date.now()
     },
     {
         id: 'gm_2',
         name: 'Panqueca Proteica de Banana',
-        description: 'Perfeita para pré-treino ou café reforçado.',
+        description: 'O café da manhã dos campeões. Doce na medida certa, fofinha e carregada de energia para destruir no treino.',
         prepTime: '15 min',
         difficulty: 'Fácil',
         category: 'Café da Manhã',
@@ -145,16 +145,16 @@ const GAIN_MUSCLE_RECIPES: Recipe[] = [
             { name: 'Ovos', quantity: '2 un', icon: '🥚' },
             { name: 'Pasta de Amendoim', quantity: '1 colher', icon: '🥜' }
         ],
-        instructions: ['Amasse a banana.', 'Misture ovos.', 'Frite e recheie.'],
+        instructions: ['Amasse bem a banana com um garfo.', 'Misture os ovos até ficar homogêneo.', 'Frite em frigideira antiaderente e finalize com a pasta de amendoim.'],
         substitutions: [],
-        healthTips: 'Energia rápida.',
+        healthTips: 'O potássio da banana ajuda a prevenir cãibras musculares.',
         tags: ['Pré-Treino', 'Doce'],
         createdAt: Date.now()
     },
     {
         id: 'gm_3',
         name: 'Macarrão com Carne Moída Magra',
-        description: 'Clássico, fácil e muito eficiente para bulking limpo.',
+        description: 'O clássico que nunca falha. Uma refeição densa, perfeita para pós-treino, repondo glicogênio e reparando as fibras musculares.',
         prepTime: '20 min',
         difficulty: 'Fácil',
         category: 'Almoço',
@@ -164,16 +164,16 @@ const GAIN_MUSCLE_RECIPES: Recipe[] = [
             { name: 'Carne Moída', quantity: '150g', icon: '🥩' },
             { name: 'Espinafre', quantity: '1 punhado', icon: '🌿' }
         ],
-        instructions: ['Cozinhe o macarrão.', 'Refogue a carne.', 'Misture.'],
+        instructions: ['Cozinhe o macarrão al dente.', 'Refogue a carne moída com temperos a gosto.', 'Misture o espinafre no final para murchar e incorpore tudo.'],
         substitutions: [],
-        healthTips: 'Carboidrato complexo.',
+        healthTips: 'Prefira cortes magros como patinho para manter a gordura controlada.',
         tags: ['Bulking', 'Clássico'],
         createdAt: Date.now()
     },
     {
         id: 'gm_4',
         name: 'Smoothie Hipercalórico Clean',
-        description: 'Rápido, barato e extremamente prático.',
+        description: 'Calorias limpas em um copo. A solução perfeita para quem tem dificuldade em bater a meta calórica comendo comida sólida.',
         prepTime: '5 min',
         difficulty: 'Fácil',
         category: 'Lanches',
@@ -184,16 +184,16 @@ const GAIN_MUSCLE_RECIPES: Recipe[] = [
             { name: 'Aveia', quantity: '2 colheres', icon: '🌾' },
             { name: 'Pasta de Amendoim', quantity: '1 colher', icon: '🥜' }
         ],
-        instructions: ['Bata tudo no liquidificador.'],
+        instructions: ['Coloque todos os ingredientes no liquidificador.', 'Bata até ficar bem cremoso.', 'Beba imediatamente.'],
         substitutions: [],
-        healthTips: 'Calorias fáceis.',
+        healthTips: 'A aveia fornece carboidratos de liberação lenta, mantendo a energia estável.',
         tags: ['Lanche', 'Rápido'],
         createdAt: Date.now()
     },
     {
         id: 'gm_5',
         name: 'Salmão Grelhado com Purê',
-        description: 'Altamente nutritivo, rico em ômega-3 e energia.',
+        description: 'Jantar de rei. O ômega-3 do salmão combate a inflamação muscular, enquanto o purê garante o sono anabólico perfeito.',
         prepTime: '30 min',
         difficulty: 'Médio',
         category: 'Jantar',
@@ -202,9 +202,9 @@ const GAIN_MUSCLE_RECIPES: Recipe[] = [
             { name: 'Salmão', quantity: '150g', icon: '🐟' },
             { name: 'Batata Doce', quantity: '150g', icon: '🍠' }
         ],
-        instructions: ['Grelhe o salmão.', 'Faça o purê.', 'Sirva.'],
+        instructions: ['Cozinhe a batata e amasse para fazer o purê.', 'Grelhe o salmão com a pele para baixo até ficar crocante.', 'Sirva juntos.'],
         substitutions: [],
-        healthTips: 'Gorduras boas.',
+        healthTips: 'Gorduras boas são essenciais para a produção de testosterona.',
         tags: ['Jantar', 'Saudável'],
         createdAt: Date.now()
     }
@@ -214,7 +214,7 @@ const HEALTHY_RECIPES: Recipe[] = [
     {
         id: 'h_1',
         name: 'Buddha Bowl Colorido',
-        description: 'Perfeito para saúde geral; prato completo em nutrientes.',
+        description: 'Um arco-íris no seu prato. Cada cor representa um nutriente diferente, garantindo uma refeição completa, vibrante e cheia de vida.',
         imageSource: require('../assets/images/recipes/bowl.png'),
         prepTime: '20 min',
         difficulty: 'Fácil',
@@ -225,16 +225,16 @@ const HEALTHY_RECIPES: Recipe[] = [
             { name: 'Abacate', quantity: '1/4 un', icon: '🥑' },
             { name: 'Grão-de-bico', quantity: '1/2 xícara', icon: '🥘' }
         ],
-        instructions: ['Monte tudo em uma tigela.'],
+        instructions: ['Cozinhe a quinoa.', 'Disponha os ingredientes lado a lado em uma tigela funda.', 'Regue com azeite e limão.'],
         substitutions: [],
-        healthTips: 'Antioxidantes.',
+        healthTips: 'Rico em gorduras monoinsaturadas e fibras para a saúde do coração.',
         tags: ['Vegano', 'Saudável'],
         createdAt: Date.now()
     },
     {
         id: 'h_2',
         name: 'Salmão ao Molho de Maracujá',
-        description: 'Sofisticado, saudável e cheio de gorduras boas.',
+        description: 'Elegância e saúde. O azedinho do maracujá corta a gordura do salmão, criando um equilíbrio de sabores digno de restaurante.',
         imageSource: require('../assets/images/recipes/bowl.png'), // Placeholder
         prepTime: '25 min',
         difficulty: 'Médio',
@@ -245,16 +245,16 @@ const HEALTHY_RECIPES: Recipe[] = [
             { name: 'Maracujá', quantity: '1 un', icon: '🍈' },
             { name: 'Mel', quantity: '1 colher', icon: '🍯' }
         ],
-        instructions: ['Grelhe o salmão.', 'Faça uma redução com maracujá e mel.', 'Sirva por cima.'],
+        instructions: ['Grelhe o salmão.', 'Em uma panela, reduza a polpa do maracujá com o mel.', 'Sirva o molho sobre o peixe.'],
         substitutions: [],
-        healthTips: 'Calmante natural.',
+        healthTips: 'O maracujá possui propriedades calmantes naturais.',
         tags: ['Jantar', 'Sofisticado'],
         createdAt: Date.now()
     },
     {
         id: 'h_3',
         name: 'Wrap de Couve com Frango e Ricota',
-        description: 'Substitua o pão pela couve para mais nutrientes.',
+        description: 'Leveza absoluta. Substituímos a massa pela folha de couve crocante, criando um wrap refrescante e ultra nutritivo.',
         imageSource: require('../assets/images/recipes/smoothie_verde.png'), // Placeholder
         prepTime: '15 min',
         difficulty: 'Fácil',
@@ -265,16 +265,16 @@ const HEALTHY_RECIPES: Recipe[] = [
             { name: 'Frango Desfiado', quantity: '100g', icon: '🍗' },
             { name: 'Ricota', quantity: '2 colheres', icon: '🧀' }
         ],
-        instructions: ['Branqueie a couve.', 'Recheie e enrole.'],
+        instructions: ['Passe a folha de couve rapidamente na água quente (branqueamento).', 'Recheie com frango e ricota.', 'Enrole como um charuto.'],
         substitutions: [],
-        healthTips: 'Low carb total.',
+        healthTips: 'Uma das melhores formas de consumir vegetais crus/semi-crus.',
         tags: ['Lanche', 'Leve'],
         createdAt: Date.now()
     },
     {
         id: 'h_4',
         name: 'Risoto de Quinoa com Cogumelos',
-        description: 'Falso risoto rico em proteínas vegetais.',
+        description: 'Cremosidade sem culpa. A quinoa traz uma textura incrível e muito mais proteína que o arroz arbóreo tradicional.',
         imageSource: require('../assets/images/recipes/omelete.png'), // Placeholder
         prepTime: '30 min',
         difficulty: 'Médio',
@@ -285,16 +285,16 @@ const HEALTHY_RECIPES: Recipe[] = [
             { name: 'Cogumelos variados', quantity: '1 xícara', icon: '🍄' },
             { name: 'Caldo de legumes', quantity: '500ml', icon: '🥘' }
         ],
-        instructions: ['Cozinhe a quinoa no caldo.', 'Refogue cogumelos e misture.'],
+        instructions: ['Refogue os cogumelos.', 'Adicione a quinoa e vá colocando o caldo aos poucos, mexendo sempre.', 'Finalize quando estiver cremoso.'],
         substitutions: [],
-        healthTips: 'Substituto perfeito do arroz.',
+        healthTips: 'A quinoa é um dos poucos vegetais que contém todos os aminoácidos essenciais.',
         tags: ['Vegano', 'Jantar'],
         createdAt: Date.now()
     },
     {
         id: 'h_5',
         name: 'Tacos de Alface com Carne Desfiada',
-        description: 'Diversão para comer com as mãos, sem farinha.',
+        description: 'Diversão na hora de comer. Crocante, saboroso e perfeito para compartilhar, sem a farinha das tortillas tradicionais.',
         imageSource: require('../assets/images/recipes/salada_atum.png'), // Placeholder
         prepTime: '20 min',
         difficulty: 'Fácil',
@@ -305,9 +305,9 @@ const HEALTHY_RECIPES: Recipe[] = [
             { name: 'Carne Desfiada', quantity: '150g', icon: '🥩' },
             { name: 'Vinagrete', quantity: 'a gosto', icon: '🍅' }
         ],
-        instructions: ['Use a folha de alface como concha.', 'Recheie com carne e vinagrete.'],
+        instructions: ['Lave e seque bem as folhas de alface para ficarem crocantes.', 'Use-as como concha.', 'Recheie com a carne quente e o vinagrete frio.'],
         substitutions: [],
-        healthTips: 'Zero glúten.',
+        healthTips: 'Ideal para dietas cetogênicas e low carb.',
         tags: ['Keto', 'Divertido'],
         createdAt: Date.now()
     }
@@ -317,30 +317,30 @@ export const RECIPE_PACKS: Record<string, RecipePack> = {
     [UserGoal.LOSE_WEIGHT]: {
         id: 'pack_lose_weight',
         goal: UserGoal.LOSE_WEIGHT,
-        title: '5 Receitas para Perda de Peso',
-        description: 'Low-kcal, saciedade alta e muito sabor.',
+        title: 'Queima de Gordura Acelerada',
+        description: 'Receitas estrategicamente selecionadas com baixa densidade calórica e alto poder de saciedade para você secar sem passar fome.',
         recipes: LOSE_WEIGHT_RECIPES
     },
     [UserGoal.GAIN_MUSCLE]: {
         id: 'pack_gain_muscle',
         goal: UserGoal.GAIN_MUSCLE,
-        title: '5 Receitas para Ganho de Massa',
-        description: 'Alta proteína e energia para seus treinos.',
+        title: 'Hipertrofia Máxima',
+        description: 'Combustível premium para seus músculos. Pratos ricos em proteínas de alto valor biológico e carboidratos complexos para recuperação e crescimento.',
         recipes: GAIN_MUSCLE_RECIPES
     },
     [UserGoal.EAT_HEALTHY]: {
         id: 'pack_healthy',
         goal: UserGoal.EAT_HEALTHY,
-        title: '5 Receitas Saudáveis',
-        description: 'Equilíbrio, micronutrientes e sabor.',
+        title: 'Vitalidade & Equilíbrio',
+        description: 'Nutrição celular completa. Uma seleção de pratos vibrantes, ricos em micronutrientes e antioxidantes para sua melhor versão.',
         recipes: HEALTHY_RECIPES
     },
     // Fallback for MAINTAIN
     [UserGoal.MAINTAIN]: {
         id: 'pack_maintain',
         goal: UserGoal.MAINTAIN,
-        title: '5 Receitas Saudáveis',
-        description: 'Equilíbrio, micronutrientes e sabor.',
+        title: 'Vitalidade & Equilíbrio',
+        description: 'Nutrição celular completa. Uma seleção de pratos vibrantes, ricos em micronutrientes e antioxidantes para sua melhor versão.',
         recipes: HEALTHY_RECIPES
     }
 };

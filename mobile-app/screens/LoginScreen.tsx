@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, SafeAreaView } from 'react-native';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { MailIcon, LockIcon, EyeIcon, EyeOffIcon, ArrowRightIcon } from '../components/Icons';
 
@@ -30,6 +30,24 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
             Alert.alert('Erro', msg);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleForgotPassword = async () => {
+        if (!email) {
+            Alert.alert('Erro', 'Por favor, digite seu email para recuperar a senha.');
+            return;
+        }
+
+        try {
+            await sendPasswordResetEmail(auth, email.trim());
+            Alert.alert('Sucesso', 'Email de recuperação enviado! Verifique sua caixa de entrada.');
+        } catch (error: any) {
+            console.error(error);
+            let msg = "Falha ao enviar email.";
+            if (error.code === 'auth/invalid-email') msg = "Email inválido.";
+            if (error.code === 'auth/user-not-found') msg = "Usuário não encontrado.";
+            Alert.alert('Erro', msg);
         }
     };
 
@@ -70,6 +88,10 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
                             {showPassword ? <EyeOffIcon size={20} color="#9CA3AF" /> : <EyeIcon size={20} color="#9CA3AF" />}
                         </TouchableOpacity>
                     </View>
+
+                    <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPasswordBtn}>
+                        <Text style={styles.forgotPasswordText}>Esqueci minha senha</Text>
+                    </TouchableOpacity>
 
                     <TouchableOpacity
                         style={styles.primaryButton}
@@ -200,5 +222,14 @@ const styles = StyleSheet.create({
         color: '#a6f000',
         fontSize: 16,
         fontWeight: '700',
+    },
+    forgotPasswordBtn: {
+        alignSelf: 'flex-end',
+        marginTop: -8,
+    },
+    forgotPasswordText: {
+        color: '#6B7280',
+        fontSize: 14,
+        fontWeight: '500',
     },
 });

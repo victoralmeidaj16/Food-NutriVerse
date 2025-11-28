@@ -7,9 +7,49 @@ const KEYS = {
     SAVED_RECIPES: '@food_nutriverse_saved_recipes',
     WEEKLY_PLAN: '@food_nutriverse_weekly_plan',
     SHOPPING_LIST: '@food_nutriverse_shopping_list',
+    RECIPE_HISTORY: '@food_nutriverse_recipe_history',
+    USER_LISTS: '@food_nutriverse_user_lists',
 };
 
 export const storageService = {
+    // --- User Lists ---
+    saveUserLists: async (lists: UserList[]) => {
+        try {
+            await AsyncStorage.setItem(KEYS.USER_LISTS, JSON.stringify(lists));
+        } catch (e) {
+            console.error('Failed to save user lists', e);
+        }
+    },
+
+    loadUserLists: async (): Promise<UserList[]> => {
+        try {
+            const json = await AsyncStorage.getItem(KEYS.USER_LISTS);
+            return json ? JSON.parse(json) : [];
+        } catch (e) {
+            console.error('Failed to load user lists', e);
+            return [];
+        }
+    },
+
+    // --- Recipe History ---
+    saveHistory: async (recipes: Recipe[]) => {
+        try {
+            await AsyncStorage.setItem(KEYS.RECIPE_HISTORY, JSON.stringify(recipes));
+        } catch (e) {
+            console.error('Failed to save history', e);
+        }
+    },
+
+    loadHistory: async (): Promise<Recipe[]> => {
+        try {
+            const json = await AsyncStorage.getItem(KEYS.RECIPE_HISTORY);
+            return json ? JSON.parse(json) : [];
+        } catch (e) {
+            console.error('Failed to load history', e);
+            return [];
+        }
+    },
+
     // --- User Profile ---
     saveProfile: async (profile: UserProfile) => {
         try {

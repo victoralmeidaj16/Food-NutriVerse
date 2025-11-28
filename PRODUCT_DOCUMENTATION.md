@@ -1,7 +1,7 @@
 # 📘 Food NutriVerse - Documentação de Produto & Design System
 
 **Versão:** 1.0.0  
-**Data:** 26 de Novembro de 2024  
+**Data:** 26 de Novembro de 2025  
 **Status:** Em Desenvolvimento  
 
 ---
@@ -12,17 +12,18 @@ O **Food NutriVerse** é um assistente nutricional inteligente de bolso. Ele uti
 
 ## 2. Objetivos Principais
 
-1.  **Democratizar a Nutrição Personalizada:** Oferecer planos alimentares adaptados a objetivos (perda de peso, hipertrofia) e restrições sem o custo de um nutricionista particular.
-2.  **Reduzir o Desperdício:** Permitir que usuários cozinhem com o que já possuem em casa através da IA.
-3.  **Facilitar a Adesão à Dieta:** Transformar pratos "proibidos" (ex: pizza, hambúrguer) em versões saudáveis e macro-compatíveis.
-4.  **Otimizar o Tempo:** Gerar listas de compras e planejamentos semanais completos em segundos.
+1.  **Eliminar a Indecisão Culinária:** Acabar com a dúvida do "o que comer hoje?" facilitando a escolha de refeições deliciosas com o que o usuário já possui em casa.
+2.  **Hiper-Personalização de Sabor:** Garantir que cada prato esteja alinhado não apenas aos objetivos e restrições, mas também aos hábitos, preferências e paladar do usuário.
+3.  **Nutrição de Elite Acessível:** Oferecer a experiência de um nutricionista e chef particular, adaptando planos para perda de peso ou definição com sofisticação. Oferecendo planos alimentares adaptados a objetivos (perda de peso, hipertrofia, saudável) e restrições sem o custo de um nutricionista particular.
+4.  **Prazer sem Culpa:** Transformar desejos e pratos favoritos em versões saudáveis e macro-compatíveis, garantindo adesão pelo sabor.Transformando pratos "proibidos" (ex: pizza, hambúrguer) em versões saudáveis e macro-compatíveis.
 
 ## 3. Público-Alvo
 
-*   **O "Busy Achiever":** Pessoas ocupadas que querem comer bem mas não têm tempo para planejar cardápios.
-*   **O Entusiasta Fitness:** Praticantes de musculação/esportes que precisam bater macros específicos.
-*   **O Cozinheiro Iniciante:** Pessoas que querem cozinhar mais em casa mas não sabem combinar ingredientes.
-*   **Restrições Alimentares:** Veganos, celíacos ou intolerantes à lactose que têm dificuldade em encontrar receitas variadas.
+*   **Mulheres em Busca de Excelência:** Mulheres com alto poder aquisitivo que buscam um corpo fitness, magro e admirável, valorizando saúde e estética.
+*   **O "Busy Achiever":** Pessoas ocupadas que querem comer bem mas não têm tempo para planejar cardápios. Profissionais de sucesso que desejam otimizar seu tempo sem abrir mão de uma alimentação de alta qualidade
+*   **O Entusiasta Fitness:** Praticantes de atividades físicas, musculação/esportes que buscam performance e resultados estéticos através da precisão nutricional.
+*   **Lifestyle Premium:** Pessoas que buscam exclusividade e personalização em sua jornada de bem-estar.
+*   **Restrições Alimentares:** Veganos, celíacos, intolerantes à lactose ou com **outras** restrições (campo livre para o usuário escrever) que têm dificuldade em encontrar receitas variadas.
 
 ---
 
@@ -71,6 +72,7 @@ O **Food NutriVerse** é um assistente nutricional inteligente de bolso. Ele uti
     *   `DailyTipCard`: Dica rotativa (dispensável).
     *   `CategoryList`: Carrossel horizontal de filtros.
     *   `RecipeFeed`: Lista vertical de receitas (Destaques ou Filtradas).
+    *   `RecipePacks`: Pacotes curados de receitas por objetivo (ex: "Queima de Gordura", "Hipertrofia").
 *   **Regras:** Feed atualiza baseado no horário do dia (manhã mostra café, noite mostra jantar).
 
 ### 5.3. Explorar (Hub de Criação)
@@ -80,7 +82,14 @@ O **Food NutriVerse** é um assistente nutricional inteligente de bolso. Ele uti
     2.  **Despensa (Scanner):** Botão de Câmera + Lista de Ingredientes + Botão "Gerar".
 *   **Feedback:** LoadingOverlay com mensagens divertidas durante a geração.
 
-### 5.4. Agenda (Planning)
+### 5.4. Biblioteca (Library)
+*   **Objetivo:** Centralizar o conhecimento culinário do usuário.
+*   **Seções:**
+    *   **Receitas Salvas:** Favoritos manuais.
+    *   **Histórico:** Log automático de todas as receitas geradas pela IA.
+*   **Interação:** Cards compactos com acesso rápido aos detalhes.
+
+### 5.5. Agenda (Planning)
 *   **Objetivo:** Gestão da rotina alimentar.
 *   **Componentes:**
     *   `DaySelector`: Faixa horizontal de dias.
@@ -88,7 +97,7 @@ O **Food NutriVerse** é um assistente nutricional inteligente de bolso. Ele uti
     *   `ShoppingListModal`: Modal full-screen com checklist.
 *   **Ações:** "Regenerar Refeição" (troca única), "Copiar Refeição".
 
-### 5.5. Perfil
+### 5.6. Perfil
 *   **Objetivo:** Gestão de conta e configurações.
 *   **Seções:**
     *   Info do Usuário (Foto, Nome, Meta).

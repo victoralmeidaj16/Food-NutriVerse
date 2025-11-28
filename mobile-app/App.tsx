@@ -13,6 +13,7 @@ import { LoginScreen } from './screens/LoginScreen';
 import { SignUpScreen } from './screens/SignUpScreen';
 import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan, Recipe, WeeklyPlan } from './types';
 import { storageService } from './services/storage';
+import { LanguageProvider } from './context/LanguageContext';
 
 // --- Types ---
 type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL' | 'PAYWALL' | 'RECIPE_PACK';
@@ -277,10 +278,12 @@ export default function App() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      {renderScreen()}
-    </View>
+    <LanguageProvider>
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        {renderScreen()}
+      </View>
+    </LanguageProvider>
   );
 }
 

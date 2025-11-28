@@ -19,7 +19,21 @@ export const EditProfileModal = ({
   const [restrictions, setRestrictions] = useState<string[]>(profile.dietaryRestrictions);
   const [dislikes, setDislikes] = useState<string[]>(profile.dislikes || []);
   const [newDislike, setNewDislike] = useState('');
-  const [editedProfile, setEditedProfile] = useState<UserProfile>(profile);
+  const [profilePicture, setProfilePicture] = useState<string | undefined>(profile.profilePicture);
+
+  const pickImage = async () => {
+    // No permissions request is necessary for launching the image library
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setProfilePicture(result.assets[0].uri);
+    }
+  };
 
   const toggleRestriction = (res: string) => {
     if (restrictions.includes(res)) {
@@ -54,6 +68,7 @@ export const EditProfileModal = ({
       activityLevel,
       dietaryRestrictions: restrictions,
       dislikes,
+      profilePicture
     });
     onClose();
   };
@@ -69,6 +84,24 @@ export const EditProfileModal = ({
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
+
+          <View style={styles.imageSection}>
+            <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
+              {profilePicture ? (
+                <Image source={{ uri: profilePicture }} style={styles.profileImage} />
+              ) : (
+                <View style={styles.placeholderImage}>
+                  <UserIcon size={40} color="#9CA3AF" />
+                </View>
+              )}
+              <View style={styles.cameraBadge}>
+                <CameraIcon size={16} color="white" />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={pickImage}>
+              <Text style={styles.changePhotoText}>Alterar Foto</Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.section}>
             <Text style={styles.label}>Nome</Text>

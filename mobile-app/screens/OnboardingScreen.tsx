@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, RESTRICTION_OPTIONS, SubscriptionPlan } from '../types';
 import { ArrowRightIcon, CheckIcon, StarIcon, TimerIcon, FlameIcon } from '../components/Icons';
 import { PaywallScreen } from './PaywallScreen';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +26,7 @@ export const OnboardingScreen = ({
     onComplete: (profile: UserProfile) => void;
     onLogin: () => void
 }) => {
+    const { t } = useLanguage();
     const [step, setStep] = useState(0);
 
     // Form State
@@ -105,16 +107,16 @@ export const OnboardingScreen = ({
             <View style={styles.heroImagePlaceholder}>
                 <Text style={{ fontSize: 60 }}>🥗</Text>
             </View>
-            <Text style={styles.heroTitle}>Coma bem todos os dias. Sem esforço.</Text>
+            <Text style={styles.heroTitle}>{t('onboarding.heroTitle')}</Text>
             <Text style={styles.heroSubtitle}>
-                O NutriVerse cria sua semana alimentar completa — baseada no seu corpo, objetivo e ingredientes que você já tem.
+                {t('onboarding.heroSubtitle')}
             </Text>
             <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
-                <Text style={styles.primaryButtonText}>Começar</Text>
+                <Text style={styles.primaryButtonText}>{t('common.start')}</Text>
                 <ArrowRightIcon size={20} color="black" />
             </TouchableOpacity>
             <TouchableOpacity onPress={onLogin} style={{ marginTop: 20 }}>
-                <Text style={styles.loginLink}>Já tenho conta</Text>
+                <Text style={styles.loginLink}>{t('onboarding.loginLink')}</Text>
             </TouchableOpacity>
         </View>
     );
@@ -141,7 +143,7 @@ export const OnboardingScreen = ({
                 onPress={handleNext}
                 disabled={painPoints.length === 0}
             >
-                <Text style={styles.primaryButtonText}>Continuar</Text>
+                <Text style={styles.primaryButtonText}>{t('common.continue')}</Text>
             </TouchableOpacity>
         </View>
     );

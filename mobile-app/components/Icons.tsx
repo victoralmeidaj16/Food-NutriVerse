@@ -39,7 +39,8 @@ import {
     Star,
     ArrowLeft,
     Clock,
-    AlertTriangle
+    AlertTriangle,
+    CheckCircle
 } from 'lucide-react-native';
 
 export const HomeIcon = Home;
@@ -82,3 +83,4 @@ export const StarIcon = Star;
 export const ArrowLeftIcon = ArrowLeft;
 export const ClockIcon = Clock;
 export const AlertTriangleIcon = AlertTriangle;
+export const CheckCircleIcon = CheckCircle;

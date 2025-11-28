@@ -10,21 +10,27 @@ export const RecipeCard = ({
     onPress,
     onSave,
     isSaved,
-    userDislikes = []
+    userDislikes = [],
+    compact = false
 }: {
     recipe: Recipe;
     onPress: () => void;
     onSave?: (r: Recipe) => void;
     isSaved?: boolean;
     userDislikes?: string[];
+    compact?: boolean;
 }) => {
     const hasConflict = userDislikes.some(dislike =>
         recipe.ingredients.some(ing => ing.name.toLowerCase().includes(dislike.toLowerCase()))
     );
 
     return (
-        <TouchableOpacity onPress={onPress} style={styles.card} activeOpacity={0.95}>
-            <View style={styles.imageContainer}>
+        <TouchableOpacity
+            onPress={onPress}
+            style={[styles.card, compact && styles.cardCompact]}
+            activeOpacity={0.95}
+        >
+            <View style={[styles.imageContainer, compact && styles.imageContainerCompact]}>
                 <Image
                     source={recipe.imageSource ? recipe.imageSource : { uri: recipe.imageUrl }}
                     style={styles.image}
@@ -33,27 +39,27 @@ export const RecipeCard = ({
                 <View style={styles.overlay} />
 
                 <View style={styles.topRow}>
-                    <View style={styles.categoryBadge}>
-                        <Text style={styles.categoryText}>{recipe.category}</Text>
+                    <View style={[styles.categoryBadge, compact && styles.categoryBadgeCompact]}>
+                        <Text style={[styles.categoryText, compact && styles.categoryTextCompact]}>{recipe.category}</Text>
                     </View>
                     {onSave && (
-                        <TouchableOpacity onPress={() => onSave(recipe)} style={styles.saveBadge}>
-                            <BookHeartIcon size={16} color={isSaved ? "#a6f000" : "white"} fill={isSaved ? "#a6f000" : "none"} />
+                        <TouchableOpacity onPress={() => onSave(recipe)} style={[styles.saveBadge, compact && styles.saveBadgeCompact]}>
+                            <BookHeartIcon size={compact ? 12 : 16} color={isSaved ? "#a6f000" : "white"} fill={isSaved ? "#a6f000" : "none"} />
                         </TouchableOpacity>
                     )}
                 </View>
 
                 <View style={styles.bottomRow}>
-                    <View style={styles.timeBadge}>
-                        <TimerIcon size={12} color="white" />
-                        <Text style={styles.timeText}>{recipe.prepTime}</Text>
+                    <View style={[styles.timeBadge, compact && styles.timeBadgeCompact]}>
+                        <TimerIcon size={compact ? 10 : 12} color="white" />
+                        <Text style={[styles.timeText, compact && styles.timeTextCompact]}>{recipe.prepTime}</Text>
                     </View>
                 </View>
             </View>
 
-            <View style={styles.content}>
+            <View style={[styles.content, compact && styles.contentCompact]}>
                 <View style={styles.headerRow}>
-                    <Text style={styles.title} numberOfLines={2}>{recipe.name}</Text>
+                    <Text style={[styles.title, compact && styles.titleCompact]} numberOfLines={2}>{recipe.name}</Text>
                     {hasConflict && (
                         <View style={styles.warningBadge}>
                             <Text style={styles.warningText}>⚠️</Text>
@@ -63,14 +69,18 @@ export const RecipeCard = ({
 
                 <View style={styles.metaRow}>
                     <View style={styles.metaItem}>
-                        <FlameIcon size={14} color="#F97316" />
-                        <Text style={styles.metaText}>{recipe.macros.calories} kcal</Text>
+                        <FlameIcon size={compact ? 12 : 14} color="#F97316" />
+                        <Text style={[styles.metaText, compact && styles.metaTextCompact]}>{recipe.macros.calories} kcal</Text>
                     </View>
-                    <View style={styles.divider} />
-                    <View style={styles.metaItem}>
-                        <View style={[styles.dot, { backgroundColor: getDifficultyColor(recipe.difficulty) }]} />
-                        <Text style={styles.metaText}>{recipe.difficulty}</Text>
-                    </View>
+                    {!compact && (
+                        <>
+                            <View style={styles.divider} />
+                            <View style={styles.metaItem}>
+                                <View style={[styles.dot, { backgroundColor: getDifficultyColor(recipe.difficulty) }]} />
+                                <Text style={styles.metaText}>{recipe.difficulty}</Text>
+                            </View>
+                        </>
+                    )}
                 </View>
             </View>
         </TouchableOpacity>
@@ -93,17 +103,26 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.12, // Increased from 0.08
+        shadowOpacity: 0.12,
         shadowRadius: 16,
-        elevation: 6, // Increased from 4
+        elevation: 6,
         borderWidth: 1,
-        borderColor: '#E5E7EB', // Stronger border
+        borderColor: '#E5E7EB',
         overflow: 'hidden',
+    },
+    cardCompact: {
+        borderRadius: 16,
+        marginBottom: 12,
+        shadowRadius: 8,
+        elevation: 3,
     },
     imageContainer: {
         height: 220,
         backgroundColor: '#F3F4F6',
         position: 'relative',
+    },
+    imageContainerCompact: {
+        height: 120, // ~45% smaller
     },
     image: {
         width: '100%',
@@ -137,12 +156,20 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
+    categoryBadgeCompact: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
     categoryText: {
         fontSize: 11,
         fontWeight: '700',
         color: '#000',
         textTransform: 'uppercase',
         letterSpacing: 0.5,
+    },
+    categoryTextCompact: {
+        fontSize: 9,
     },
     saveBadge: {
         backgroundColor: 'rgba(0,0,0,0.3)',
@@ -151,6 +178,11 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    saveBadgeCompact: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
     },
     timeBadge: {
         backgroundColor: 'rgba(0,0,0,0.75)',
@@ -161,13 +193,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 6,
     },
+    timeBadgeCompact: {
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+        borderRadius: 6,
+        gap: 4,
+    },
     timeText: {
         color: 'white',
         fontSize: 11,
         fontWeight: '700',
     },
+    timeTextCompact: {
+        fontSize: 9,
+    },
     content: {
         padding: 20,
+    },
+    contentCompact: {
+        padding: 12,
     },
     headerRow: {
         flexDirection: 'row',
@@ -183,6 +227,10 @@ const styles = StyleSheet.create({
         color: '#111827',
         lineHeight: 26,
         letterSpacing: -0.5,
+    },
+    titleCompact: {
+        fontSize: 14,
+        lineHeight: 18,
     },
     ratingBadge: {
         flexDirection: 'row',
@@ -211,6 +259,9 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#6B7280',
         fontWeight: '600',
+    },
+    metaTextCompact: {
+        fontSize: 11,
     },
     divider: {
         width: 1,

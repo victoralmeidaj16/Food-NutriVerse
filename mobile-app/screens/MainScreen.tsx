@@ -7,6 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, StyleSheet, Dimensions, ActivityIndicator, Alert, SafeAreaView, Modal, LayoutAnimation, Platform, UIManager, Animated, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { deleteUser } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { UserProfile, Recipe, Tab, WeeklyPlan, ShoppingList, UserGoal, RECIPE_CATEGORIES } from '../types';
@@ -31,6 +32,7 @@ const { width } = Dimensions.get('window');
 import { storageService } from '../services/storage';
 import { deleteUserData } from '../services/userService';
 import { auth } from '../services/firebaseConfig';
+import { useLanguage } from '../context/LanguageContext';
 
 export const MainScreen = ({
     user,
@@ -83,19 +85,35 @@ export const MainScreen = ({
     const [selectedMealToCopy, setSelectedMealToCopy] = useState<{ dayIndex: number, mealIndex: number, recipe: Recipe } | null>(null);
     const [regeneratingMeal, setRegeneratingMeal] = useState<{ dayIndex: number, mealIndex: number } | null>(null);
 
+    // Enable LayoutAnimation for Android
+    useEffect(() => {
+        if (Platform.OS === 'android') {
+            if (UIManager.setLayoutAnimationEnabledExperimental) {
+                UIManager.setLayoutAnimationEnabledExperimental(true);
+            }
+        }
+    }, []);
+    const [showAllRecipes, setShowAllRecipes] = useState(false);
+    const { t, language, setLanguage } = useLanguage();
+
     // Enable LayoutAnimation on Android
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
         UIManager.setLayoutAnimationEnabledExperimental(true);
     }
 
-    // Load Planning Data
+    // Load Planning Data & History
     useEffect(() => {
-        const loadPlanningData = async () => {
+        const loadData = async () => {
             // Plan is loaded in App.tsx
             const list = await storageService.loadShoppingList();
             if (list) setShoppingList(list);
+
+            const history = await storageService.loadHistory();
+            if (history.length > 0) {
+                setGeneratedRecipes(history);
+            }
         };
-        loadPlanningData();
+        loadData();
     }, []);
 
     // --- Handlers ---
@@ -111,8 +129,30 @@ export const MainScreen = ({
         setExploreMode(mode);
     };
 
+    const playSound = async () => {
+        try {
+            const { sound } = await Audio.Sound.createAsync(
+                require('../assets/sounds/pop.mp3') // Assuming we will add this, or use a URI
+            ).catch(() => ({ sound: null }));
+
+            // Fallback to a remote URL if local file doesn't exist (for this demo)
+            if (!sound) {
+                const { sound: remoteSound } = await Audio.Sound.createAsync(
+                    { uri: 'https://www.soundjay.com/buttons/sounds/button-09.mp3' }
+                );
+                await remoteSound.playAsync();
+                return;
+            }
+
+            await sound.playAsync();
+        } catch (error) {
+            console.log('Error playing sound', error);
+        }
+    };
+
     const handleExplorePress = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        playSound();
 
         // Reset rotation and ripple
         fabRotate.setValue(0);
@@ -216,7 +256,9 @@ export const MainScreen = ({
 
     const addManualIngredient = () => {
         if (manualIngredient.trim()) {
-            setPantryIngredients(prev => [...prev, manualIngredient.trim()]);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setPantryIngredients([...pantryIngredients, manualIngredient.trim()]);
             setManualIngredient('');
         }
     };
@@ -273,9 +315,14 @@ export const MainScreen = ({
                 userProfile.dislikes || []
             );
             if (result) {
-                setGeneratedRecipes(prev => [result, ...prev]);
+                setGeneratedRecipes(prev => {
+                    const newList = [result, ...prev].slice(0, 20); // Keep last 20
+                    storageService.saveHistory(newList);
+                    return newList;
+                });
                 onRecipeClick(result); // Open immediately
                 setDishInput('');
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } else {
                 Alert.alert("Erro", "Não foi possível gerar a receita. Tente novamente.");
             }
@@ -446,6 +493,8 @@ export const MainScreen = ({
             ? [...generatedRecipes, ...MOCK_RECIPES].filter(r => r.category === selectedCategory)
             : [...generatedRecipes, ...MOCK_RECIPES];
 
+        const visibleRecipes = showAllRecipes ? displayRecipes : displayRecipes.slice(0, 4);
+
         const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 
         return (
@@ -562,14 +611,25 @@ export const MainScreen = ({
                     )}
                 </View>
 
-                <View style={styles.recipesList}>
-                    {displayRecipes.map(recipe => (
+                <View style={[styles.recipesList, !showAllRecipes && { paddingBottom: 0 }]}>
+                    {visibleRecipes.map((recipe, index) => (
                         <RecipeCard
                             key={recipe.id}
                             recipe={recipe}
                             onPress={() => onRecipeClick(recipe)}
                         />
                     ))}
+                    {!showAllRecipes && displayRecipes.length > 3 && (
+                        <LinearGradient
+                            colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,1)']}
+                            style={styles.seeMoreGradient}
+                        >
+                            <TouchableOpacity onPress={() => setShowAllRecipes(true)} style={styles.seeMoreButton}>
+                                <Text style={styles.seeMoreText}>Ver mais</Text>
+                                <ArrowRightIcon size={16} color="#000" />
+                            </TouchableOpacity>
+                        </LinearGradient>
+                    )}
                 </View>
             </ScrollView>
         );
@@ -903,6 +963,24 @@ export const MainScreen = ({
                         <Text style={styles.emptyDesc}>Suas receitas favoritas aparecerão aqui.</Text>
                     </View>
                 )}
+
+                <View style={[styles.sectionHeader, { marginTop: 32 }]}>
+                    <Text style={styles.sectionTitle}>Histórico</Text>
+                </View>
+                <View style={styles.historyList}>
+                    {generatedRecipes.length > 0 ? (
+                        generatedRecipes.map(recipe => (
+                            <RecipeCard
+                                key={recipe.id}
+                                recipe={recipe}
+                                onPress={() => onRecipeClick(recipe)}
+                                compact={true}
+                            />
+                        ))
+                    ) : (
+                        <Text style={styles.emptyHistoryText}>Nenhuma receita gerada ainda.</Text>
+                    )}
+                </View>
             </ScrollView>
         );
     };
@@ -919,7 +997,11 @@ export const MainScreen = ({
 
                 <View style={styles.profileCard}>
                     <View style={styles.profileImageContainer}>
-                        <UserIcon size={48} color="#D1D5DB" />
+                        {userProfile?.profilePicture ? (
+                            <Image source={{ uri: userProfile.profilePicture }} style={styles.profileImage} />
+                        ) : (
+                            <UserIcon size={48} color="#D1D5DB" />
+                        )}
                     </View>
                     <Text style={styles.profileName}>{userProfile?.name}</Text>
                     <Text style={styles.profileGoal}>
@@ -979,8 +1061,19 @@ export const MainScreen = ({
                     </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity onPress={onLogout} style={[styles.logoutButton, { marginTop: 32 }]}>
-                    <Text style={styles.logoutText}>Sair da conta</Text>
+                <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => setLanguage(language === 'pt' ? 'en' : 'pt')}
+                >
+                    <View style={[styles.menuIconBox, { backgroundColor: '#EEF2FF' }]}>
+                        <Text style={{ fontSize: 16 }}>🌐</Text>
+                    </View>
+                    <Text style={styles.menuItemText}>{t('profile.changeLanguage')}</Text>
+                    <Text style={{ color: '#6B7280', fontWeight: '600' }}>{language.toUpperCase()}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
+                    <Text style={styles.logoutText}>{t('profile.logout')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={handleDeleteAccount} style={styles.deleteAccountButton}>
@@ -2071,5 +2164,45 @@ const styles = StyleSheet.create({
         padding: 4,
         backgroundColor: '#FEF2F2',
         borderRadius: 8,
+    },
+    seeMoreGradient: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 250, // Covers the 4th card
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        paddingBottom: 40,
+    },
+    seeMoreButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
+        gap: 8,
+    },
+    seeMoreText: {
+        fontWeight: '700',
+        color: '#000',
+        fontSize: 14,
+    },
+    historyList: {
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+    },
+    emptyHistoryText: {
+        textAlign: 'center',
+        color: '#9CA3AF',
+        marginTop: 20,
+        marginBottom: 20,
+        fontStyle: 'italic',
     },
 });

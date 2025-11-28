@@ -78,6 +78,7 @@ export interface UserProfile {
     id?: string;
     name: string;
     email?: string;
+    profilePicture?: string;
     goal: UserGoal;
     activityLevel: ActivityLevel;
     mealsPerDay: number;
@@ -137,6 +138,13 @@ export interface ShoppingItem {
 
 export interface ShoppingList {
     items: ShoppingItem[];
+}
+
+export interface UserList {
+    id: string;
+    name: string;
+    recipeIds: string[];
+    createdAt: number;
 }
 
 export const RESTRICTION_OPTIONS = [

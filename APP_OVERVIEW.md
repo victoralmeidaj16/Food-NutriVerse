@@ -32,6 +32,7 @@ O **Food NutriVerse** é um aplicativo móvel inovador que utiliza Inteligência
 *   **Dashboard:** Saudação personalizada e data.
 *   **Dica do Dia:** Card com dicas nutricionais rápidas.
 *   **Categorias:** Filtros rápidos (Café da manhã, Low Carb, Vegano, etc.).
+*   **Packs de Receitas:** Coleções curadas com objetivos específicos (ex: "5 Receitas para Perda de Peso").
 *   **Feed:** Lista de receitas geradas e sugestões populares.
 
 #### 🔍 Explorar

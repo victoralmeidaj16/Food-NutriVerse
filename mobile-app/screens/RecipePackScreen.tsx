@@ -44,27 +44,42 @@ export const RecipePackScreen = ({
                             style={styles.recipeCard}
                             onPress={() => onRecipeClick(recipe)}
                         >
-                            <View style={styles.recipeNumber}>
-                                <Text style={styles.numberText}>{index + 1}</Text>
-                            </View>
-                            {recipe.imageSource && (
-                                <Image source={recipe.imageSource} style={styles.recipeImage} />
-                            )}
-                            <View style={styles.recipeInfo}>
-                                <Text style={styles.recipeName}>{recipe.name}</Text>
-                                <View style={styles.metaRow}>
-                                    <View style={styles.metaItem}>
-                                        <ClockIcon size={14} color="#6B7280" />
-                                        <Text style={styles.metaText}>{recipe.prepTime}</Text>
-                                    </View>
-                                    <View style={styles.metaItem}>
-                                        <FlameIcon size={14} color="#6B7280" />
-                                        <Text style={styles.metaText}>{recipe.macros.calories} kcal</Text>
+                            <View style={styles.cardHeader}>
+                                <View style={styles.recipeNumber}>
+                                    <Text style={styles.numberText}>{index + 1}</Text>
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.recipeName}>{recipe.name}</Text>
+                                    <View style={styles.metaRow}>
+                                        <View style={styles.metaItem}>
+                                            <ClockIcon size={14} color="#6B7280" />
+                                            <Text style={styles.metaText}>{recipe.prepTime}</Text>
+                                        </View>
+                                        <View style={styles.metaItem}>
+                                            <FlameIcon size={14} color="#6B7280" />
+                                            <Text style={styles.metaText}>{recipe.macros.calories} kcal</Text>
+                                        </View>
+                                        <View style={styles.metaItem}>
+                                            <ChefHatIcon size={14} color="#6B7280" />
+                                            <Text style={styles.metaText}>{recipe.instructions.length} passos</Text>
+                                        </View>
                                     </View>
                                 </View>
                             </View>
-                            <View style={styles.arrowContainer}>
-                                <Text style={{ fontSize: 20, color: '#a6f000' }}>→</Text>
+
+                            <View style={styles.cardBody}>
+                                {recipe.imageSource && (
+                                    <Image source={recipe.imageSource} style={styles.recipeImage} />
+                                )}
+                                <View style={styles.descriptionContainer}>
+                                    <Text style={styles.cardDescription} numberOfLines={3}>
+                                        {recipe.description}
+                                    </Text>
+                                    <View style={styles.arrowRow}>
+                                        <Text style={styles.viewRecipeText}>Ver Receita</Text>
+                                        <Text style={{ fontSize: 18, color: '#a6f000' }}>→</Text>
+                                    </View>
+                                </View>
                             </View>
                         </TouchableOpacity>
                     ))}
@@ -130,48 +145,46 @@ const styles = StyleSheet.create({
         gap: 16,
     },
     recipeCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
         backgroundColor: 'white',
         padding: 16,
-        borderRadius: 16,
+        borderRadius: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowRadius: 12,
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
     },
     recipeNumber: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         backgroundColor: '#a6f000',
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
+        marginRight: 12,
     },
     numberText: {
-        fontWeight: '700',
+        fontWeight: '800',
         color: 'black',
-    },
-    recipeImage: {
-        width: 60,
-        height: 60,
-        borderRadius: 8,
-        marginRight: 16,
-    },
-    recipeInfo: {
-        flex: 1,
+        fontSize: 12,
     },
     recipeName: {
-        fontSize: 16,
-        fontWeight: '700',
+        fontSize: 18,
+        fontWeight: '800',
         color: '#1F2937',
         marginBottom: 4,
     },
     metaRow: {
         flexDirection: 'row',
         gap: 12,
+        alignItems: 'center',
     },
     metaItem: {
         flexDirection: 'row',
@@ -181,8 +194,37 @@ const styles = StyleSheet.create({
     metaText: {
         fontSize: 12,
         color: '#6B7280',
+        fontWeight: '500',
     },
-    arrowContainer: {
-        paddingLeft: 16,
-    }
+    cardBody: {
+        flexDirection: 'row',
+        gap: 16,
+    },
+    recipeImage: {
+        width: 80,
+        height: 80,
+        borderRadius: 12,
+        backgroundColor: '#F3F4F6',
+    },
+    descriptionContainer: {
+        flex: 1,
+        justifyContent: 'space-between',
+    },
+    cardDescription: {
+        fontSize: 13,
+        color: '#4B5563',
+        lineHeight: 18,
+        marginBottom: 8,
+    },
+    arrowRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: 4,
+    },
+    viewRecipeText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#a6f000',
+    },
 });

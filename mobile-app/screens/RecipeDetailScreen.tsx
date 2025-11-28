@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Modal, SafeAreaView } from 'react-native';
-import { Recipe } from '../types';
-import { ArrowRightIcon, BookHeartIcon, TimerIcon, FlameIcon, ExchangeIcon, LightbulbIcon, CheckIcon, CloseIcon, ChefHatIcon, AlertTriangleIcon, CalendarIcon } from '../components/Icons';
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Modal, SafeAreaView, Animated, TextInput } from 'react-native';
+import { UserList, Recipe, WeeklyPlan } from '../types';
+import { storageService } from '../services/storage';
+import { ArrowRightIcon, BookHeartIcon, TimerIcon, FlameIcon, ExchangeIcon, LightbulbIcon, CheckIcon, CloseIcon, ChefHatIcon, AlertTriangleIcon, CalendarIcon, CheckCircleIcon, ShoppingBagIcon } from '../components/Icons';
 import { AddToPlanModal } from '../components/AddToPlanModal';
-import { WeeklyPlan } from '../types';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
@@ -13,7 +13,6 @@ export const RecipeDetailScreen = ({
     recipe,
     onClose,
     onSave,
-
     isSaved,
     userDislikes = [],
     weeklyPlan = null,
@@ -29,6 +28,70 @@ export const RecipeDetailScreen = ({
 }) => {
     const [cookingMode, setCookingMode] = useState(false);
     const [showAddToPlan, setShowAddToPlan] = useState(false);
+
+    // Save to List State
+    const [showSaveModal, setShowSaveModal] = useState(false);
+    const [userLists, setUserLists] = useState<UserList[]>([]);
+    const [newListName, setNewListName] = useState('');
+    const [isCreatingList, setIsCreatingList] = useState(false);
+    const scaleAnim = React.useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        loadLists();
+    }, []);
+
+    const loadLists = async () => {
+        const lists = await storageService.loadUserLists();
+        setUserLists(lists);
+    };
+
+    const handleSavePress = () => {
+        // Animate Heart
+        Animated.sequence([
+            Animated.timing(scaleAnim, { toValue: 1.2, duration: 100, useNativeDriver: true }),
+            Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true })
+        ]).start();
+
+        setShowSaveModal(true);
+    };
+
+    const handleCreateList = async () => {
+        if (!newListName.trim()) return;
+
+        const newList: UserList = {
+            id: Math.random().toString(36).substr(2, 9),
+            name: newListName.trim(),
+            recipeIds: [recipe.id],
+            createdAt: Date.now()
+        };
+
+        const updatedLists = [...userLists, newList];
+        setUserLists(updatedLists);
+        await storageService.saveUserLists(updatedLists);
+
+        // Also trigger the main onSave to ensure it's in the "All Saved" list if needed
+        onSave(recipe);
+
+        setNewListName('');
+        setIsCreatingList(false);
+        setShowSaveModal(false);
+    };
+
+    const handleAddToList = async (listId: string) => {
+        const updatedLists = userLists.map(list => {
+            if (list.id === listId) {
+                if (!list.recipeIds.includes(recipe.id)) {
+                    return { ...list, recipeIds: [...list.recipeIds, recipe.id] };
+                }
+            }
+            return list;
+        });
+
+        setUserLists(updatedLists);
+        await storageService.saveUserLists(updatedLists);
+        onSave(recipe); // Ensure it's marked as saved globally
+        setShowSaveModal(false);
+    };
 
     const conflictingIngredients = recipe.ingredients.filter(ing =>
         userDislikes.some(dislike => ing.name.toLowerCase().includes(dislike.toLowerCase()))
@@ -53,9 +116,13 @@ export const RecipeDetailScreen = ({
                         <TouchableOpacity onPress={onClose} style={styles.iconButton}>
                             <ArrowRightIcon size={24} color="white" style={{ transform: [{ rotate: '180deg' }] }} />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => onSave(recipe)} style={styles.iconBtn}>
-                            <BookHeartIcon size={24} color={isSaved ? "#a6f000" : "white"} fill={isSaved ? "#a6f000" : "none"} />
+
+                        <TouchableOpacity onPress={handleSavePress} style={styles.iconBtn}>
+                            <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                                <BookHeartIcon size={24} color={isSaved ? "#a6f000" : "white"} fill={isSaved ? "#a6f000" : "none"} />
+                            </Animated.View>
                         </TouchableOpacity>
+
                         {onAddToPlan && weeklyPlan && (
                             <TouchableOpacity onPress={() => setShowAddToPlan(true)} style={styles.iconBtn}>
                                 <CalendarIcon size={24} color="white" />
@@ -63,6 +130,67 @@ export const RecipeDetailScreen = ({
                         )}
                     </View>
                 </View>
+
+                {/* Save to List Modal */}
+                <Modal visible={showSaveModal} transparent animationType="fade">
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.saveModalContent}>
+                            <View style={styles.saveModalHeader}>
+                                <Text style={styles.saveModalTitle}>Salvar Receita</Text>
+                                <TouchableOpacity onPress={() => setShowSaveModal(false)}>
+                                    <CloseIcon size={24} color="#1F2937" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <ScrollView style={{ maxHeight: 300 }}>
+                                {userLists.map(list => {
+                                    const isAlreadyInList = list.recipeIds.includes(recipe.id);
+                                    return (
+                                        <TouchableOpacity
+                                            key={list.id}
+                                            style={styles.listOption}
+                                            onPress={() => handleAddToList(list.id)}
+                                        >
+                                            <View style={styles.listIconPlaceholder}>
+                                                <BookHeartIcon size={20} color="#4B5563" />
+                                            </View>
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={styles.listName}>{list.name}</Text>
+                                                <Text style={styles.listCount}>{list.recipeIds.length} receitas</Text>
+                                            </View>
+                                            {isAlreadyInList && <CheckCircleIcon size={20} color="#16a34a" />}
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </ScrollView>
+
+                            {isCreatingList ? (
+                                <View style={styles.createListInputContainer}>
+                                    <TextInput
+                                        style={styles.createListInput}
+                                        placeholder="Nome da lista (ex: Café da Manhã)"
+                                        value={newListName}
+                                        onChangeText={setNewListName}
+                                        autoFocus
+                                    />
+                                    <TouchableOpacity onPress={handleCreateList} style={styles.confirmCreateBtn}>
+                                        <CheckIcon size={20} color="white" />
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                <TouchableOpacity
+                                    style={styles.createNewListBtn}
+                                    onPress={() => setIsCreatingList(true)}
+                                >
+                                    <View style={styles.plusIcon}>
+                                        <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>+</Text>
+                                    </View>
+                                    <Text style={styles.createNewListText}>Criar nova lista</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
+                </Modal>
 
                 {/* Add to Plan Modal */}
                 {weeklyPlan && onAddToPlan && (
@@ -72,7 +200,9 @@ export const RecipeDetailScreen = ({
                         plan={weeklyPlan}
                         onConfirm={(day, slot) => onAddToPlan(recipe, day, slot)}
                     />
-                )}         {/* Title & Info */}
+                )}
+
+                {/* Title & Info */}
                 <View style={styles.headerInfo}>
                     <View style={styles.categoryTag}>
                         <Text style={styles.categoryText}>{recipe.category}</Text>
@@ -188,13 +318,13 @@ export const RecipeDetailScreen = ({
                     </View>
 
                 </View>
-            </ScrollView >
+            </ScrollView>
 
             {/* Cooking Mode Modal */}
-            < Modal visible={cookingMode} animationType="slide" presentationStyle="fullScreen" >
+            <Modal visible={cookingMode} animationType="slide" presentationStyle="fullScreen">
                 <CookingMode recipe={recipe} onClose={() => setCookingMode(false)} />
-            </Modal >
-        </View >
+            </Modal>
+        </View>
     );
 };
 
@@ -230,6 +360,10 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
     const currentInstructionIndex = step - 1;
     const totalSteps = recipe.instructions.length;
 
+    if (step > totalSteps) {
+        return <CompletionView recipe={recipe} onClose={onClose} />;
+    }
+
     return (
         <SafeAreaView style={styles.cookingContainer}>
             {/* Header */}
@@ -255,37 +389,44 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
                     <View style={{ flex: 1 }}>
                         <View style={styles.checkHeader}>
                             <Text style={styles.cookingTitle}>Separe os ingredientes</Text>
-                            <TouchableOpacity onPress={selectAll}>
-                                <Text style={styles.selectAllText}>Marcar todos</Text>
-                            </TouchableOpacity>
                         </View>
                         <ScrollView contentContainerStyle={styles.checkList}>
-                            {recipe.ingredients.map((ing, i) => {
-                                const isChecked = checkedIngredients.has(i);
-                                return (
-                                    <TouchableOpacity
-                                        key={i}
-                                        onPress={() => toggleIngredient(i)}
-                                        style={[styles.checkItem, isChecked && styles.checkItemActive]}
-                                    >
-                                        <View style={[styles.checkbox, isChecked && styles.checkboxActive]}>
-                                            {isChecked && <CheckIcon size={16} color="white" />}
-                                        </View>
-                                        <Text style={[styles.checkName, isChecked && styles.checkNameActive]}>
-                                            {ing.quantity} {ing.name}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
+                            <View style={styles.ingredientsCard}>
+                                {recipe.ingredients.map((ing, i) => {
+                                    const isChecked = checkedIngredients.has(i);
+                                    return (
+                                        <TouchableOpacity
+                                            key={i}
+                                            onPress={() => toggleIngredient(i)}
+                                            style={[styles.checkItem, isChecked && styles.checkItemActive]}
+                                        >
+                                            <View style={[styles.checkbox, isChecked && styles.checkboxActive]}>
+                                                {isChecked && <CheckIcon size={16} color="white" />}
+                                            </View>
+                                            <Text style={[styles.checkName, isChecked && styles.checkNameActive]}>
+                                                {ing.quantity} {ing.name}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
                         </ScrollView>
-                        <TouchableOpacity
-                            onPress={() => setStep(1)}
-                            style={[styles.nextBtn, checkedIngredients.size === 0 && styles.nextBtnDisabled]}
-                            disabled={checkedIngredients.size === 0}
-                        >
-                            <Text style={styles.nextBtnText}>Começar Receita</Text>
-                            <ArrowRightIcon size={20} color="black" />
-                        </TouchableOpacity>
+
+                        <View style={styles.bottomActions}>
+                            <TouchableOpacity onPress={selectAll} style={styles.checkAllBtn}>
+                                <CheckCircleIcon size={24} color="#a6f000" />
+                                <Text style={styles.checkAllText}>Marcar Todos</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                onPress={() => setStep(1)}
+                                style={[styles.nextBtn, checkedIngredients.size === 0 && styles.nextBtnDisabled]}
+                                disabled={checkedIngredients.size === 0}
+                            >
+                                <Text style={styles.nextBtnText}>Começar Receita</Text>
+                                <ArrowRightIcon size={20} color="black" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 ) : (
                     <View style={{ flex: 1, justifyContent: 'space-between' }}>
@@ -314,7 +455,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
                                 </TouchableOpacity>
                             ) : (
                                 <TouchableOpacity
-                                    onPress={onClose}
+                                    onPress={() => setStep(step + 1)} // Go to completion page
                                     style={[styles.nextBtn, { backgroundColor: '#15803d' }]}
                                 >
                                     <Text style={[styles.nextBtnText, { color: 'white' }]}>Concluir</Text>
@@ -329,6 +470,55 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
     );
 };
 
+const CompletionView = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void }) => {
+    return (
+        <View style={styles.completionContainer}>
+            <TouchableOpacity onPress={onClose} style={styles.closeCompletionBtn}>
+                <CloseIcon size={24} color="#1F2937" />
+            </TouchableOpacity>
+
+            <View style={styles.completionContent}>
+                <View style={styles.successIconContainer}>
+                    <Text style={{ fontSize: 64 }}>🎉</Text>
+                </View>
+
+                <Text style={styles.completionTitle}>Parabéns!</Text>
+                <Text style={styles.completionSubtitle}>
+                    Você concluiu a receita{'\n'}
+                    <Text style={{ fontWeight: '800', color: '#1F2937' }}>{recipe.name}</Text>
+                </Text>
+
+                <View style={styles.shortcutsContainer}>
+                    <TouchableOpacity style={styles.shortcutBtn}>
+                        <View style={[styles.shortcutIcon, { backgroundColor: '#ecfccb' }]}>
+                            <BookHeartIcon size={24} color="#65a30d" />
+                        </View>
+                        <Text style={styles.shortcutLabel}>Salvar</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.shortcutBtn}>
+                        <View style={[styles.shortcutIcon, { backgroundColor: '#dbeafe' }]}>
+                            <CalendarIcon size={24} color="#2563eb" />
+                        </View>
+                        <Text style={styles.shortcutLabel}>Planejar</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.shortcutBtn}>
+                        <View style={[styles.shortcutIcon, { backgroundColor: '#f3e8ff' }]}>
+                            <ShoppingBagIcon size={24} color="#9333ea" />
+                        </View>
+                        <Text style={styles.shortcutLabel}>Lista</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity onPress={onClose} style={styles.finishBtn}>
+                    <Text style={styles.finishBtnText}>Voltar ao Início</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+};
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -340,6 +530,7 @@ const styles = StyleSheet.create({
     imageContainer: {
         height: 300,
         position: 'relative',
+        backgroundColor: '#1F2937', // Fallback dark color for white text visibility
     },
     image: {
         width: '100%',
@@ -365,7 +556,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.2)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
         alignItems: 'center',
         justifyContent: 'center',
         // backdropFilter: 'blur(10px)', 
@@ -374,7 +565,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.2)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -812,5 +1003,186 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#a6f000',
         fontSize: 16,
+    },
+    ingredientsCard: {
+        backgroundColor: '#F3F4F6',
+        borderRadius: 24,
+        padding: 16,
+        gap: 12,
+    },
+    bottomActions: {
+        gap: 16,
+        paddingTop: 16,
+    },
+    checkAllBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        padding: 12,
+    },
+    checkAllText: {
+        color: '#a6f000',
+        fontWeight: '700',
+        fontSize: 16,
+    },
+    completionContainer: {
+        flex: 1,
+        backgroundColor: 'white',
+        padding: 24,
+    },
+    closeCompletionBtn: {
+        position: 'absolute',
+        top: 16,
+        left: 16,
+        zIndex: 10,
+        padding: 8,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 20,
+    },
+    completionContent: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    successIconContainer: {
+        marginBottom: 24,
+        transform: [{ scale: 1.2 }],
+    },
+    completionTitle: {
+        fontSize: 32,
+        fontWeight: '800',
+        color: '#a6f000',
+        marginBottom: 8,
+    },
+    completionSubtitle: {
+        fontSize: 18,
+        color: '#6B7280',
+        textAlign: 'center',
+        marginBottom: 48,
+        lineHeight: 26,
+    },
+    shortcutsContainer: {
+        flexDirection: 'row',
+        gap: 24,
+        marginBottom: 48,
+    },
+    shortcutBtn: {
+        alignItems: 'center',
+        gap: 8,
+    },
+    shortcutIcon: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    shortcutLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#4B5563',
+    },
+    finishBtn: {
+        backgroundColor: 'black',
+        paddingHorizontal: 32,
+        paddingVertical: 16,
+        borderRadius: 16,
+        width: '100%',
+        alignItems: 'center',
+    },
+    finishBtnText: {
+        color: '#a6f000',
+        fontWeight: '700',
+        fontSize: 16,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        padding: 24,
+    },
+    saveModalContent: {
+        backgroundColor: 'white',
+        borderRadius: 24,
+        padding: 24,
+        maxHeight: '80%',
+    },
+    saveModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    saveModalTitle: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#1F2937',
+    },
+    listOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+        gap: 12,
+    },
+    listIconPlaceholder: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    listName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1F2937',
+    },
+    listCount: {
+        fontSize: 12,
+        color: '#6B7280',
+    },
+    createNewListBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginTop: 16,
+        paddingVertical: 12,
+    },
+    plusIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: 'black',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    createNewListText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1F2937',
+    },
+    createListInputContainer: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 16,
+    },
+    createListInput: {
+        flex: 1,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        height: 48,
+        fontSize: 16,
+    },
+    confirmCreateBtn: {
+        width: 48,
+        height: 48,
+        backgroundColor: '#a6f000',
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });

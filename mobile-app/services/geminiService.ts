@@ -209,14 +209,15 @@ export const generateFitnessRecipe = async (
     ${coreInstruction}
 
     Regras:
-    1. Se for Pantry Mode, invente um nome criativo para a receita.
+    1. Se for Pantry Mode, invente um nome criativo e apetitoso para a receita (NUNCA deixe vazio).
     2. Se for Transform Mode (prato específico), use o nome original no campo 'originalName'.
     3. Calcule macros estimados com precisão.
     4. Classifique a receita em uma destas categorias exatas: 'Café da Manhã', 'Almoço', 'Jantar', 'Lanches', 'Pré-Treino', 'Sobremesa'.
     5. Preencha o array 'substitutions' explicando o que foi trocado e por quê (ex: Açúcar -> Xilitol). Se for Pantry Mode e não houver troca direta, deixe vazio ou liste o ingrediente chave.
-    6. Para os ingredientes, separe OBRIGATORIAMENTE o nome, a quantidade e escolha um emoji representativo.
+    6. Para os ingredientes, separe OBRIGATORIAMENTE o nome, a quantidade e escolha um emoji representativo. Liste TODOS os ingredientes necessários.
+    7. No Modo de Preparo (instructions), seja DETALHADO. Explique o passo a passo com clareza, tempos de cozimento e dicas visuais (ex: "até dourar", "cerca de 10 min"). Evite instruções muito curtas.
     
-    Gere uma resposta JSON estrita seguindo o schema fornecido.
+    Gere uma resposta JSON estrita seguindo o schema fornecido. Certifique-se de que todos os campos obrigatórios estejam preenchidos com conteúdo rico.
   `;
 
     try {

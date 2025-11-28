@@ -16,5 +16,35 @@ View your app in AI Studio: https://ai.studio/apps/drive/1UbufQ0qu05wyr-ewIMajan
 1. Install dependencies:
    `npm install`
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+## 📱 Links Importantes (App Store Compliance)
+
+*   **Política de Privacidade:** [Privacy Policy](https://victoralmeidaj16.github.io/Food-NutriVerse/privacy.html)
+*   **Termos de Uso:** [Terms of Use](https://victoralmeidaj16.github.io/Food-NutriVerse/terms.html)
+*   **Suporte:** [Support Page](https://victoralmeidaj16.github.io/Food-NutriVerse/support.html)
+
+## 🍎 Build para iOS (App Store)
+
+1.  **Pré-requisitos:**
+    *   Conta Apple Developer
+    *   EAS CLI instalado (`npm install -g eas-cli`)
+    *   Login no EAS (`eas login`)
+
+2.  **Gerar Build:**
+    ```bash
+    cd mobile-app
+    eas build --platform ios
+    ```
+
+3.  **Submeter:**
+    *   Baixe o `.ipa` gerado
+    *   Use o Transporter app (macOS) para enviar para o App Store Connect
+
+## 🤖 Build para Android
+
+1.  **Gerar APK/Bundle:**
+    ```bash
+    cd mobile-app
+    eas build --platform android
+    ```
 3. Run the app:
    `npm run dev`
