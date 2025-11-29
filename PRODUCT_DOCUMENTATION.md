@@ -23,7 +23,7 @@ O **Food NutriVerse** é um assistente nutricional inteligente de bolso. Ele uti
 *   **O "Busy Achiever":** Pessoas ocupadas que querem comer bem mas não têm tempo para planejar cardápios. Profissionais de sucesso que desejam otimizar seu tempo sem abrir mão de uma alimentação de alta qualidade
 *   **O Entusiasta Fitness:** Praticantes de atividades físicas, musculação/esportes que buscam performance e resultados estéticos através da precisão nutricional.
 *   **Lifestyle Premium:** Pessoas que buscam exclusividade e personalização em sua jornada de bem-estar.
-*   **Restrições Alimentares:** Veganos, celíacos, intolerantes à lactose ou com **outras** restrições (campo livre para o usuário escrever) que têm dificuldade em encontrar receitas variadas.
+*   **Restrições Alimentares:** Veganos, celíacos ou intolerantes à lactose que têm dificuldade em encontrar receitas variadas.
 
 ---
 

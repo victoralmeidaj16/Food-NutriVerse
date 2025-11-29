@@ -1,0 +1,8 @@
+app_identifier("com.victoralmeidaj16.foodnutriverse") # The bundle identifier of your app
+apple_id("[SEU_EMAIL_APPLE_ID]") # Your Apple email address
+
+# itc_team_id("[SEU_TEAM_ID]") # App Store Connect Team ID (Optional)
+# team_id("[SEU_DEVELOPER_TEAM_ID]") # Developer Portal Team ID (Optional)
+
+# For more information about the Appfile, see:
+#     https://docs.fastlane.tools/advanced/#appfile

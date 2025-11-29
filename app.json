@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "5e42d13b-baf3-425c-9a6c-60b9dda82bab"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.victoraj16.nutriverse"
+    }
+  }
+}
