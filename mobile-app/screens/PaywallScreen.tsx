@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Animated } from 'react-native';
 import { CheckIcon, SparklesIcon, LockIcon } from '../components/Icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -7,9 +7,28 @@ const { width } = Dimensions.get('window');
 
 export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: () => void, onRestore: () => void, onClose: () => void }) => {
     const [selectedPlan, setSelectedPlan] = useState<'YEARLY' | 'MONTHLY'>('YEARLY');
+    const closeButtonOpacity = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        // Fade in close button after 4 seconds
+        const timer = setTimeout(() => {
+            Animated.timing(closeButtonOpacity, {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true,
+            }).start();
+        }, 4000);
+
+        return () => clearTimeout(timer);
+    }, []);
 
     return (
         <SafeAreaView style={styles.container}>
+            <Animated.View style={[styles.closeButtonContainer, { opacity: closeButtonOpacity }]}>
+                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                    <Text style={styles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+            </Animated.View>
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.header}>
                     <View style={styles.iconContainer}>
@@ -241,5 +260,26 @@ const styles = StyleSheet.create({
         color: '#4B5563',
         textAlign: 'center',
         lineHeight: 16,
+    },
+    closeButtonContainer: {
+        position: 'absolute',
+        top: 60,
+        right: 24,
+        zIndex: 10,
+    },
+    closeButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    closeButtonText: {
+        fontSize: 20,
+        color: '#E5E7EB',
+        fontWeight: '600',
     },
 });

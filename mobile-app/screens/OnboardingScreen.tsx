@@ -39,6 +39,8 @@ export const OnboardingScreen = ({
     const [age, setAge] = useState('');
     const [activity, setActivity] = useState<ActivityLevel>(ActivityLevel.MEDIUM);
     const [restrictions, setRestrictions] = useState<string[]>([]);
+    const [showCustomRestriction, setShowCustomRestriction] = useState(false);
+    const [customRestriction, setCustomRestriction] = useState('');
 
     // Routine
     const [mealsPerDay, setMealsPerDay] = useState(3);
@@ -49,8 +51,10 @@ export const OnboardingScreen = ({
     // Animation for Result
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const [showPlanPreview, setShowPlanPreview] = useState(false);
+    const [loadingProgress, setLoadingProgress] = useState(0);
+    const [loadingMessage, setLoadingMessage] = useState('');
 
-    const totalSteps = 8; // 0 to 7 (Paywall is 7)
+    const totalSteps = 9; // 0 to 8 (Paywall is 8)
 
     const handleNext = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -226,7 +230,21 @@ export const OnboardingScreen = ({
                 ))}
             </View>
 
-            <Text style={[styles.label, { marginTop: 24 }]}>Restrições (Opcional)</Text>
+            <TouchableOpacity
+                style={[styles.primaryButton, (!height || !weight || !age) && styles.buttonDisabled]}
+                onPress={handleNext}
+                disabled={!height || !weight || !age}
+            >
+                <Text style={styles.primaryButtonText}>Continuar</Text>
+            </TouchableOpacity>
+        </ScrollView>
+    );
+
+    const renderRestrictions = () => (
+        <ScrollView contentContainerStyle={styles.scrollStepContainer} keyboardShouldPersistTaps="handled">
+            <Text style={styles.title}>Restrições Alimentares</Text>
+            <Text style={styles.subtitle}>Selecione suas restrições ou preferências alimentares (opcional).</Text>
+
             <View style={styles.tagsContainer}>
                 {RESTRICTION_OPTIONS.map(opt => (
                     <TouchableOpacity
@@ -237,12 +255,48 @@ export const OnboardingScreen = ({
                         <Text style={[styles.tagText, restrictions.includes(opt) && styles.tagTextSelected]}>{opt}</Text>
                     </TouchableOpacity>
                 ))}
+                <TouchableOpacity
+                    onPress={() => setShowCustomRestriction(!showCustomRestriction)}
+                    style={[styles.tag, showCustomRestriction && styles.tagSelected]}
+                >
+                    <Text style={[styles.tagText, showCustomRestriction && styles.tagTextSelected]}>Outros</Text>
+                </TouchableOpacity>
             </View>
 
+            {showCustomRestriction && (
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Digite sua restrição personalizada</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Ex: Intolerância à lactose"
+                        value={customRestriction}
+                        onChangeText={setCustomRestriction}
+                        onSubmitEditing={() => {
+                            if (customRestriction.trim()) {
+                                setRestrictions([...restrictions, customRestriction.trim()]);
+                                setCustomRestriction('');
+                                setShowCustomRestriction(false);
+                            }
+                        }}
+                    />
+                    {customRestriction.trim() && (
+                        <TouchableOpacity
+                            style={[styles.primaryButton, { marginTop: 12 }]}
+                            onPress={() => {
+                                setRestrictions([...restrictions, customRestriction.trim()]);
+                                setCustomRestriction('');
+                                setShowCustomRestriction(false);
+                            }}
+                        >
+                            <Text style={styles.primaryButtonText}>Adicionar</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            )}
+
             <TouchableOpacity
-                style={[styles.primaryButton, (!height || !weight || !age) && styles.buttonDisabled]}
+                style={styles.primaryButton}
                 onPress={handleNext}
-                disabled={!height || !weight || !age}
             >
                 <Text style={styles.primaryButtonText}>Continuar</Text>
             </TouchableOpacity>
@@ -295,7 +349,10 @@ export const OnboardingScreen = ({
             </View>
 
             <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Repetir receitas na semana?</Text>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.switchLabel}>Repetir receitas na semana?</Text>
+                    <Text style={styles.switchDescription}>Facilita o preparo de marmitas para a semana</Text>
+                </View>
                 <TouchableOpacity
                     onPress={() => setRepeatMeals(!repeatMeals)}
                     style={[styles.switch, repeatMeals && styles.switchActive]}
@@ -311,7 +368,27 @@ export const OnboardingScreen = ({
     );
 
     useEffect(() => {
-        if (step === 5) {
+        if (step === 6) {
+            // Reset states
+            setLoadingProgress(0);
+            setShowPlanPreview(false);
+
+            const loadingSteps = [
+                { progress: 15, message: 'Analisando seu perfil nutricional...', delay: 0 },
+                { progress: 35, message: `Calculando suas calorias ideais (${height}cm, ${weight}kg)...`, delay: 800 },
+                { progress: 55, message: `Buscando receitas para ${mealsPerDay} refeições/dia...`, delay: 1600 },
+                { progress: 75, message: restrictions.length > 0 ? `Filtrando por: ${restrictions.slice(0, 2).join(', ')}...` : 'Selecionando ingredientes frescos...', delay: 2400 },
+                { progress: 90, message: cookingTime === 'FAST' ? 'Priorizando receitas rápidas...' : 'Incluindo receitas elaboradas...', delay: 3400 },
+                { progress: 100, message: 'Finalizando seu plano personalizado!', delay: 4600 }
+            ];
+
+            loadingSteps.forEach(({ progress, message, delay }) => {
+                setTimeout(() => {
+                    setLoadingProgress(progress);
+                    setLoadingMessage(message);
+                }, delay);
+            });
+
             setTimeout(() => {
                 setShowPlanPreview(true);
                 Animated.timing(fadeAnim, {
@@ -319,43 +396,124 @@ export const OnboardingScreen = ({
                     duration: 800,
                     useNativeDriver: true
                 }).start();
-            }, 1500);
+            }, 5500);
         }
-    }, [step]);
+    }, [step, height, weight, mealsPerDay, restrictions, cookingTime]);
 
     const renderResult = () => {
         if (!showPlanPreview) {
             return (
                 <View style={styles.centerStep}>
-                    <Text style={{ fontSize: 60, marginBottom: 20 }}>🔮</Text>
+                    <Text style={{ fontSize: 60, marginBottom: 20 }}>🥕</Text>
                     <Text style={styles.title}>Criando sua estratégia...</Text>
-                    <Text style={styles.subtitle}>A IA está analisando 10.000 combinações para você.</Text>
+                    <Text style={styles.subtitle}>A IA está personalizando tudo para você.</Text>
+
+                    <View style={styles.progressContainer}>
+                        <View style={styles.progressBar}>
+                            <View style={[styles.progressFill, { width: `${loadingProgress}%` }]} />
+                        </View>
+                        <Text style={styles.progressText}>{loadingProgress}%</Text>
+                    </View>
+
+                    {loadingMessage ? (
+                        <Text style={styles.loadingMessage}>{loadingMessage}</Text>
+                    ) : null}
                 </View>
             );
         }
 
+        // Calculate personalized calories based on user data
+        const calculateCalories = () => {
+            const weightNum = Number(weight) || 70;
+            const heightNum = Number(height) || 170;
+            const ageNum = Number(age) || 25;
+
+            // BMR calculation (Mifflin-St Jeor)
+            let bmr = (10 * weightNum) + (6.25 * heightNum) - (5 * ageNum) + 5;
+
+            // Activity multiplier
+            const activityMultiplier = {
+                [ActivityLevel.LOW]: 1.2,
+                [ActivityLevel.MEDIUM]: 1.55,
+                [ActivityLevel.HIGH]: 1.9
+            }[activity] || 1.55;
+
+            let tdee = bmr * activityMultiplier;
+
+            // Adjust for goal
+            if (goal === UserGoal.LOSE_WEIGHT) tdee -= 500;
+            else if (goal === UserGoal.GAIN_MUSCLE) tdee += 300;
+
+            return Math.round(tdee / 100) * 100; // Round to nearest 100
+        };
+
+        // Get personalized meals based on goal and preferences
+        const getMealSuggestions = () => {
+            const isVegetarian = restrictions.includes('Vegetariano');
+            const isVegan = restrictions.includes('Vegano');
+            const isFast = cookingTime === 'FAST';
+
+            const breakfastOptions = {
+                [UserGoal.LOSE_WEIGHT]: isFast ? 'Omelete Proteico Light' : 'Panqueca de Aveia com Frutas',
+                [UserGoal.GAIN_MUSCLE]: isFast ? 'Ovos Mexidos com Abacate' : 'Tapioca Recheada Proteica',
+                [UserGoal.MAINTAIN]: isFast ? 'Iogurte com Granola' : 'Pão Integral com Pasta de Amendoim',
+                [UserGoal.EAT_HEALTHY]: isFast ? 'Smoothie Bowl Verde' : 'Overnight Oats de Frutas Vermelhas'
+            };
+
+            const lunchOptions = {
+                [UserGoal.LOSE_WEIGHT]: isVegetarian ? 'Salada Completa com Grão-de-Bico' : (isFast ? 'Frango Grelhado e Legumes' : 'Peixe Assado com Quinoa'),
+                [UserGoal.GAIN_MUSCLE]: isVegetarian ? 'Buddha Bowl Proteico' : (isFast ? 'Filé com Batata Doce' : 'Carne Moída com Arroz Integral'),
+                [UserGoal.MAINTAIN]: isVegetarian ? 'Wrap de Hummus' : (isFast ? 'Strogonoff Fitness' : 'Risoto de Frango'),
+                [UserGoal.EAT_HEALTHY]: isVegetarian ? 'Bowl Mediterrâneo' : (isFast ? 'Salmão com Brócolis' : 'Frango Curry com Legumes')
+            };
+
+            const dinnerOptions = {
+                [UserGoal.LOSE_WEIGHT]: isFast ? 'Sopa Detox' : 'Omelete de Claras com Salada',
+                [UserGoal.GAIN_MUSCLE]: isFast ? 'Wrap de Frango' : 'Carne com Legumes Assados',
+                [UserGoal.MAINTAIN]: isFast ? 'Sanduiche Natural' : 'Macarrão Integral ao Molho',
+                [UserGoal.EAT_HEALTHY]: isFast ? 'Salada Caesar' : 'Poke Bowl de Atum'
+            };
+
+            if (isVegan) {
+                return [
+                    'Smoothie de Banana com Aveia',
+                    'Tofu Grelhado com Quinoa',
+                    'Hamburguer de Grão-de-Bico'
+                ];
+            }
+
+            return [
+                breakfastOptions[goal] || breakfastOptions[UserGoal.EAT_HEALTHY],
+                lunchOptions[goal] || lunchOptions[UserGoal.EAT_HEALTHY],
+                dinnerOptions[goal] || dinnerOptions[UserGoal.EAT_HEALTHY]
+            ];
+        };
+
+        const calories = calculateCalories();
+        const meals = getMealSuggestions();
+        const goalText = {
+            [UserGoal.LOSE_WEIGHT]: 'perder peso',
+            [UserGoal.GAIN_MUSCLE]: 'ganhar massa magra',
+            [UserGoal.MAINTAIN]: 'manter o peso',
+            [UserGoal.EAT_HEALTHY]: 'se alimentar melhor'
+        }[goal] || 'seu objetivo';
+
         return (
             <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
                 <Text style={styles.title}>Seu Plano NutriVerse está pronto 🎉</Text>
-                <Text style={styles.subtitle}>100% personalizado para {goal === UserGoal.LOSE_WEIGHT ? 'perder peso' : 'seu objetivo'}.</Text>
+                <Text style={styles.subtitle}>100% personalizado para {goalText}.</Text>
 
                 <View style={styles.previewCard}>
                     <View style={styles.dayHeader}>
                         <Text style={styles.dayTitle}>Dia 1</Text>
-                        <Text style={styles.calText}>~1800 kcal</Text>
+                        <Text style={styles.calText}>~{calories} kcal</Text>
                     </View>
-                    <View style={styles.mealRow}>
-                        <View style={styles.dot} />
-                        <Text style={styles.mealText}>Omelete Proteico com Espinafre</Text>
-                    </View>
-                    <View style={styles.mealRow}>
-                        <View style={styles.dot} />
-                        <Text style={styles.mealText}>Frango Grelhado e Legumes</Text>
-                    </View>
-                    <View style={styles.mealRow}>
-                        <View style={styles.dot} />
-                        <Text style={styles.mealText}>Overnight Oats de Frutas Vermelhas</Text>
-                    </View>
+                    {meals.slice(0, mealsPerDay).map((meal, idx) => (
+                        <View key={idx} style={styles.mealRow}>
+                            <View style={styles.dot} />
+                            <Text style={styles.mealText}>{meal}</Text>
+                        </View>
+                    ))}
                 </View>
 
                 <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
@@ -392,7 +550,7 @@ export const OnboardingScreen = ({
         </View>
     );
 
-    if (step === 7) {
+    if (step === 8) {
         return <PaywallScreen onPurchase={handleFinish} onRestore={handleFinish} onClose={handleFinish} />;
     }
 
@@ -402,7 +560,7 @@ export const OnboardingScreen = ({
                 {step > 0 && (
                     <View style={styles.progressBarContainer}>
                         <View style={styles.progressBarTrack}>
-                            <View style={[styles.progressBarFill, { width: `${(step / 7) * 100}%` }]} />
+                            <View style={[styles.progressBarFill, { width: `${(step / 8) * 100}%` }]} />
                         </View>
                     </View>
                 )}
@@ -412,9 +570,10 @@ export const OnboardingScreen = ({
                     {step === 1 && renderPainPoints()}
                     {step === 2 && renderGoal()}
                     {step === 3 && renderProfile()}
-                    {step === 4 && renderRoutine()}
-                    {step === 5 && renderResult()}
-                    {step === 6 && renderSocialProof()}
+                    {step === 4 && renderRestrictions()}
+                    {step === 5 && renderRoutine()}
+                    {step === 6 && renderResult()}
+                    {step === 7 && renderSocialProof()}
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -656,6 +815,12 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#1F2937',
     },
+    switchDescription: {
+        fontSize: 13,
+        fontWeight: '400',
+        color: '#6B7280',
+        marginTop: 4,
+    },
     switch: {
         width: 50,
         height: 30,
@@ -768,5 +933,36 @@ const styles = StyleSheet.create({
     progressBarFill: {
         height: '100%',
         backgroundColor: '#a6f000',
+    },
+    progressContainer: {
+        width: '100%',
+        marginTop: 40,
+        marginBottom: 20,
+    },
+    progressBar: {
+        height: 8,
+        backgroundColor: '#E5E7EB',
+        borderRadius: 4,
+        overflow: 'hidden',
+        marginBottom: 12,
+    },
+    progressFill: {
+        height: '100%',
+        backgroundColor: '#a6f000',
+        borderRadius: 4,
+    },
+    progressText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111827',
+        textAlign: 'center',
+    },
+    loadingMessage: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: '#6B7280',
+        textAlign: 'center',
+        marginTop: 24,
+        paddingHorizontal: 32,
     },
 });

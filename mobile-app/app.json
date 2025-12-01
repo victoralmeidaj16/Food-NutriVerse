@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Food NutriVerse",
-    "slug": "food-nutriverse",
+    "slug": "mobile-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.victoralmeidaj16.foodnutriverse",
       "infoPlist": {
         "NSCameraUsageDescription": "Precisamos de acesso à câmera para você escanear ingredientes.",
-        "NSPhotoLibraryUsageDescription": "Precisamos de acesso à galeria para você escolher fotos de ingredientes."
+        "NSPhotoLibraryUsageDescription": "Precisamos de acesso à galeria para você escolher fotos de ingredientes.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
