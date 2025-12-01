@@ -10,8 +10,8 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
 // Initialize Gemini
-// Note: In production (Render), ensure GEMINI_API_KEY is set in Environment Variables
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Note: In production (Render), ensure GOOGLE_API_KEY is set in Environment Variables
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
 // Root route - API Documentation/Status
 app.get('/', (req, res) => {
@@ -30,7 +30,7 @@ app.get('/', (req, res) => {
 
 // Detailed status check
 app.get('/api/status', (req, res) => {
-    const geminiKeyConfigured = !!process.env.GEMINI_API_KEY;
+    const geminiKeyConfigured = !!process.env.GOOGLE_API_KEY;
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -45,8 +45,8 @@ app.post('/api/generate-recipe', async (req, res) => {
     try {
         const { contents, model: modelName, config } = req.body;
 
-        if (!process.env.GEMINI_API_KEY) {
-            console.error('GEMINI_API_KEY is missing');
+        if (!process.env.GOOGLE_API_KEY) {
+            console.error('GOOGLE_API_KEY is missing');
             return res.status(500).json({ error: 'API Key not configured on server' });
         }
 
