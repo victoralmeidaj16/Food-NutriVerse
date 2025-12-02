@@ -14,8 +14,8 @@
     "production": {
       "autoIncrement": true,
       "node": "20.10.0",
-      "npm": {
-        "install": true
+      "env": {
+        "EAS_NO_YARN": "1"
       }
     }
   },
