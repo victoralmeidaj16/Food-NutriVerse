@@ -1,6 +1,6 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserProfile, Recipe, WeeklyPlan, ShoppingList } from '../types';
+import { UserProfile, Recipe, WeeklyPlan, ShoppingList, UserList } from '../types';
 
 const KEYS = {
     USER_PROFILE: '@food_nutriverse_profile',
@@ -89,9 +89,13 @@ export const storageService = {
     },
 
     // --- Weekly Plan ---
-    saveWeeklyPlan: async (plan: WeeklyPlan) => {
+    saveWeeklyPlan: async (plan: WeeklyPlan | null) => {
         try {
-            await AsyncStorage.setItem(KEYS.WEEKLY_PLAN, JSON.stringify(plan));
+            if (plan) {
+                await AsyncStorage.setItem(KEYS.WEEKLY_PLAN, JSON.stringify(plan));
+            } else {
+                await AsyncStorage.removeItem(KEYS.WEEKLY_PLAN);
+            }
         } catch (e) {
             console.error('Failed to save weekly plan', e);
         }

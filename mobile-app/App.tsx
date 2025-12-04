@@ -93,25 +93,8 @@ export default function App() {
 
       const plan = await storageService.loadWeeklyPlan();
       if (plan) setWeeklyPlan(plan);
-      else {
-        // Initialize a default weekly plan if none exists
-        const defaultPlan: WeeklyPlan = {
-          id: 'default-plan',
-          startDate: Date.now(),
-          days: Array.from({ length: 7 }, (_, dayIndex) => ({
-            dayIndex,
-            dayName: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dayIndex],
-            meals: Array.from({ length: userProfile?.mealsPerDay || 3 }, (_, mealIndex) => ({
-              slotIndex: mealIndex,
-              recipe: null,
-              timeSlot: (['Café da Manhã', 'Almoço', 'Lanche', 'Jantar', 'Ceia'][mealIndex] || 'Lanche') as any,
-              id: Math.random().toString(36).substr(2, 9)
-            })),
-          })),
-        };
-        setWeeklyPlan(defaultPlan);
-        await storageService.saveWeeklyPlan(defaultPlan);
-      }
+      if (plan) setWeeklyPlan(plan);
+      else setWeeklyPlan(null);
 
     } catch (error) {
       console.error("Error loading user specific data:", error);
@@ -179,6 +162,7 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
+      await storageService.clearAll(); // Clear local storage
       await signOut(auth);
       // State listener will handle navigation
     } catch (error) {

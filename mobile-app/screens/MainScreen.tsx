@@ -26,6 +26,7 @@ import { DailyTipCard } from '../components/DailyTipCard';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { SubscriptionService } from '../services/subscriptionService';
 import { CopyMealModal } from '../components/CopyMealModal';
+import { WeeklyPlanIntro } from '../components/WeeklyPlanIntro';
 
 const { width } = Dimensions.get('window');
 
@@ -766,38 +767,51 @@ export const MainScreen = ({
         </ScrollView>
     );
 
+    const handleDeletePlan = () => {
+        Alert.alert(
+            "Excluir Plano",
+            "Tem certeza? Você terá que gerar um novo plano.",
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Excluir",
+                    style: "destructive",
+                    onPress: async () => {
+                        setWeeklyPlan(null);
+                        await storageService.saveWeeklyPlan(null);
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    }
+                }
+            ]
+        );
+    };
+
     const renderPlanning = () => (
         <View style={styles.content}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
                     <Text style={styles.pageTitle}>Sua Semana</Text>
                     {weeklyPlan && (
-                        <TouchableOpacity
-                            onPress={handleCreateShoppingList}
-                            style={styles.shoppingListBtn}
-                        >
-                            <ShoppingBagIcon size={16} color="#a6f000" />
-                            <Text style={styles.shoppingListBtnText}>Lista</Text>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                            <TouchableOpacity
+                                onPress={handleDeletePlan}
+                                style={[styles.shoppingListBtn, { backgroundColor: '#FEE2E2' }]}
+                            >
+                                <TrashIcon size={16} color="#EF4444" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleCreateShoppingList}
+                                style={styles.shoppingListBtn}
+                            >
+                                <ShoppingBagIcon size={16} color="#a6f000" />
+                                <Text style={styles.shoppingListBtnText}>Lista</Text>
+                            </TouchableOpacity>
+                        </View>
                     )}
                 </View>
 
                 {!weeklyPlan ? (
-                    <View style={styles.emptyState}>
-                        <View style={styles.emptyIcon}>
-                            <CalendarIcon size={40} color="#a6f000" />
-                        </View>
-                        <Text style={styles.emptyTitle}>Semana não planejada</Text>
-                        <Text style={styles.emptyDesc}>
-                            Transforme sua alimentação com um clique. Economize tempo e coma melhor.
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() => setShowPlanningWizard(true)}
-                            style={styles.primaryBtn}
-                        >
-                            <Text style={styles.primaryBtnText}>Gerar Plano Mágico</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <WeeklyPlanIntro onStart={() => setShowPlanningWizard(true)} />
                 ) : (
                     <View>
                         {/* Day Selector */}

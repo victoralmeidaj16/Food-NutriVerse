@@ -110,7 +110,7 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#111827', // Dark theme for high impact
+        backgroundColor: '#FFFFFF', // White background
     },
     content: {
         padding: 24,
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 32,
         fontWeight: '800',
-        color: 'white',
+        color: '#1F2937', // Dark text
         textAlign: 'center',
         lineHeight: 38,
     },
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     },
     benefitText: {
         fontSize: 16,
-        color: '#E5E7EB',
+        color: '#4B5563', // Dark gray text
         fontWeight: '500',
     },
     plansContainer: {
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
         marginBottom: 32,
     },
     planCard: {
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: '#F3F4F6', // Light gray card
         borderRadius: 16,
         padding: 20,
         borderWidth: 2,
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     },
     planCardSelected: {
         borderColor: '#a6f000',
-        backgroundColor: 'rgba(166, 240, 0, 0.05)',
+        backgroundColor: '#F9FAFB', // Slightly lighter when selected
     },
     bestValueBadge: {
         position: 'absolute',
@@ -199,26 +199,26 @@ const styles = StyleSheet.create({
     planTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: 'white',
+        color: '#1F2937', // Dark text
     },
     planSave: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#a6f000',
+        color: '#65A30D', // Darker green for contrast on white
     },
     planPrice: {
         fontSize: 28,
         fontWeight: '800',
-        color: 'white',
+        color: '#1F2937', // Dark text
     },
     planPerMonth: {
         fontSize: 16,
-        color: '#9CA3AF',
+        color: '#6B7280', // Gray text
         fontWeight: '500',
     },
     planBilled: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: '#6B7280', // Gray text
         marginTop: 4,
     },
     ctaButton: {
@@ -249,15 +249,15 @@ const styles = StyleSheet.create({
     },
     footerLink: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: '#6B7280', // Gray text
         fontWeight: '600',
     },
     footerDivider: {
-        color: '#4B5563',
+        color: '#9CA3AF',
     },
     disclaimer: {
         fontSize: 11,
-        color: '#4B5563',
+        color: '#9CA3AF',
         textAlign: 'center',
         lineHeight: 16,
     },
@@ -271,15 +271,13 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: '#F3F4F6', // Light gray
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)',
     },
     closeButtonText: {
         fontSize: 20,
-        color: '#E5E7EB',
+        color: '#4B5563',
         fontWeight: '600',
     },
 });
