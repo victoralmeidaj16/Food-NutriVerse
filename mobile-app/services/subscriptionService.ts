@@ -132,12 +132,44 @@ export const SubscriptionService = {
         };
     },
 
-    upgradeToPro: (profile: UserProfile, plan: SubscriptionPlan.MONTHLY | SubscriptionPlan.YEARLY): UserProfile => {
-        return {
-            ...profile,
-            plan: plan,
-            isPro: true,
-            subscriptionExpiry: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString() // Mock 1 year
-        };
+    upgradeToPro: async (profile: UserProfile, plan: SubscriptionPlan.MONTHLY | SubscriptionPlan.YEARLY): Promise<UserProfile> => {
+        // Import IAP service
+        const { iapService, PRODUCT_IDS } = require('./iapService');
+
+        // Map plan to product ID
+        const productId = plan === SubscriptionPlan.MONTHLY
+            ? PRODUCT_IDS.MONTHLY
+            : PRODUCT_IDS.YEARLY;
+
+        try {
+            // Initialize IAP if not already
+            await iapService.initialize();
+
+            // Attempt purchase
+            const result = await iapService.purchaseProduct(productId);
+
+            if (result.success) {
+                // Calculate expiry based on plan
+                const now = new Date();
+                const expiryDate = plan === SubscriptionPlan.MONTHLY
+                    ? new Date(now.setMonth(now.getMonth() + 1))
+                    : new Date(now.setFullYear(now.getFullYear() + 1));
+
+                return {
+                    ...profile,
+                    plan: plan,
+                    isPro: true,
+                    subscriptionExpiry: expiryDate.toISOString(),
+                    transactionReceipt: result.transactionReceipt
+                };
+            } else {
+                // Purchase failed or was cancelled
+                console.error('Purchase failed:', result.error);
+                throw new Error(result.error || 'Falha na compra');
+            }
+        } catch (error: any) {
+            console.error('upgradeToPro error:', error);
+            throw error;
+        }
     }
 };

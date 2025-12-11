@@ -14,6 +14,7 @@ import { SignUpScreen } from './screens/SignUpScreen';
 import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan, Recipe, WeeklyPlan } from './types';
 import { storageService } from './services/storage';
 import { LanguageProvider } from './context/LanguageContext';
+import { iapService } from './services/iapService';
 
 // --- Types ---
 type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL' | 'PAYWALL' | 'RECIPE_PACK';
@@ -121,6 +122,38 @@ export default function App() {
 
     return unsubscribe;
   }, []);
+
+  // Initialize IAP on app start
+  useEffect(() => {
+    const initIAP = async () => {
+      const initialized = await iapService.initialize();
+      if (initialized) {
+        console.log('App: IAP initialized successfully');
+
+        // Check if user has active subscription
+        const subStatus = await iapService.checkSubscriptionStatus();
+        if (subStatus.isActive && userProfile && firebaseUser) {
+          // Update user profile to reflect active subscription
+          const updatedProfile = {
+            ...userProfile,
+            isPro: true,
+            plan: subStatus.productId?.includes('yearly') ? SubscriptionPlan.YEARLY : SubscriptionPlan.MONTHLY,
+            subscriptionExpiry: new Date(subStatus.expiryDate || 0).toISOString()
+          };
+          await updateUserProfile(firebaseUser.uid, updatedProfile);
+          setUserProfile(updatedProfile);
+        }
+      }
+    };
+
+    initIAP();
+
+    // Cleanup on unmount
+    return () => {
+      iapService.disconnect();
+    };
+  }, []);
+
 
   const handleOnboardingComplete = (profile: UserProfile) => {
     setPendingProfile(profile);

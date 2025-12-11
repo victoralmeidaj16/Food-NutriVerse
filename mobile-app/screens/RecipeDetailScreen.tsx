@@ -6,6 +6,8 @@ import { storageService } from '../services/storage';
 import { ArrowRightIcon, BookHeartIcon, TimerIcon, FlameIcon, ExchangeIcon, LightbulbIcon, CheckIcon, CloseIcon, ChefHatIcon, AlertTriangleIcon, CalendarIcon, CheckCircleIcon, ShoppingBagIcon } from '../components/Icons';
 import { AddToPlanModal } from '../components/AddToPlanModal';
 import { LinearGradient } from 'expo-linear-gradient';
+import { CitationBadge } from '../components/CitationBadge';
+import { mapHealthTipToReference, getReferencesByIds } from '../services/healthReferences';
 
 const { width, height } = Dimensions.get('window');
 
@@ -239,16 +241,25 @@ export const RecipeDetailScreen = ({
                     <Text style={styles.description}>{recipe.description}</Text>
 
                     {/* Macros Grid */}
-                    <View style={styles.macrosGrid}>
-                        {Object.entries(recipe.macros).map(([key, val]) => (
-                            <View key={key} style={styles.macroCard}>
-                                <Text style={styles.macroLabel}>
-                                    {key === 'protein' ? 'Prot' : key === 'carbs' ? 'Carb' : key === 'fats' ? 'Gord' : 'Cal'}
-                                </Text>
-                                <Text style={styles.macroValue}>{val}</Text>
-                                <Text style={styles.macroUnit}>{key === 'calories' ? '' : 'g'}</Text>
-                            </View>
-                        ))}
+                    <View style={styles.macrosSection}>
+                        <View style={styles.macrosHeader}>
+                            <Text style={styles.macrosSectionTitle}>Informação Nutricional</Text>
+                            <CitationBadge
+                                references={getReferencesByIds(['protein-muscle', 'carbs-energy', 'balanced-diet'])}
+                                size="small"
+                            />
+                        </View>
+                        <View style={styles.macrosGrid}>
+                            {Object.entries(recipe.macros).map(([key, val]) => (
+                                <View key={key} style={styles.macroCard}>
+                                    <Text style={styles.macroLabel}>
+                                        {key === 'protein' ? 'Prot' : key === 'carbs' ? 'Carb' : key === 'fats' ? 'Gord' : 'Cal'}
+                                    </Text>
+                                    <Text style={styles.macroValue}>{val}</Text>
+                                    <Text style={styles.macroUnit}>{key === 'calories' ? '' : 'g'}</Text>
+                                </View>
+                            ))}
+                        </View>
                     </View>
 
                     <Text style={styles.sectionTitle}>Ingredientes</Text>
@@ -299,8 +310,17 @@ export const RecipeDetailScreen = ({
 
                     <View style={styles.chefTip}>
                         <View style={styles.chefTipHeader}>
-                            <LightbulbIcon size={20} color="#1e40af" />
-                            <Text style={styles.chefTipTitle}>Dica do Chef</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                                <LightbulbIcon size={20} color="#1e40af" />
+                                <Text style={styles.chefTipTitle}>Dica do Chef</Text>
+                            </View>
+                            <CitationBadge
+                                references={getReferencesByIds(
+                                    recipe.citations || mapHealthTipToReference(recipe.healthTips)
+                                )}
+                                size="small"
+                                showLabel
+                            />
                         </View>
                         <Text style={styles.chefTipText}>{recipe.healthTips}</Text>
                     </View>
@@ -628,11 +648,25 @@ const styles = StyleSheet.create({
         marginBottom: 24,
         lineHeight: 24,
     },
+    macrosSection: {
+        marginBottom: 32,
+    },
+    macrosHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    macrosSectionTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1F2937',
+    },
     macrosGrid: {
         flexDirection: 'row',
         gap: 8,
-        marginBottom: 32,
     },
+
     macroCard: {
         flex: 1,
         backgroundColor: 'white',

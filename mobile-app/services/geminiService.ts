@@ -2,6 +2,7 @@ import { randomUUID } from 'expo-crypto';
 import { UserGoal, Recipe, UserProfile, WeeklyPlan, ShoppingList, ShoppingItem } from "../types";
 import { generateAndSaveImage, getImageUrl } from './imageService';
 import { BACKEND_URL } from './config';
+import { mapHealthTipToReference } from './healthReferences';
 
 // Helper to call backend
 const callBackend = async (endpoint: string, body: any) => {
@@ -66,7 +67,7 @@ interface Schema {
     description?: string;
 }
 
-export const identifyIngredientsFromImage = async (base64Image: string): Promise<string[]> => {
+export const identifyIngredientsFromImage = async (base64Image: string, onProgress?: (status: string, progress: number) => void): Promise<string[]> => {
     const ingredientSchema: Schema = {
         type: Type.OBJECT,
         properties: {
@@ -80,8 +81,9 @@ export const identifyIngredientsFromImage = async (base64Image: string): Promise
     };
 
     try {
+        onProgress?.("Enviando imagem para o Chef IA...", 0.2);
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-1.5-flash",
+            model: "gemini-2.0-flash",
             contents: [
                 {
                     inlineData: {
@@ -103,7 +105,9 @@ export const identifyIngredientsFromImage = async (base64Image: string): Promise
         const text = response.text;
         if (!text) return [];
 
+        onProgress?.("Identificando ingredientes...", 0.8);
         const data = JSON.parse(text);
+        onProgress?.("Concluído!", 1.0);
         return data.ingredients || [];
 
     } catch (error) {
@@ -171,8 +175,11 @@ export const generateFitnessRecipe = async (
     input: string | string[], // Can be a dish name (string) or ingredients list (string[])
     goal: UserGoal,
     restrictions: string[] = [],
-    dislikes: string[] = []
+    dislikes: string[] = [],
+    onProgress?: (status: string, progress: number) => void
 ): Promise<Recipe | null> => {
+
+    onProgress?.("Conectando ao Chef IA...", 0.1);
 
     const goalPromptMap = {
         [UserGoal.LOSE_WEIGHT]: "foco em déficit calórico, alta saciedade e baixo carboidrato simples",
@@ -221,9 +228,10 @@ export const generateFitnessRecipe = async (
   `;
 
     try {
+        onProgress?.("Analisando ingredientes e objetivos...", 0.3);
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-1.5-flash",
-            contents: prompt,
+            model: "gemini-2.0-flash-exp",
+            contents: [{ text: prompt }],
             config: {
                 responseMimeType: "application/json",
                 responseSchema: recipeSchema,
@@ -237,6 +245,7 @@ export const generateFitnessRecipe = async (
         const data = JSON.parse(text);
 
         // Generate AI Image and save locally
+        onProgress?.("Criando fotografia do prato...", 0.7);
         let localImageUri = null;
         try {
             localImageUri = await generateAndSaveImage(data.name);
@@ -244,11 +253,17 @@ export const generateFitnessRecipe = async (
             console.warn("Failed to generate image, using fallback URL");
         }
 
+        onProgress?.("Finalizando receita...", 0.9);
+
+        // Auto-assign citations based on health tips
+        const citations = mapHealthTipToReference(data.healthTips || "");
+
         return {
             ...data,
             id: randomUUID(),
             createdAt: Date.now(),
-            imageUrl: localImageUri || getImageUrl(data.name)
+            imageUrl: localImageUri || getImageUrl(data.name),
+            citations: citations
         } as Recipe;
 
     } catch (error) {
@@ -312,7 +327,7 @@ export const generateWeeklyPlan = async (
 
     try {
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-1.5-flash",
+            model: "gemini-2.0-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -394,7 +409,7 @@ export const generateShoppingList = async (plan: WeeklyPlan): Promise<ShoppingLi
 
     try {
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-1.5-flash",
+            model: "gemini-2.0-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",

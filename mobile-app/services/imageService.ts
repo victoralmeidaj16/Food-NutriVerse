@@ -48,9 +48,7 @@ export const generateAndSaveImage = async (prompt: string): Promise<string | nul
             body: JSON.stringify({
                 instances: [
                     {
-                        prompt: {
-                            text: enhancedPrompt
-                        }
+                        prompt: enhancedPrompt
                     }
                 ],
                 parameters: {

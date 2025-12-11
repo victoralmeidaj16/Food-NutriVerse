@@ -21,12 +21,14 @@ import {
 import { MOCK_RECIPES } from '../services/mockData';
 import { generateFitnessRecipe, identifyIngredientsFromImage, generateWeeklyPlan, generateShoppingList } from '../services/geminiService';
 import { LoadingOverlay } from '../components/LoadingOverlay';
+import { LoadingModal } from '../components/LoadingModal';
 import { PlanningWizard } from '../components/PlanningWizard';
 import { DailyTipCard } from '../components/DailyTipCard';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { SubscriptionService } from '../services/subscriptionService';
 import { CopyMealModal } from '../components/CopyMealModal';
 import { WeeklyPlanIntro } from '../components/WeeklyPlanIntro';
+import { PantryImagePreview } from '../components/PantryImagePreview';
 
 const { width } = Dimensions.get('window');
 
@@ -34,6 +36,7 @@ import { storageService } from '../services/storage';
 import { deleteUserData } from '../services/userService';
 import { auth } from '../services/firebaseConfig';
 import { useLanguage } from '../context/LanguageContext';
+import { SourcesScreen } from '../components/SourcesScreen';
 
 export const MainScreen = ({
     user,
@@ -70,6 +73,8 @@ export const MainScreen = ({
     const [manualIngredient, setManualIngredient] = useState('');
     const [loading, setLoading] = useState(false);
     const [loadingMsg, setLoadingMsg] = useState('');
+    const [loadingProgress, setLoadingProgress] = useState(0);
+    const [loadingStatus, setLoadingStatus] = useState('');
     const [generatedRecipes, setGeneratedRecipes] = useState<Recipe[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -85,6 +90,11 @@ export const MainScreen = ({
     const [copyMealModalVisible, setCopyMealModalVisible] = useState(false);
     const [selectedMealToCopy, setSelectedMealToCopy] = useState<{ dayIndex: number, mealIndex: number, recipe: Recipe } | null>(null);
     const [regeneratingMeal, setRegeneratingMeal] = useState<{ dayIndex: number, mealIndex: number } | null>(null);
+
+    // Pantry Image Preview
+    const [showPantryPreview, setShowPantryPreview] = useState(false);
+    const [pantryImages, setPantryImages] = useState<string[]>([]);
+    const [showSourcesScreen, setShowSourcesScreen] = useState(false);
 
     // Enable LayoutAnimation for Android
     useEffect(() => {
@@ -207,15 +217,13 @@ export const MainScreen = ({
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
+            allowsEditing: false,
             quality: 0.5,
         });
 
-        if (!result.canceled) {
-            // Simulate scanning process
-            const newIngredients = [...pantryIngredients, 'Tomate', 'Queijo', 'Manjericão'];
-            setPantryIngredients(newIngredients);
+        if (!result.canceled && result.assets[0].uri) {
+            setPantryImages(prev => [...prev, result.assets[0].uri]);
+            setShowPantryPreview(true);
 
             // Update Usage Stats
             const updatedProfile = SubscriptionService.incrementPantryScan(userProfile);
@@ -231,28 +239,113 @@ export const MainScreen = ({
         }
 
         const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [4, 3],
+            allowsEditing: false,
             quality: 0.5,
-            base64: true,
         });
 
-        if (!result.canceled && result.assets[0].base64) {
-            analyzeImage(result.assets[0].base64);
+        if (!result.canceled && result.assets[0].uri) {
+            setPantryImages(prev => [...prev, result.assets[0].uri]);
+            setShowPantryPreview(true);
         }
     };
 
     const analyzeImage = async (base64: string) => {
         setLoading(true);
         setLoadingMsg("Analisando despensa...");
+        setLoadingStatus("Enviando imagem...");
+        setLoadingProgress(0);
+
         try {
-            const detected = await identifyIngredientsFromImage(base64);
+            const detected = await identifyIngredientsFromImage(base64, (status, progress) => {
+                setLoadingStatus(status);
+                setLoadingProgress(progress);
+            });
             setPantryIngredients(prev => [...new Set([...prev, ...detected])]);
         } catch (error) {
             Alert.alert("Erro", "Não foi possível identificar os ingredientes.");
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleAnalyzePantryImages = async (manualIngredients: string[]) => {
+        setShowPantryPreview(false);
+
+        setLoading(true);
+        setLoadingMsg("Analisando despensa...");
+        setLoadingStatus("Processando imagens...");
+        setLoadingProgress(0);
+
+        const allIngredients: string[] = [...manualIngredients];
+
+        try {
+            // Convert URIs to base64 and analyze
+            for (const uri of pantryImages) {
+                const response = await fetch(uri);
+                const blob = await response.blob();
+                const reader = new FileReader();
+
+                const base64 = await new Promise<string>((resolve) => {
+                    reader.onloadend = () => {
+                        const base64data = reader.result as string;
+                        resolve(base64data.split(',')[1]);
+                    };
+                    reader.readAsDataURL(blob);
+                });
+
+                const detected = await identifyIngredientsFromImage(base64, (status, progress) => {
+                    setLoadingStatus(status);
+                    setLoadingProgress(progress * 0.7); // 70% for analysis
+                });
+
+                allIngredients.push(...detected);
+            }
+
+            // Remove duplicates
+            const uniqueIngredients = [...new Set(allIngredients)];
+            setPantryIngredients(uniqueIngredients);
+
+            // Clear images after analysis
+            setPantryImages([]);
+
+            // Auto-generate recipe with these ingredients
+            setLoadingStatus("Criando receita com esses ingredientes...");
+            setLoadingProgress(0.8);
+
+            if (uniqueIngredients.length > 0) {
+                const recipe = await generateFitnessRecipe(
+                    uniqueIngredients,
+                    userProfile?.goal || ('WEIGHT_LOSS' as UserGoal),
+                    userProfile?.dietaryRestrictions || [],
+                    userProfile?.dislikes || [],
+                    (status, progress) => {
+                        setLoadingStatus(status);
+                        setLoadingProgress(0.8 + (progress * 0.2)); // 80-100%
+                    }
+                );
+
+                if (recipe) {
+                    setGeneratedRecipes([recipe]);
+                    setActiveTab('EXPLORE');
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Erro", "Não foi possível processar os ingredientes.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAddMorePantryImages = () => {
+        setShowPantryPreview(false);
+        // Trigger image picker again
+        setTimeout(() => pickImage(), 100);
+    };
+
+    const handleAddManuallyFromPreview = () => {
+        setShowPantryPreview(false);
+        // Focus on manual input (scroll to it if needed)
     };
 
     const addManualIngredient = () => {
@@ -287,16 +380,47 @@ export const MainScreen = ({
         Alert.alert('Sucesso', 'Receita salva com sucesso!');
     };
     const handleGenerateRecipe = async () => {
-        if (!userProfile) return;
+        console.log('🔥 handleGenerateRecipe called!', { userProfile: !!userProfile, exploreMode, dishInput });
+
+        // Create a default profile if missing (for Expo Go development)
+        const profile: UserProfile = userProfile || {
+            name: 'Dev User',
+            goal: 'WEIGHT_LOSS' as UserGoal,
+            dietaryRestrictions: [],
+            dislikes: [],
+            isPro: false,
+            activityLevel: 'MODERATE' as any,
+            mealsPerDay: 3,
+            mealSlots: [],
+            usageModes: ['RECIPES'] as any,
+            usageStats: {
+                recipesGenerated: 0,
+                weeklyPlansCreated: 0,
+                pantryScans: 0,
+                lastGenerationDate: new Date().toISOString(),
+                recipesGeneratedToday: 0,
+                lastDesireDate: new Date().toISOString(),
+                desiresTransformedToday: 0,
+                savedRecipesCount: 0,
+                lastScanDate: new Date().toISOString(),
+                pantryScansThisWeek: 0
+            } as any,
+            plan: 'FREE' as any
+        };
 
         // Check Subscription Limit
-        if (!SubscriptionService.canGenerateRecipe(userProfile)) {
+        console.log('✅ Profile created:', profile);
+        if (!SubscriptionService.canGenerateRecipe(profile)) {
+            console.log('❌ Subscription limit reached');
             onShowPaywall();
             return;
         }
+        console.log('✅ Subscription check passed');
 
         // The original logic for input validation and setting loading message
         const input = exploreMode === 'TEXT' ? dishInput : pantryIngredients;
+        console.log('📝 Input:', input);
+
         if (exploreMode === 'TEXT' && !dishInput.trim()) {
             Alert.alert("Ops", "Digite o nome de um prato.");
             return;
@@ -306,14 +430,23 @@ export const MainScreen = ({
             return;
         }
 
+        console.log('✅ Validation passed, starting generation...');
         setLoadingMsg(exploreMode === 'TEXT' ? "Fitzando receita..." : "Criando com o que você tem...");
+        setLoadingStatus("Iniciando...");
+        setLoadingProgress(0);
+        setLoading(true);
 
         try {
+            console.log('🚀 Calling generateFitnessRecipe...');
             const result = await generateFitnessRecipe(
                 input,
-                userProfile.goal,
-                userProfile.dietaryRestrictions,
-                userProfile.dislikes || []
+                profile.goal,
+                profile.dietaryRestrictions,
+                profile.dislikes || [],
+                (status, progress) => {
+                    setLoadingStatus(status);
+                    setLoadingProgress(progress);
+                }
             );
             if (result) {
                 setGeneratedRecipes(prev => {
@@ -328,7 +461,7 @@ export const MainScreen = ({
                 Alert.alert("Erro", "Não foi possível gerar a receita. Tente novamente.");
             }
         } catch (e) {
-            console.error(e);
+            console.error('❌ Recipe generation error:', e);
             Alert.alert("Erro", "Falha na conexão com a IA.");
         } finally {
             setLoading(false);
@@ -664,10 +797,10 @@ export const MainScreen = ({
             {exploreMode === 'TEXT' ? (
                 <View style={styles.exploreContainer}>
                     <View style={styles.magicCard}>
-                        <View style={styles.magicIconContainer}>
-                            <SparklesIcon size={40} color="#a6f000" />
+                        <View style={styles.magicHeader}>
+                            <SparklesIcon size={32} color="#a6f000" />
+                            <Text style={styles.magicTitle}>Transformação Mágica</Text>
                         </View>
-                        <Text style={styles.magicTitle}>Transformação Mágica</Text>
                         <Text style={styles.magicDesc}>
                             Digite o nome de qualquer prato "gordo" e a IA criará uma versão saudável e deliciosa para você.
                         </Text>
@@ -685,7 +818,7 @@ export const MainScreen = ({
                                 disabled={!dishInput.trim()}
                                 style={[styles.sendButton, !dishInput.trim() && styles.sendButtonDisabled]}
                             >
-                                <ArrowRightIcon size={24} color={!dishInput.trim() ? "#9CA3AF" : "black"} />
+                                <ArrowRightIcon size={24} color={dishInput.trim() ? "#a6f000" : "#9CA3AF"} />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -832,6 +965,14 @@ export const MainScreen = ({
                             ))}
                         </ScrollView>
 
+                        {/* Loading Modal */}
+                        <LoadingModal
+                            visible={loading}
+                            progress={loadingProgress}
+                            status={loadingStatus || loadingMsg}
+                        />
+
+                        {/* Modals */}
                         {/* Meals List */}
                         <View style={styles.mealsList}>
                             {weeklyPlan.days[activePlanningDay].meals.map((meal, idx) => (
@@ -1073,6 +1214,17 @@ export const MainScreen = ({
                         <Text style={styles.menuItemText}>Política de Privacidade</Text>
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => setShowSourcesScreen(true)}
+                    >
+                        <View style={[styles.menuIconBox, { backgroundColor: '#E0F2FE' }]}>
+                            <FileTextIcon size={20} color="#0369A1" />
+                        </View>
+                        <Text style={styles.menuItemText}>Fontes e Referências</Text>
+                        <ArrowRightIcon size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
@@ -1152,8 +1304,29 @@ export const MainScreen = ({
                 <EditProfileModal
                     profile={userProfile}
                     onClose={() => setShowEditProfile(false)}
-                    onSave={onUpdateProfile}
+                    onSave={(updated) => {
+                        onUpdateProfile(updated);
+                        setShowEditProfile(false);
+                    }}
                 />
+            )}
+
+            <PantryImagePreview
+                visible={showPantryPreview}
+                images={pantryImages}
+                onAddMore={handleAddMorePantryImages}
+                onAddManually={handleAddManuallyFromPreview}
+                onAnalyze={handleAnalyzePantryImages}
+                onClose={() => {
+                    setShowPantryPreview(false);
+                    setPantryImages([]);
+                }}
+            />
+
+            {showSourcesScreen && (
+                <Modal visible={showSourcesScreen} animationType="slide" presentationStyle="fullScreen">
+                    <SourcesScreen onBack={() => setShowSourcesScreen(false)} />
+                </Modal>
             )}
         </SafeAreaView>
     );
@@ -1448,6 +1621,84 @@ const styles = StyleSheet.create({
     exploreContainer: {
         alignItems: 'center',
     },
+    magicCard: {
+        backgroundColor: '#111827',
+        borderRadius: 32,
+        padding: 28,
+        marginHorizontal: 16,
+        marginBottom: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    magicHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginBottom: 12,
+        justifyContent: 'center',
+    },
+    magicIconContainer: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(166, 240, 0, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+    },
+    magicTitle: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#FFFFFF',
+        textAlign: 'center',
+    },
+    magicDesc: {
+        fontSize: 14,
+        color: '#9CA3AF',
+        marginBottom: 20,
+        lineHeight: 20,
+        textAlign: 'center',
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    textInput: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 24,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        paddingRight: 60,
+        fontSize: 16,
+        color: '#1F2937',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    sendButton: {
+        position: 'absolute',
+        right: 8,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#a6f000',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#a6f000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    sendButtonDisabled: {
+        backgroundColor: '#E5E7EB',
+        shadowOpacity: 0,
+        elevation: 0,
+    },
     iconCircle: {
         width: 64,
         height: 64,
@@ -1469,35 +1720,6 @@ const styles = StyleSheet.create({
         color: '#6B7280',
         textAlign: 'center',
         marginBottom: 32,
-    },
-    inputWrapper: {
-        width: '100%',
-        position: 'relative',
-    },
-    textInput: {
-        width: '100%',
-        backgroundColor: 'white',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderRadius: 24,
-        padding: 20,
-        paddingRight: 60,
-        fontSize: 16,
-        color: '#1F2937',
-    },
-    sendButton: {
-        position: 'absolute',
-        right: 8,
-        top: 8,
-        bottom: 8,
-        width: 48,
-        backgroundColor: 'black',
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    sendButtonDisabled: {
-        backgroundColor: '#E5E7EB',
     },
     pantryActions: {
         flexDirection: 'row',
@@ -2065,38 +2287,6 @@ const styles = StyleSheet.create({
     },
     modeSwitchContainer: {
         marginBottom: 24,
-    },
-    magicCard: {
-        backgroundColor: '#111827',
-        borderRadius: 32,
-        padding: 24,
-        alignItems: 'center',
-        marginBottom: 32,
-    },
-    magicIconContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: 'rgba(166, 240, 0, 0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(166, 240, 0, 0.2)',
-    },
-    magicTitle: {
-        fontSize: 24,
-        fontWeight: '800',
-        color: 'white',
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    magicDesc: {
-        fontSize: 14,
-        color: '#9CA3AF',
-        textAlign: 'center',
-        marginBottom: 24,
-        lineHeight: 22,
     },
     suggestionsContainer: {
         marginBottom: 32,

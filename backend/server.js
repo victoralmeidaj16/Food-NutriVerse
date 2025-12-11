@@ -50,11 +50,17 @@ app.post('/api/generate-recipe', async (req, res) => {
             return res.status(500).json({ error: 'API Key not configured on server' });
         }
 
-        console.log(`Generating recipe with model: ${modelName || "gemini-1.5-flash"}`);
+        if (!contents || !Array.isArray(contents)) {
+            console.error('Invalid contents:', contents);
+            return res.status(400).json({ error: 'contents must be an array' });
+        }
 
-        // Use the requested model or default to flash
+        console.log(`Generating recipe with model: ${modelName || "gemini-2.0-flash-exp"}`);
+        console.log(`Contents length: ${contents.length}`);
+
+        // Use the requested model or default to flash-exp
         const model = genAI.getGenerativeModel({
-            model: modelName || "gemini-1.5-flash",
+            model: modelName || "gemini-2.0-flash-exp",
             generationConfig: config
         });
 

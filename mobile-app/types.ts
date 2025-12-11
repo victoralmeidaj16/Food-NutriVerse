@@ -56,7 +56,9 @@ export interface Recipe {
     healthTips: string;
     tags: string[];
     createdAt: number;
+    citations?: string[]; // Reference IDs from healthReferences.ts
 }
+
 
 export enum SubscriptionPlan {
     FREE = 'FREE',
@@ -104,6 +106,7 @@ export interface UserProfile {
     plan: SubscriptionPlan;
     isPro: boolean;
     subscriptionExpiry?: string;
+    transactionReceipt?: string; // IAP receipt for validation
     usageStats: UserUsageStats;
 }
 

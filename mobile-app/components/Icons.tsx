@@ -40,8 +40,11 @@ import {
     ArrowLeft,
     Clock,
     AlertTriangle,
-    CheckCircle
+    CheckCircle,
+    ExternalLink,
+    Info
 } from 'lucide-react-native';
+
 
 export const HomeIcon = Home;
 export const SearchIcon = Search;
@@ -56,6 +59,7 @@ export const CheckIcon = Check;
 export const PlayIcon = Play;
 export const PauseIcon = Pause;
 export const CloseIcon = X;
+export const XIcon = X;
 export const LeafIcon = Leaf;
 export const TimerIcon = Timer;
 export const RefreshIcon = RefreshCw;
@@ -84,3 +88,6 @@ export const ArrowLeftIcon = ArrowLeft;
 export const ClockIcon = Clock;
 export const AlertTriangleIcon = AlertTriangle;
 export const CheckCircleIcon = CheckCircle;
+export const ExternalLinkIcon = ExternalLink;
+export const InfoIcon = Info;
+
