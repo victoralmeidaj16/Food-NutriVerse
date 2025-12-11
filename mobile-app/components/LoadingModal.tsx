@@ -18,7 +18,10 @@ const TIPS = [
     "🥦 Vegetais verde-escuros são ricos em ferro e cálcio.",
     "🍎 Frutas com casca têm mais fibras e nutrientes.",
     "🍳 Ovos são uma das melhores fontes de proteína natural.",
-    "🏃‍♂️ Comer carboidratos antes do treino dá mais energia."
+    "🏃‍♂️ Comer carboidratos antes do treino dá mais energia.",
+    "⏰ Primeira vez gerando? O servidor pode demorar até 1 minuto para acordar.",
+    "☕ A receita perfeita vale a espera! Estamos trabalhando nisso...",
+    "🌙 Nosso servidor dorme quando não está em uso para economizar recursos.",
 ];
 
 export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, status }) => {

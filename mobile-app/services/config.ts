@@ -8,8 +8,10 @@ export const OPENAI_API_KEY = extra.openaiApiKey || 'sk-svcacct-tGcK6-6Snft2nFad
 export const GOOGLE_API_KEY = extra.googleApiKey || 'AIzaSyBD4B1V8GeGMYTfyviHVWcJaNfufpu4dr8';
 
 // Dynamic Backend URL:
-// - In Development (iOS Simulator): Use machine IP (localhost doesn't work in simulator)
-// - In Production: Use the Render URL
-export const BACKEND_URL = __DEV__
-    ? 'http://192.168.1.165:3000'  // Your machine's local IP
-    : 'https://food-nutriverse.onrender.com';
+// Using Render backend for both dev and production (local backend has network issues)
+export const BACKEND_URL = 'https://food-nutriverse.onrender.com';
+
+// Alternative if you want to use local backend:
+// export const BACKEND_URL = __DEV__
+//     ? 'http://localhost:3000'  // Local backend
+//     : 'https://food-nutriverse.onrender.com';  // Production

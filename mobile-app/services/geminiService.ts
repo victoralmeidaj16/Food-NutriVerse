@@ -4,15 +4,38 @@ import { generateAndSaveImage, getImageUrl } from './imageService';
 import { BACKEND_URL } from './config';
 import { mapHealthTipToReference } from './healthReferences';
 
-// Helper to call backend
-const callBackend = async (endpoint: string, body: any) => {
+// Helper to call backend with timeout (handles Render cold starts)
+const callBackend = async (endpoint: string, body: any, onProgress?: (status: string, progress: number) => void) => {
     console.log(`Calling backend: ${BACKEND_URL}${endpoint}`);
+
+    const isProduction = !BACKEND_URL.includes('localhost') && !BACKEND_URL.includes('192.168');
+
     try {
+        // Create abort controller for timeout
+        // Production (Render free tier): 90s to handle cold starts
+        // Development: 60s
+        const timeoutDuration = isProduction ? 90000 : 60000;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
+
+        // Show cold start message if in production
+        if (isProduction && onProgress) {
+            onProgress("🌟 Conectando ao Chef IA...", 0.05);
+
+            // After 5 seconds, show cold start message
+            setTimeout(() => {
+                onProgress("⏰ Despertando o servidor... (isso pode levar até 1 minuto na primeira vez)", 0.1);
+            }, 5000);
+        }
+
         const response = await fetch(`${BACKEND_URL}${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -22,8 +45,16 @@ const callBackend = async (endpoint: string, body: any) => {
 
         const data = await response.json();
         return data; // Expected { text: "..." }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Backend call failed:", error);
+
+        // Provide helpful error messages
+        if (error.name === 'AbortError') {
+            throw new Error(isProduction
+                ? 'O servidor demorou muito para responder. Tente novamente em alguns instantes.'
+                : 'Tempo limite excedido. Verifique se o backend está rodando.');
+        }
+
         throw error;
     }
 };
@@ -100,7 +131,7 @@ export const identifyIngredientsFromImage = async (base64Image: string, onProgre
                 responseSchema: ingredientSchema,
                 temperature: 0.5,
             }
-        }));
+        }, onProgress));
 
         const text = response.text;
         if (!text) return [];
@@ -237,7 +268,7 @@ export const generateFitnessRecipe = async (
                 responseSchema: recipeSchema,
                 temperature: 0.7,
             },
-        }));
+        }, onProgress));
 
         const text = response.text;
         if (!text) throw new Error("Empty response from Gemini");
