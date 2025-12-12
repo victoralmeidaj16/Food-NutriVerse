@@ -12,9 +12,9 @@ const callBackend = async (endpoint: string, body: any, onProgress?: (status: st
 
     try {
         // Create abort controller for timeout
-        // Production (Render free tier): 90s to handle cold starts
+        // Production (Render free tier): 120s to handle cold starts (can take up to 50-60s)
         // Development: 60s
-        const timeoutDuration = isProduction ? 90000 : 60000;
+        const timeoutDuration = isProduction ? 120000 : 60000;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
 
@@ -70,11 +70,13 @@ const retryOperation = async <T>(
     } catch (error: any) {
         // Check for 503 or specific overload messages
         const isOverloaded = error?.status === 503 || error?.code === 503 || error?.message?.includes('overloaded');
+        // Also retry on timeout errors (cold start issues)
+        const isTimeout = error?.name === 'AbortError' || error?.message?.includes('demorou muito');
 
-        if (retries > 0 && isOverloaded) {
-            console.warn(`Model overloaded. Retrying in ${delay}ms... (Attempts left: ${retries})`);
+        if (retries > 0 && (isOverloaded || isTimeout)) {
+            console.warn(`Server unavailable/timeout. Retrying in ${delay}ms... (Attempts left: ${retries})`);
             await new Promise((resolve) => setTimeout(resolve, delay));
-            return retryOperation(operation, retries - 1, delay * 2);
+            return retryOperation(operation, retries - 1, delay * 1.5); // Less aggressive backoff for cold starts
         }
         throw error;
     }

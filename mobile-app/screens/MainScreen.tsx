@@ -249,6 +249,10 @@ export const MainScreen = ({
         }
     };
 
+    const handleRemovePantryImage = (index: number) => {
+        setPantryImages(prev => prev.filter((_, i) => i !== index));
+    };
+
     const analyzeImage = async (base64: string) => {
         setLoading(true);
         setLoadingMsg("Analisando despensa...");
@@ -344,6 +348,10 @@ export const MainScreen = ({
                 console.log('🍽️ Recipe generated:', recipe.name);
                 setGeneratedRecipes([recipe]);
                 setActiveTab('EXPLORE');
+                // Auto-open the recipe details
+                setLoading(false);
+                setTimeout(() => onRecipeClick(recipe), 300);
+                return; // Don't hit the finally block setLoading(false) again
             } else {
                 Alert.alert("Erro", "Não foi possível gerar a receita. Tente novamente.");
             }
@@ -1339,6 +1347,7 @@ export const MainScreen = ({
                 onAddMore={handleAddMorePantryImages}
                 onAddManually={handleAddManuallyFromPreview}
                 onAnalyze={handleAnalyzePantryImages}
+                onRemoveImage={handleRemovePantryImage}
                 onClose={() => {
                     setShowPantryPreview(false);
                     setPantryImages([]);

@@ -9,7 +9,7 @@ import {
 } from 'expo-file-system/legacy';
 
 import * as Crypto from 'expo-crypto';
-import { GOOGLE_API_KEY } from './config';
+import { BACKEND_URL } from './config';
 
 const BASE_DIR = documentDirectory || cacheDirectory;
 const IMAGE_DIR = `${BASE_DIR}images/`;
@@ -29,72 +29,53 @@ export const generateAndSaveImage = async (prompt: string): Promise<string | nul
     try {
         await ensureDirExists();
 
-        const enhancedPrompt = `
-            ${prompt}, ${prompt}, professional food photography,
-            highly detailed, appetizing, elegant plating,
-            clean white background with subtle lime green accents,
-            soft studio lighting, 4k resolution, culinary magazine style,
-            minimalist and modern presentation
-        `;
+        console.log("Generating image via backend...");
 
-        console.log("Generating image using Google Gemini (Imagen 4)...");
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-preview-06-06:predict?key=${GOOGLE_API_KEY}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                instances: [
-                    {
-                        prompt: enhancedPrompt
-                    }
-                ],
-                parameters: {
-                    aspectRatio: "1:1",
-                    sampleCount: 1
-                }
-            })
+        // Call backend endpoint (API key is secure on server)
+        const response = await fetch(`${BACKEND_URL}/api/generate-image`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt })
         });
 
         if (!response.ok) {
-            const err = await response.text();
-            throw new Error(`Gemini error: ${response.status} - ${err}`);
+            throw new Error(`Backend error: ${response.status}`);
         }
 
-        const json = await response.json();
-
-        // Response format: { predictions: [ { bytesBase64Encoded: "..." } ] }
-        const b64 = json.predictions?.[0]?.bytesBase64Encoded;
-
-        if (!b64 || b64.length < 10000) {
-            throw new Error("Invalid base64 image received from Gemini");
-        }
-
+        const data = await response.json();
         const filename = `${Crypto.randomUUID()}.jpg`;
         const fileUri = IMAGE_DIR + filename;
 
-        await writeAsStringAsync(fileUri, b64, { encoding: EncodingType.Base64 });
+        if (data.imageBase64) {
+            // Backend returned base64 image from Imagen API
+            await writeAsStringAsync(fileUri, data.imageBase64, { encoding: EncodingType.Base64 });
+            console.log("Image saved from Imagen:", fileUri);
+            return fileUri;
+        } else if (data.imageUrl) {
+            // Backend returned fallback URL
+            console.log("Using fallback image URL");
+            const { uri } = await downloadAsync(data.imageUrl, fileUri);
+            return uri;
+        }
 
-        console.log("Image saved to:", fileUri);
-        return fileUri;
+        throw new Error("No image data received");
 
     } catch (error: any) {
-        console.warn("Primary generation failed → fallback:", error.message);
+        console.warn("Backend image generation failed, using direct fallback:", error.message);
 
+        // Direct fallback if backend is down
         try {
+            await ensureDirExists();
             const seed = Math.floor(Math.random() * 999999);
-            const fallbackUrl =
-                `https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${encodeURIComponent(prompt)}%20clean%20white%20background%20with%20subtle%20lime%20green%20details%20elegant%20plating?seed=${seed}&width=1024&height=1024&nologo=true`;
+            const enhancedPrompt = `professional food photography of ${prompt} clean white background elegant plating`;
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?seed=${seed}&width=1024&height=1024&nologo=true`;
 
             const filename = `${Crypto.randomUUID()}.jpg`;
             const fileUri = IMAGE_DIR + filename;
-
-            const { uri } = await downloadAsync(fallbackUrl, fileUri);
+            const { uri } = await downloadAsync(imageUrl, fileUri);
             return uri;
-
         } catch (fallbackError) {
-            console.error("Fallback failed:", fallbackError);
+            console.error("All image generation failed:", fallbackError);
             return null;
         }
     }

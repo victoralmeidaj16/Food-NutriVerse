@@ -10,6 +10,7 @@ interface PantryImagePreviewProps {
     onAddManually: () => void;
     onAnalyze: (manualIngredients: string[]) => void;
     onClose: () => void;
+    onRemoveImage?: (index: number) => void;
 }
 
 export const PantryImagePreview = ({
@@ -18,7 +19,8 @@ export const PantryImagePreview = ({
     onAddMore,
     onAddManually,
     onAnalyze,
-    onClose
+    onClose,
+    onRemoveImage
 }: PantryImagePreviewProps) => {
     const [showManualInput, setShowManualInput] = useState(false);
     const [manualIngredients, setManualIngredients] = useState<string[]>([]);
@@ -48,6 +50,12 @@ export const PantryImagePreview = ({
         // Don't call onAddManually() - we want to stay on this page
     };
 
+    const handleRemoveImage = (index: number) => {
+        if (onRemoveImage) {
+            onRemoveImage(index);
+        }
+    };
+
     return (
         <Modal visible={visible} animationType="slide" transparent={false}>
             <View style={styles.container}>
@@ -69,6 +77,13 @@ export const PantryImagePreview = ({
                                 style={styles.image}
                                 resizeMode="cover"
                             />
+                            {/* Delete button */}
+                            <TouchableOpacity
+                                style={styles.deleteImageBtn}
+                                onPress={() => handleRemoveImage(index)}
+                            >
+                                <CloseIcon size={16} color="#FFFFFF" />
+                            </TouchableOpacity>
                         </View>
                     ))}
                 </ScrollView>
@@ -202,6 +217,22 @@ const styles = StyleSheet.create({
     image: {
         width: '100%',
         height: '100%',
+    },
+    deleteImageBtn: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: 'rgba(239, 68, 68, 0.9)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 4,
     },
     actions: {
         flexDirection: 'row',
