@@ -30,12 +30,11 @@ export const generateAndSaveImage = async (prompt: string): Promise<string | nul
         await ensureDirExists();
 
         const enhancedPrompt = `
-            professional food photography of ${prompt},
-            close-up, mouth-watering, steam rising, highly detailed texture,
-            studio lighting, vibrant and fresh ingredients,
-            michelin star plating, elegant presentation,
-            subtle lime green accents in background or garnish (branding style),
-            modern, clean, 8k resolution, culinary masterpiece
+            ${prompt}, ${prompt}, professional food photography,
+            highly detailed, appetizing, elegant plating,
+            clean white background with subtle lime green accents,
+            soft studio lighting, 4k resolution, culinary magazine style,
+            minimalist and modern presentation
         `;
 
         console.log("Generating image using Google Gemini (Imagen 4)...");
@@ -86,7 +85,7 @@ export const generateAndSaveImage = async (prompt: string): Promise<string | nul
         try {
             const seed = Math.floor(Math.random() * 999999);
             const fallbackUrl =
-                `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}&width=1024&height=1024&nologo=true`;
+                `https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${encodeURIComponent(prompt)}%20clean%20white%20background%20with%20subtle%20lime%20green%20details%20elegant%20plating?seed=${seed}&width=1024&height=1024&nologo=true`;
 
             const filename = `${Crypto.randomUUID()}.jpg`;
             const fileUri = IMAGE_DIR + filename;
@@ -103,5 +102,5 @@ export const generateAndSaveImage = async (prompt: string): Promise<string | nul
 
 export const getImageUrl = (prompt: string): string => {
     const seed = Math.floor(Math.random() * 999999);
-    return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}&width=1024&height=1024&nologo=true`;
+    return `https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${encodeURIComponent(prompt)}%20clean%20white%20background%20with%20subtle%20lime%20green%20details%20elegant%20plating?seed=${seed}&width=1024&height=1024&nologo=true`;
 };

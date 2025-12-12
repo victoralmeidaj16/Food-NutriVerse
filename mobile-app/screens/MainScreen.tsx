@@ -218,7 +218,7 @@ export const MainScreen = ({
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: false,
-            quality: 0.5,
+            quality: 0.3,
         });
 
         if (!result.canceled && result.assets[0].uri) {
@@ -240,7 +240,7 @@ export const MainScreen = ({
 
         const result = await ImagePicker.launchCameraAsync({
             allowsEditing: false,
-            quality: 0.5,
+            quality: 0.3,
         });
 
         if (!result.canceled && result.assets[0].uri) {
@@ -269,6 +269,7 @@ export const MainScreen = ({
     };
 
     const handleAnalyzePantryImages = async (manualIngredients: string[]) => {
+        console.log('🔍 handleAnalyzePantryImages started', { imagesCount: pantryImages.length, manualIngredients });
         setShowPantryPreview(false);
 
         setLoading(true);
@@ -281,8 +282,10 @@ export const MainScreen = ({
         try {
             // Convert URIs to base64 and analyze
             for (const uri of pantryImages) {
+                console.log('📷 Processing image:', uri.substring(0, 50) + '...');
                 const response = await fetch(uri);
                 const blob = await response.blob();
+                console.log('📦 Blob size:', blob.size, 'bytes');
                 const reader = new FileReader();
 
                 const base64 = await new Promise<string>((resolve) => {
@@ -293,45 +296,60 @@ export const MainScreen = ({
                     reader.readAsDataURL(blob);
                 });
 
+                console.log('📤 Base64 length:', base64.length, 'characters');
+
                 const detected = await identifyIngredientsFromImage(base64, (status, progress) => {
                     setLoadingStatus(status);
                     setLoadingProgress(progress * 0.7); // 70% for analysis
                 });
 
+                console.log('✅ Detected ingredients:', detected);
                 allIngredients.push(...detected);
             }
 
             // Remove duplicates
             const uniqueIngredients = [...new Set(allIngredients)];
+            console.log('🥗 Final ingredients list:', uniqueIngredients);
             setPantryIngredients(uniqueIngredients);
 
             // Clear images after analysis
             setPantryImages([]);
 
+            // Check if we found any ingredients
+            if (uniqueIngredients.length === 0) {
+                Alert.alert(
+                    "Nenhum ingrediente encontrado",
+                    "Não foi possível identificar ingredientes na imagem. Tente uma foto mais clara com alimentos visíveis, ou adicione ingredientes manualmente.",
+                    [{ text: "OK" }]
+                );
+                return;
+            }
+
             // Auto-generate recipe with these ingredients
             setLoadingStatus("Criando receita com esses ingredientes...");
             setLoadingProgress(0.8);
 
-            if (uniqueIngredients.length > 0) {
-                const recipe = await generateFitnessRecipe(
-                    uniqueIngredients,
-                    userProfile?.goal || ('WEIGHT_LOSS' as UserGoal),
-                    userProfile?.dietaryRestrictions || [],
-                    userProfile?.dislikes || [],
-                    (status, progress) => {
-                        setLoadingStatus(status);
-                        setLoadingProgress(0.8 + (progress * 0.2)); // 80-100%
-                    }
-                );
-
-                if (recipe) {
-                    setGeneratedRecipes([recipe]);
-                    setActiveTab('EXPLORE');
+            const recipe = await generateFitnessRecipe(
+                uniqueIngredients,
+                userProfile?.goal || ('WEIGHT_LOSS' as UserGoal),
+                userProfile?.dietaryRestrictions || [],
+                userProfile?.dislikes || [],
+                (status, progress) => {
+                    setLoadingStatus(status);
+                    setLoadingProgress(0.8 + (progress * 0.2)); // 80-100%
                 }
+            );
+
+            if (recipe) {
+                console.log('🍽️ Recipe generated:', recipe.name);
+                setGeneratedRecipes([recipe]);
+                setActiveTab('EXPLORE');
+            } else {
+                Alert.alert("Erro", "Não foi possível gerar a receita. Tente novamente.");
             }
-        } catch (error) {
-            console.error(error);
-            Alert.alert("Erro", "Não foi possível processar os ingredientes.");
+        } catch (error: any) {
+            console.error('❌ Pantry analysis error:', error);
+            Alert.alert("Erro", `Não foi possível processar: ${error.message || 'Erro desconhecido'}`);
         } finally {
             setLoading(false);
         }
@@ -454,6 +472,10 @@ export const MainScreen = ({
                     storageService.saveHistory(newList);
                     return newList;
                 });
+
+                // Automatically save to user's library
+                onToggleSave(result);
+
                 onRecipeClick(result); // Open immediately
                 setDishInput('');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

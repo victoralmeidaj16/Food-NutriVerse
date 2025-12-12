@@ -111,6 +111,8 @@ export const identifyIngredientsFromImage = async (base64Image: string, onProgre
         required: ["ingredients"]
     };
 
+    console.log('🖼️ identifyIngredientsFromImage called, base64 length:', base64Image.length);
+
     try {
         onProgress?.("Enviando imagem para o Chef IA...", 0.2);
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
@@ -123,7 +125,7 @@ export const identifyIngredientsFromImage = async (base64Image: string, onProgre
                     }
                 },
                 {
-                    text: "Analise esta imagem e identifique todos os ingredientes alimentícios visíveis (frutas, vegetais, embalagens, etc). Liste apenas os nomes em português, de forma genérica (ex: 'Leite' em vez de 'Leite Desnatado Marca X')."
+                    text: "Analise esta imagem e identifique todos os ingredientes alimentícios visíveis (frutas, vegetais, embalagens, etc). Liste apenas os nomes em português, de forma genérica (ex: 'Leite' em vez de 'Leite Desnatado Marca X'). Se não houver alimentos visíveis, retorne uma lista vazia."
                 }
             ],
             config: {
@@ -133,17 +135,24 @@ export const identifyIngredientsFromImage = async (base64Image: string, onProgre
             }
         }, onProgress));
 
+        console.log('📥 Backend response received:', response);
+
         const text = response.text;
-        if (!text) return [];
+        if (!text) {
+            console.warn('⚠️ Empty response from backend');
+            return [];
+        }
 
         onProgress?.("Identificando ingredientes...", 0.8);
         const data = JSON.parse(text);
+        console.log('🍎 Parsed ingredients:', data.ingredients);
         onProgress?.("Concluído!", 1.0);
         return data.ingredients || [];
 
-    } catch (error) {
-        console.error("Error identifying ingredients:", error);
-        return [];
+    } catch (error: any) {
+        console.error("❌ Error identifying ingredients:", error);
+        // Re-throw the error so the UI can handle it
+        throw new Error(`Falha ao analisar imagem: ${error.message || 'Erro desconhecido'}`);
     }
 };
 

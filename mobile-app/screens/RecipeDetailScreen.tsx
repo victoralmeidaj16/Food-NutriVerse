@@ -6,8 +6,7 @@ import { storageService } from '../services/storage';
 import { ArrowRightIcon, BookHeartIcon, TimerIcon, FlameIcon, ExchangeIcon, LightbulbIcon, CheckIcon, CloseIcon, ChefHatIcon, AlertTriangleIcon, CalendarIcon, CheckCircleIcon, ShoppingBagIcon } from '../components/Icons';
 import { AddToPlanModal } from '../components/AddToPlanModal';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CitationBadge } from '../components/CitationBadge';
-import { mapHealthTipToReference, getReferencesByIds } from '../services/healthReferences';
+import { getReferencesByIds } from '../services/healthReferences';
 
 const { width, height } = Dimensions.get('window');
 
@@ -244,10 +243,7 @@ export const RecipeDetailScreen = ({
                     <View style={styles.macrosSection}>
                         <View style={styles.macrosHeader}>
                             <Text style={styles.macrosSectionTitle}>Informação Nutricional</Text>
-                            <CitationBadge
-                                references={getReferencesByIds(['protein-muscle', 'carbs-energy', 'balanced-diet'])}
-                                size="small"
-                            />
+                            {null}
                         </View>
                         <View style={styles.macrosGrid}>
                             {Object.entries(recipe.macros).map(([key, val]) => (
@@ -308,22 +304,7 @@ export const RecipeDetailScreen = ({
                         ))}
                     </View>
 
-                    <View style={styles.chefTip}>
-                        <View style={styles.chefTipHeader}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                                <LightbulbIcon size={20} color="#1e40af" />
-                                <Text style={styles.chefTipTitle}>Dica do Chef</Text>
-                            </View>
-                            <CitationBadge
-                                references={getReferencesByIds(
-                                    recipe.citations || mapHealthTipToReference(recipe.healthTips)
-                                )}
-                                size="small"
-                                showLabel
-                            />
-                        </View>
-                        <Text style={styles.chefTipText}>{recipe.healthTips}</Text>
-                    </View>
+                    {null}
 
                     {/* Cooking Mode Entry Point */}
                     <View style={styles.cookingModeEntry}>

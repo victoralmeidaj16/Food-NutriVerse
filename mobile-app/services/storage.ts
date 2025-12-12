@@ -34,18 +34,23 @@ export const storageService = {
     // --- Recipe History ---
     saveHistory: async (recipes: Recipe[]) => {
         try {
+            console.log(`💾 Saving history: ${recipes.length} recipes`);
             await AsyncStorage.setItem(KEYS.RECIPE_HISTORY, JSON.stringify(recipes));
+            console.log('✅ History saved to storage');
         } catch (e) {
-            console.error('Failed to save history', e);
+            console.error('❌ Failed to save history', e);
         }
     },
 
     loadHistory: async (): Promise<Recipe[]> => {
         try {
             const json = await AsyncStorage.getItem(KEYS.RECIPE_HISTORY);
-            return json ? JSON.parse(json) : [];
+            console.log(`📂 Loaded history: ${json ? 'Found data' : 'Empty'}`);
+            const data = json ? JSON.parse(json) : [];
+            console.log(`📊 Parsed history: ${data.length} recipes`);
+            return data;
         } catch (e) {
-            console.error('Failed to load history', e);
+            console.error('❌ Failed to load history', e);
             return [];
         }
     },

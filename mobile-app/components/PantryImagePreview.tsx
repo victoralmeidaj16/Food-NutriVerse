@@ -45,7 +45,7 @@ export const PantryImagePreview = ({
 
     const handleToggleManualInput = () => {
         setShowManualInput(!showManualInput);
-        onAddManually();
+        // Don't call onAddManually() - we want to stay on this page
     };
 
     return (
