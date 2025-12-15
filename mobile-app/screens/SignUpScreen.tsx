@@ -5,8 +5,10 @@ import { auth } from '../services/firebaseConfig';
 import { saveUserProfile } from '../services/userService';
 import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan } from '../types';
 import { MailIcon, LockIcon, EyeIcon, EyeOffIcon, ArrowRightIcon, UserIcon } from '../components/Icons';
+import { useLanguage } from '../context/LanguageContext';
 
 export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigateToLogin: () => void, initialProfile?: UserProfile | null }) => {
+    const { t } = useLanguage();
     const [name, setName] = useState(initialProfile?.name === 'Atleta' ? '' : (initialProfile?.name || ''));
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -15,7 +17,7 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
 
     const handleSignUp = async () => {
         if (!name || !email || !password) {
-            Alert.alert('Erro', 'Preencha todos os campos');
+            Alert.alert(t('common.error'), t('errors.fillAllFields'));
             return;
         }
 
@@ -44,7 +46,9 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
                     lastDesireDate: new Date().toISOString(),
                     pantryScansThisWeek: 0,
                     lastScanDate: new Date().toISOString(),
-                    savedRecipesCount: 0
+                    savedRecipesCount: 0,
+                    weeklyPlansGeneratedThisWeek: 0,
+                    lastPlanGenerationDate: new Date().toISOString()
                 }
             };
 
@@ -61,11 +65,11 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
             // Auth state listener in App.tsx will handle navigation
         } catch (error: any) {
             console.error(error);
-            let msg = "Falha ao criar conta.";
-            if (error.code === 'auth/email-already-in-use') msg = "Email já está em uso.";
-            if (error.code === 'auth/invalid-email') msg = "Email inválido.";
-            if (error.code === 'auth/weak-password') msg = "Senha muito fraca (min. 6 caracteres).";
-            Alert.alert('Erro', msg);
+            let msg = t('errors.generic');
+            if (error.code === 'auth/email-already-in-use') msg = t('errors.emailAlreadyInUse');
+            if (error.code === 'auth/invalid-email') msg = t('errors.invalidEmail');
+            if (error.code === 'auth/weak-password') msg = t('errors.weakPassword');
+            Alert.alert(t('common.error'), msg);
         } finally {
             setLoading(false);
         }
@@ -75,9 +79,9 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
         <SafeAreaView style={styles.authContainer}>
             <View style={styles.authContent}>
                 <View style={styles.logoContainer}>
-                    <Text style={styles.authTitle}>Crie sua conta</Text>
+                    <Text style={styles.authTitle}>{t('auth.createAccountTitle')}</Text>
                     <Text style={styles.authSubtitle}>
-                        {initialProfile ? `Quase lá! Salve seu plano.` : 'Comece sua jornada saudável'}
+                        {initialProfile ? t('auth.createAccountSubtitle') : t('auth.createAccountSubtitle')}
                     </Text>
                 </View>
 
@@ -86,7 +90,7 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
                         <UserIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
                         <TextInput
                             style={styles.input}
-                            placeholder="Nome completo"
+                            placeholder={t('auth.namePlaceholder')}
                             value={name}
                             onChangeText={setName}
                         />
@@ -96,7 +100,7 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
                         <MailIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
                         <TextInput
                             style={styles.input}
-                            placeholder="Email"
+                            placeholder={t('auth.emailPlaceholder')}
                             value={email}
                             onChangeText={setEmail}
                             autoCapitalize="none"
@@ -108,7 +112,7 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
                         <LockIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
                         <TextInput
                             style={styles.input}
-                            placeholder="Senha (min. 6 caracteres)"
+                            placeholder={t('auth.passwordPlaceholder')}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword}
@@ -127,7 +131,7 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
                             <ActivityIndicator color="black" />
                         ) : (
                             <View style={styles.buttonContent}>
-                                <Text style={[styles.primaryButtonText, { color: 'black' }]}>Criar conta</Text>
+                                <Text style={[styles.primaryButtonText, { color: 'black' }]}>{t('auth.createAccount')}</Text>
                                 <ArrowRightIcon size={20} color="black" />
                             </View>
                         )}
@@ -135,9 +139,9 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
                 </View>
 
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>Já tem uma conta?</Text>
+                    <Text style={styles.footerText}>{t('auth.alreadyHaveAccount')}</Text>
                     <TouchableOpacity onPress={onNavigateToLogin}>
-                        <Text style={[styles.linkText, { color: 'black' }]}>Fazer login</Text>
+                        <Text style={[styles.linkText, { color: 'black' }]}>{t('auth.loginLink')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>

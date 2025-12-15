@@ -3,8 +3,10 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityInd
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { MailIcon, LockIcon, EyeIcon, EyeOffIcon, ArrowRightIcon } from '../components/Icons';
+import { useLanguage } from '../context/LanguageContext';
 
 export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => void }) => {
+    const { t } = useLanguage();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -12,7 +14,7 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Erro', 'Preencha todos os campos');
+            Alert.alert(t('common.error'), t('errors.fillAllFields'));
             return;
         }
 
@@ -22,12 +24,12 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
             // Auth state listener in App.tsx will handle navigation
         } catch (error: any) {
             console.error(error);
-            let msg = "Falha ao fazer login.";
-            if (error.code === 'auth/invalid-email') msg = "Email inválido.";
-            if (error.code === 'auth/user-not-found') msg = "Usuário não encontrado.";
-            if (error.code === 'auth/wrong-password') msg = "Senha incorreta.";
-            if (error.code === 'auth/invalid-credential') msg = "Credenciais inválidas.";
-            Alert.alert('Erro', msg);
+            let msg = t('errors.generic');
+            if (error.code === 'auth/invalid-email') msg = t('errors.invalidEmail') || "Invalid email.";
+            if (error.code === 'auth/user-not-found') msg = t('errors.userNotFound') || "User not found.";
+            if (error.code === 'auth/wrong-password') msg = t('errors.wrongPassword') || "Incorrect password.";
+            if (error.code === 'auth/invalid-credential') msg = t('errors.invalidCredentials') || "Invalid credentials.";
+            Alert.alert(t('common.error'), msg);
         } finally {
             setLoading(false);
         }
@@ -35,19 +37,19 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
 
     const handleForgotPassword = async () => {
         if (!email) {
-            Alert.alert('Erro', 'Por favor, digite seu email para recuperar a senha.');
+            Alert.alert(t('common.error'), t('messages.enterEmailForRecovery'));
             return;
         }
 
         try {
             await sendPasswordResetEmail(auth, email.trim());
-            Alert.alert('Sucesso', 'Email de recuperação enviado! Verifique sua caixa de entrada.');
+            Alert.alert(t('common.success'), t('messages.passwordResetSent'));
         } catch (error: any) {
             console.error(error);
-            let msg = "Falha ao enviar email.";
-            if (error.code === 'auth/invalid-email') msg = "Email inválido.";
-            if (error.code === 'auth/user-not-found') msg = "Usuário não encontrado.";
-            Alert.alert('Erro', msg);
+            let msg = t('errors.generic');
+            if (error.code === 'auth/invalid-email') msg = t('errors.invalidEmail') || "Invalid email.";
+            if (error.code === 'auth/user-not-found') msg = t('errors.userNotFound') || "User not found.";
+            Alert.alert(t('common.error'), msg);
         }
     };
 
@@ -58,8 +60,8 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
                     <View style={styles.logoCircle}>
                         <Text style={styles.logoText}>N</Text>
                     </View>
-                    <Text style={styles.authTitle}>Bem-vindo de volta</Text>
-                    <Text style={styles.authSubtitle}>Para salvar seu plano, entre na sua conta</Text>
+                    <Text style={styles.authTitle}>{t('auth.welcomeBack')}</Text>
+                    <Text style={styles.authSubtitle}>{t('auth.loginSubtitle')}</Text>
                 </View>
 
                 <View style={styles.form}>
@@ -67,7 +69,7 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
                         <MailIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
                         <TextInput
                             style={styles.input}
-                            placeholder="Email"
+                            placeholder={t('auth.emailPlaceholder')}
                             value={email}
                             onChangeText={setEmail}
                             autoCapitalize="none"
@@ -79,7 +81,7 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
                         <LockIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
                         <TextInput
                             style={styles.input}
-                            placeholder="Senha"
+                            placeholder={t('auth.passwordPlaceholder')}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword}
@@ -90,7 +92,7 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
                     </View>
 
                     <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPasswordBtn}>
-                        <Text style={styles.forgotPasswordText}>Esqueci minha senha</Text>
+                        <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -102,7 +104,7 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
                             <ActivityIndicator color="white" />
                         ) : (
                             <View style={styles.buttonContent}>
-                                <Text style={styles.primaryButtonText}>Entrar</Text>
+                                <Text style={styles.primaryButtonText}>{t('auth.loginButton')}</Text>
                                 <ArrowRightIcon size={20} color="white" />
                             </View>
                         )}
@@ -110,9 +112,9 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
                 </View>
 
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>Não tem uma conta?</Text>
+                    <Text style={styles.footerText}>{t('auth.noAccount')}</Text>
                     <TouchableOpacity onPress={onNavigateToSignUp}>
-                        <Text style={styles.linkText}>Criar conta gratuita</Text>
+                        <Text style={styles.linkText}>{t('auth.createAccount')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>

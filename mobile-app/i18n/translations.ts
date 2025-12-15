@@ -39,7 +39,14 @@ export const translations = {
             restoreFailed: "Não foi possível restaurar compras. Tente novamente.",
             aiConnectionFailed: "Falha na conexão com a IA.",
             deleteAccountFailed: "Falha ao excluir conta. Talvez seja necessário fazer login novamente.",
-            regenerateFailed: "Não foi possível gerar uma nova receita. Tente novamente."
+            regenerateFailed: "Não foi possível gerar uma nova receita. Tente novamente.",
+            invalidEmail: "Email inválido.",
+            userNotFound: "Usuário não encontrado.",
+            wrongPassword: "Senha incorreta.",
+            invalidCredentials: "Credenciais inválidas.",
+            emailAlreadyInUse: "Este email já está em uso.",
+            weakPassword: "Senha muito fraca. Use pelo menos 6 caracteres.",
+            loginFailed: "Falha ao fazer login."
         },
         permissions: {
             required: "Permissão necessária",
@@ -349,7 +356,14 @@ export const translations = {
             restoreFailed: "Could not restore purchases. Please try again.",
             aiConnectionFailed: "Failed to connect to AI.",
             deleteAccountFailed: "Failed to delete account. You may need to sign in again.",
-            regenerateFailed: "Could not generate a new recipe. Please try again."
+            regenerateFailed: "Could not generate a new recipe. Please try again.",
+            invalidEmail: "Invalid email.",
+            userNotFound: "User not found.",
+            wrongPassword: "Incorrect password.",
+            invalidCredentials: "Invalid credentials.",
+            emailAlreadyInUse: "This email is already in use.",
+            weakPassword: "Password too weak. Use at least 6 characters.",
+            loginFailed: "Failed to log in."
         },
         permissions: {
             required: "Permission required",
