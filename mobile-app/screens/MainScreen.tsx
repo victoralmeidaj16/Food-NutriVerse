@@ -231,6 +231,14 @@ export const MainScreen = ({
         }
     };
     const handleTakePhoto = async () => {
+        if (!userProfile) return;
+
+        // Check Subscription Limit (same as pickImage)
+        if (!SubscriptionService.canScanPantry(userProfile)) {
+            onShowPaywall();
+            return;
+        }
+
         const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
         if (permissionResult.granted === false) {
@@ -246,6 +254,10 @@ export const MainScreen = ({
         if (!result.canceled && result.assets[0].uri) {
             setPantryImages(prev => [...prev, result.assets[0].uri]);
             setShowPantryPreview(true);
+
+            // Update Usage Stats (same as pickImage)
+            const updatedProfile = SubscriptionService.incrementPantryScan(userProfile);
+            onUpdateProfile(updatedProfile);
         }
     };
 
