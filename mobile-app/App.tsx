@@ -79,7 +79,9 @@ export default function App() {
               lastDesireDate: new Date().toISOString(),
               pantryScansThisWeek: 0,
               lastScanDate: new Date().toISOString(),
-              savedRecipesCount: 0
+              savedRecipesCount: 0,
+              weeklyPlansGeneratedThisWeek: 0,
+              lastPlanGenerationDate: new Date().toISOString()
             }
           };
           await saveUserProfile(uid, defaultProfile);

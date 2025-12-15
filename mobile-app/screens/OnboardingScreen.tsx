@@ -90,7 +90,9 @@ export const OnboardingScreen = ({
                 lastDesireDate: new Date().toISOString(),
                 pantryScansThisWeek: 0,
                 lastScanDate: new Date().toISOString(),
-                savedRecipesCount: 0
+                savedRecipesCount: 0,
+                weeklyPlansGeneratedThisWeek: 0,
+                lastPlanGenerationDate: new Date().toISOString()
             }
         };
         onComplete(profile);

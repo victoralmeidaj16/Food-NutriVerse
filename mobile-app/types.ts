@@ -74,6 +74,8 @@ export interface UserUsageStats {
     pantryScansThisWeek: number;
     lastScanDate: string;
     savedRecipesCount: number;
+    weeklyPlansGeneratedThisWeek: number;
+    lastPlanGenerationDate: string;
 }
 
 export interface UserProfile {

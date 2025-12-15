@@ -11,6 +11,7 @@ export const SubscriptionService = {
             DESIRES_PER_DAY: 1,
             SAVED_RECIPES: 1,
             PANTRY_SCANS_PER_WEEK: 2,
+            WEEKLY_PLANS_PER_WEEK: 1,
         }
     },
 
@@ -51,6 +52,18 @@ export const SubscriptionService = {
 
         if (diffDays > 7) return true;
         return profile.usageStats.pantryScansThisWeek < SubscriptionService.LIMITS.FREE.PANTRY_SCANS_PER_WEEK;
+    },
+
+    canGenerateWeeklyPlan: (profile: UserProfile): boolean => {
+        if (profile.isPro) return true;
+
+        const now = new Date();
+        const lastGen = new Date(profile.usageStats.lastPlanGenerationDate || '2000-01-01');
+        const diffTime = Math.abs(now.getTime() - lastGen.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays > 7) return true;
+        return (profile.usageStats.weeklyPlansGeneratedThisWeek || 0) < SubscriptionService.LIMITS.FREE.WEEKLY_PLANS_PER_WEEK;
     },
 
     // Actions (Return updated profile)
@@ -128,6 +141,29 @@ export const SubscriptionService = {
                 ...profile.usageStats,
                 pantryScansThisWeek: newCount,
                 lastScanDate: now.toISOString()
+            }
+        };
+    },
+
+    incrementWeeklyPlanCount: (profile: UserProfile): UserProfile => {
+        if (profile.isPro) return profile;
+
+        const now = new Date();
+        const lastGen = new Date(profile.usageStats.lastPlanGenerationDate || '2000-01-01');
+        const diffTime = Math.abs(now.getTime() - lastGen.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        let newCount = (profile.usageStats.weeklyPlansGeneratedThisWeek || 0) + 1;
+        if (diffDays > 7) {
+            newCount = 1;
+        }
+
+        return {
+            ...profile,
+            usageStats: {
+                ...profile.usageStats,
+                weeklyPlansGeneratedThisWeek: newCount,
+                lastPlanGenerationDate: now.toISOString()
             }
         };
     },

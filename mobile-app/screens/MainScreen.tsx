@@ -514,6 +514,13 @@ export const MainScreen = ({
 
     const handleGeneratePlan = async (preference: string, mealsCount: number, allowRepeats: boolean) => {
         if (!userProfile) return;
+
+        // Check Subscription Limit
+        if (!SubscriptionService.canGenerateWeeklyPlan(userProfile)) {
+            onShowPaywall();
+            return;
+        }
+
         setShowPlanningWizard(false);
         setLoading(true);
         setLoadingMsg("A IA está montando sua semana...");
@@ -523,6 +530,10 @@ export const MainScreen = ({
             if (plan) {
                 setWeeklyPlan(plan);
                 storageService.saveWeeklyPlan(plan); // Save
+
+                // Update Usage Stats
+                const updatedProfile = SubscriptionService.incrementWeeklyPlanCount(userProfile);
+                onUpdateProfile(updatedProfile);
                 setActivePlanningDay(0);
             } else {
                 Alert.alert("Erro", "Não foi possível criar o plano. Tente novamente.");
