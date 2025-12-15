@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Animated, Dimensions, Easing } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { ChefHat, Sparkles, Camera, BrainCircuit } from 'lucide-react-native';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
@@ -11,7 +12,7 @@ interface LoadingModalProps {
     status: string; // "Conectando...", "Analisando..."
 }
 
-const TIPS = [
+const TIPS_PT = [
     "💡 Sabia que proteínas aumentam a saciedade por mais tempo?",
     "🥑 Gorduras boas como abacate ajudam na absorção de vitaminas.",
     "💧 Beber água antes das refeições pode ajudar na digestão.",
@@ -24,7 +25,24 @@ const TIPS = [
     "🌙 Nosso servidor dorme quando não está em uso para economizar recursos.",
 ];
 
+const TIPS_EN = [
+    "💡 Did you know proteins increase satiety for longer?",
+    "🥑 Good fats like avocado help with vitamin absorption.",
+    "💧 Drinking water before meals can aid digestion.",
+    "🥦 Dark green vegetables are rich in iron and calcium.",
+    "🍎 Fruits with skin have more fiber and nutrients.",
+    "🍳 Eggs are one of the best sources of natural protein.",
+    "🏃‍♂️ Eating carbs before workout gives more energy.",
+    "⏰ First time generating? The server may take up to 1 minute to wake up.",
+    "☕ The perfect recipe is worth the wait! We're working on it...",
+    "🌙 Our server sleeps when not in use to save resources.",
+];
+
 export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, status }) => {
+    const { language } = useLanguage();
+    const TIPS = language === 'en' ? TIPS_EN : TIPS_PT;
+    const tipTitle = language === 'en' ? 'NutriVerse Tip:' : 'Dica NutriVerse:';
+
     const [tipIndex, setTipIndex] = useState(0);
     const progressAnim = useRef(new Animated.Value(0)).current;
     const iconAnim = useRef(new Animated.Value(0)).current;
@@ -68,7 +86,7 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
         } else {
             iconAnim.setValue(0);
         }
-    }, [visible]);
+    }, [visible, TIPS.length]);
 
     const iconTranslateY = iconAnim.interpolate({
         inputRange: [0, 1],
@@ -108,7 +126,7 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
                     <Text style={styles.percentageText}>{Math.round(progress * 100)}%</Text>
 
                     <View style={styles.tipContainer}>
-                        <Text style={styles.tipTitle}>Dica NutriVerse:</Text>
+                        <Text style={styles.tipTitle}>{tipTitle}</Text>
                         <Text style={styles.tipText}>{TIPS[tipIndex]}</Text>
                     </View>
                 </View>

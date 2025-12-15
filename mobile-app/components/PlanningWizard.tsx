@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, ActivityIndicator } from 'react-native';
 import { ArrowRightIcon, CloseIcon } from './Icons';
+import { useLanguage } from '../context/LanguageContext';
 
 export const PlanningWizard = ({
     onClose,
@@ -10,10 +11,18 @@ export const PlanningWizard = ({
     onClose: () => void;
     onGenerate: (pref: string, meals: number, repeats: boolean) => void
 }) => {
-    const [preference, setPreference] = useState('Variada e equilibrada');
+    const { t } = useLanguage();
+    const [preference, setPreference] = useState(t('planning.preferences.varied'));
     const [mealsCount, setMealsCount] = useState(3);
     const [allowRepeats, setAllowRepeats] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
+
+    const preferences = [
+        { key: 'varied', label: t('planning.preferences.varied') },
+        { key: 'lowCarb', label: t('planning.preferences.lowCarb') },
+        { key: 'vegetarian', label: t('planning.preferences.vegetarian') },
+        { key: 'economic', label: t('planning.preferences.economic') }
+    ];
 
     const handleGenerate = async () => {
         setIsGenerating(true);
@@ -29,28 +38,28 @@ export const PlanningWizard = ({
             <View style={styles.overlay}>
                 <View style={styles.container}>
                     <View style={styles.header}>
-                        <Text style={styles.title}>Planejar Semana</Text>
+                        <Text style={styles.title}>{t('planning.planWeek')}</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeBtn} disabled={isGenerating}>
                             <CloseIcon size={24} color="#1F2937" />
                         </TouchableOpacity>
                     </View>
 
                     <ScrollView contentContainerStyle={styles.content}>
-                        <Text style={styles.label}>Preferência de Cardápio</Text>
+                        <Text style={styles.label}>{t('planning.preference')}</Text>
                         <View style={styles.optionsRow}>
-                            {['Variada', 'Low Carb', 'Vegetariana', 'Econômica'].map(opt => (
+                            {preferences.map(opt => (
                                 <TouchableOpacity
-                                    key={opt}
-                                    onPress={() => setPreference(opt)}
-                                    style={[styles.optionChip, preference === opt && styles.optionChipSelected]}
+                                    key={opt.key}
+                                    onPress={() => setPreference(opt.label)}
+                                    style={[styles.optionChip, preference === opt.label && styles.optionChipSelected]}
                                     disabled={isGenerating}
                                 >
-                                    <Text style={[styles.optionText, preference === opt && styles.optionTextSelected]}>{opt}</Text>
+                                    <Text style={[styles.optionText, preference === opt.label && styles.optionTextSelected]}>{opt.label}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
 
-                        <Text style={styles.label}>Refeições por dia</Text>
+                        <Text style={styles.label}>{t('planning.mealsPerDay')}</Text>
                         <View style={styles.counterRow}>
                             <TouchableOpacity
                                 onPress={() => setMealsCount(Math.max(1, mealsCount - 1))}
@@ -69,21 +78,21 @@ export const PlanningWizard = ({
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={styles.label}>Repetição de Pratos</Text>
+                        <Text style={styles.label}>{t('planning.repeatDishes')}</Text>
                         <View style={styles.switchRow}>
                             <TouchableOpacity
                                 onPress={() => setAllowRepeats(true)}
                                 style={[styles.switchOption, allowRepeats && styles.switchActive]}
                                 disabled={isGenerating}
                             >
-                                <Text style={[styles.switchText, allowRepeats && styles.switchTextActive]}>Pode repetir</Text>
+                                <Text style={[styles.switchText, allowRepeats && styles.switchTextActive]}>{t('planning.canRepeat')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={() => setAllowRepeats(false)}
                                 style={[styles.switchOption, !allowRepeats && styles.switchActive]}
                                 disabled={isGenerating}
                             >
-                                <Text style={[styles.switchText, !allowRepeats && styles.switchTextActive]}>Sempre diferente</Text>
+                                <Text style={[styles.switchText, !allowRepeats && styles.switchTextActive]}>{t('planning.alwaysDifferent')}</Text>
                             </TouchableOpacity>
                         </View>
                     </ScrollView>
@@ -96,11 +105,11 @@ export const PlanningWizard = ({
                         {isGenerating ? (
                             <>
                                 <ActivityIndicator size="small" color="black" />
-                                <Text style={styles.generateBtnText}>Gerando...</Text>
+                                <Text style={styles.generateBtnText}>{t('planning.generating')}</Text>
                             </>
                         ) : (
                             <>
-                                <Text style={styles.generateBtnText}>Gerar Plano Mágico</Text>
+                                <Text style={styles.generateBtnText}>{t('planning.generateMagicPlan')}</Text>
                                 <ArrowRightIcon size={20} color="black" />
                             </>
                         )}
