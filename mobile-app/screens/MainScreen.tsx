@@ -211,7 +211,7 @@ export const MainScreen = ({
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
         if (permissionResult.granted === false) {
-            Alert.alert("Permissão necessária", "Precisamos de acesso à galeria para escanear ingredientes.");
+            Alert.alert(t('permissions.required'), t('permissions.galleryAccess'));
             return;
         }
 
@@ -242,7 +242,7 @@ export const MainScreen = ({
         const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
         if (permissionResult.granted === false) {
-            Alert.alert("Permissão necessária", "Precisamos de acesso à câmera.");
+            Alert.alert(t('permissions.required'), t('permissions.cameraAccess'));
             return;
         }
 
@@ -278,7 +278,7 @@ export const MainScreen = ({
             });
             setPantryIngredients(prev => [...new Set([...prev, ...detected])]);
         } catch (error) {
-            Alert.alert("Erro", "Não foi possível identificar os ingredientes.");
+            Alert.alert(t('common.error'), t('errors.imageAnalysisFailed'));
         } finally {
             setLoading(false);
         }
@@ -289,8 +289,8 @@ export const MainScreen = ({
         setShowPantryPreview(false);
 
         setLoading(true);
-        setLoadingMsg("Analisando despensa...");
-        setLoadingStatus("Processando imagens...");
+        setLoadingMsg(t('loading.analyzingPantry'));
+        setLoadingStatus(t('explore.processingImages'));
         setLoadingProgress(0);
 
         const allIngredients: string[] = [...manualIngredients];
@@ -334,15 +334,15 @@ export const MainScreen = ({
             // Check if we found any ingredients
             if (uniqueIngredients.length === 0) {
                 Alert.alert(
-                    "Nenhum ingrediente encontrado",
-                    "Não foi possível identificar ingredientes na imagem. Tente uma foto mais clara com alimentos visíveis, ou adicione ingredientes manualmente.",
-                    [{ text: "OK" }]
+                    t('messages.noIngredientsFound'),
+                    t('messages.noIngredientsFoundDesc'),
+                    [{ text: t('common.ok') }]
                 );
                 return;
             }
 
             // Auto-generate recipe with these ingredients
-            setLoadingStatus("Criando receita com esses ingredientes...");
+            setLoadingStatus(t('explore.creatingRecipe'));
             setLoadingProgress(0.8);
 
             const recipe = await generateFitnessRecipe(
@@ -365,11 +365,11 @@ export const MainScreen = ({
                 setTimeout(() => onRecipeClick(recipe), 300);
                 return; // Don't hit the finally block setLoading(false) again
             } else {
-                Alert.alert("Erro", "Não foi possível gerar a receita. Tente novamente.");
+                Alert.alert(t('common.error'), t('errors.recipeGenerationFailed'));
             }
         } catch (error: any) {
             console.error('❌ Pantry analysis error:', error);
-            Alert.alert("Erro", `Não foi possível processar: ${error.message || 'Erro desconhecido'}`);
+            Alert.alert(t('common.error'), `${t('errors.couldNotProcess')}: ${error.message || t('errors.unknownError')}`);
         } finally {
             setLoading(false);
         }
@@ -415,7 +415,7 @@ export const MainScreen = ({
         const updatedProfile = SubscriptionService.incrementSavedRecipes(userProfile);
         onUpdateProfile(updatedProfile);
 
-        Alert.alert('Sucesso', 'Receita salva com sucesso!');
+        Alert.alert(t('common.success'), t('messages.recipeSaved'));
     };
     const handleGenerateRecipe = async () => {
         console.log('🔥 handleGenerateRecipe called!', { userProfile: !!userProfile, exploreMode, dishInput });
@@ -460,17 +460,17 @@ export const MainScreen = ({
         console.log('📝 Input:', input);
 
         if (exploreMode === 'TEXT' && !dishInput.trim()) {
-            Alert.alert("Ops", "Digite o nome de um prato.");
+            Alert.alert(t('common.oops'), t('messages.enterDishName'));
             return;
         }
         if (exploreMode === 'PANTRY' && pantryIngredients.length === 0) {
-            Alert.alert("Ops", "Adicione ingredientes primeiro.");
+            Alert.alert(t('common.oops'), t('messages.addIngredientsFirst'));
             return;
         }
 
         console.log('✅ Validation passed, starting generation...');
-        setLoadingMsg(exploreMode === 'TEXT' ? "Fitzando receita..." : "Criando com o que você tem...");
-        setLoadingStatus("Iniciando...");
+        setLoadingMsg(exploreMode === 'TEXT' ? t('loading.generatingRecipe') : t('explore.creatingRecipe'));
+        setLoadingStatus(t('loading.connectingAI'));
         setLoadingProgress(0);
         setLoading(true);
 
@@ -500,11 +500,11 @@ export const MainScreen = ({
                 setDishInput('');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } else {
-                Alert.alert("Erro", "Não foi possível gerar a receita. Tente novamente.");
+                Alert.alert(t('common.error'), t('errors.recipeGenerationFailed'));
             }
         } catch (e) {
             console.error('❌ Recipe generation error:', e);
-            Alert.alert("Erro", "Falha na conexão com a IA.");
+            Alert.alert(t('common.error'), t('errors.aiConnectionFailed'));
         } finally {
             setLoading(false);
         }
@@ -523,7 +523,7 @@ export const MainScreen = ({
 
         setShowPlanningWizard(false);
         setLoading(true);
-        setLoadingMsg("A IA está montando sua semana...");
+        setLoadingMsg(t('loading.generatingPlan'));
 
         try {
             const plan = await generateWeeklyPlan(userProfile, preference, mealsCount, allowRepeats);
@@ -536,11 +536,11 @@ export const MainScreen = ({
                 onUpdateProfile(updatedProfile);
                 setActivePlanningDay(0);
             } else {
-                Alert.alert("Erro", "Não foi possível criar o plano. Tente novamente.");
+                Alert.alert(t('common.error'), t('errors.planGenerationFailed'));
             }
         } catch (e) {
             console.error(e);
-            Alert.alert("Erro", "Falha ao gerar plano.");
+            Alert.alert(t('common.error'), t('errors.planGenerationFailed'));
         } finally {
             setLoading(false);
         }
@@ -549,7 +549,7 @@ export const MainScreen = ({
     const handleCreateShoppingList = async () => {
         if (!weeklyPlan) return;
         setLoading(true);
-        setLoadingMsg("Calculando lista de compras...");
+        setLoadingMsg(t('loading.calculatingList'));
         try {
             const list = await generateShoppingList(weeklyPlan);
             if (list) {
@@ -558,7 +558,7 @@ export const MainScreen = ({
                 setShowShoppingList(true);
             }
         } catch (e) {
-            Alert.alert("Erro", "Falha ao criar lista.");
+            Alert.alert(t('common.error'), t('errors.generic'));
         } finally {
             setLoading(false);
         }
@@ -596,7 +596,7 @@ export const MainScreen = ({
         await storageService.saveWeeklyPlan(newPlan);
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert("Sucesso", "Refeição copiada com sucesso!");
+        Alert.alert(t('common.success'), t('messages.mealCopied'));
         setCopyMealModalVisible(false);
     };
 
@@ -606,12 +606,12 @@ export const MainScreen = ({
         const mealSlot = weeklyPlan.days[dayIndex].meals[mealIndex];
 
         Alert.alert(
-            "Regenerar Refeição",
-            `Deseja criar uma nova opção para ${mealSlot.timeSlot}?`,
+            t('planning.regenerateMeal'),
+            `${t('planning.regenerateMealDesc')} ${mealSlot.timeSlot}?`,
             [
-                { text: "Cancelar", style: "cancel" },
+                { text: t('common.cancel'), style: "cancel" },
                 {
-                    text: "Sim, trocar",
+                    text: t('planning.swap'),
                     onPress: async () => {
                         setRegeneratingMeal({ dayIndex, mealIndex });
                         try {
@@ -629,11 +629,11 @@ export const MainScreen = ({
                                 await storageService.saveWeeklyPlan(newPlan);
                                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                             } else {
-                                Alert.alert("Erro", "Não foi possível gerar uma nova receita. Tente novamente.");
+                                Alert.alert(t('common.error'), t('errors.regenerateFailed'));
                             }
                         } catch (error) {
                             console.error(error);
-                            Alert.alert("Erro", "Falha ao regenerar receita.");
+                            Alert.alert(t('common.error'), t('errors.regenerateFailed'));
                         } finally {
                             setRegeneratingMeal(null);
                         }
@@ -645,16 +645,16 @@ export const MainScreen = ({
 
     const handleDeleteAccount = () => {
         Alert.alert(
-            "Excluir Conta",
-            "Tem certeza? Essa ação é irreversível e apagará todos os seus dados.",
+            t('profile.deleteAccountConfirm'),
+            t('profile.deleteAccountDesc'),
             [
-                { text: "Cancelar", style: "cancel" },
+                { text: t('common.cancel'), style: "cancel" },
                 {
-                    text: "Excluir",
+                    text: t('profile.deleteAccountButton'),
                     style: "destructive",
                     onPress: async () => {
                         setLoading(true);
-                        setLoadingMsg("Excluindo conta...");
+                        setLoadingMsg(t('common.loading'));
                         try {
                             if (auth.currentUser) {
                                 await deleteUserData(auth.currentUser.uid);
@@ -663,7 +663,7 @@ export const MainScreen = ({
                             }
                         } catch (error) {
                             console.error(error);
-                            Alert.alert("Erro", "Falha ao excluir conta. Talvez seja necessário fazer login novamente.");
+                            Alert.alert(t('common.error'), t('errors.deleteAccountFailed'));
                         } finally {
                             setLoading(false);
                         }
@@ -955,12 +955,12 @@ export const MainScreen = ({
 
     const handleDeletePlan = () => {
         Alert.alert(
-            "Excluir Plano",
-            "Tem certeza? Você terá que gerar um novo plano.",
+            t('planning.deletePlan') || "Delete Plan",
+            t('planning.deletePlanDesc') || "Are you sure? You will need to generate a new plan.",
             [
-                { text: "Cancelar", style: "cancel" },
+                { text: t('common.cancel'), style: "cancel" },
                 {
-                    text: "Excluir",
+                    text: t('common.delete'),
                     style: "destructive",
                     onPress: async () => {
                         setWeeklyPlan(null);

@@ -212,7 +212,9 @@ export const translations = {
                 friday: "Sexta",
                 saturday: "Sábado",
                 sunday: "Domingo"
-            }
+            },
+            deletePlan: "Excluir Plano",
+            deletePlanDesc: "Tem certeza? Você terá que gerar um novo plano."
         },
         library: {
             title: "Biblioteca",
@@ -529,7 +531,9 @@ export const translations = {
                 friday: "Friday",
                 saturday: "Saturday",
                 sunday: "Sunday"
-            }
+            },
+            deletePlan: "Delete Plan",
+            deletePlanDesc: "Are you sure? You will need to generate a new plan."
         },
         library: {
             title: "Library",
