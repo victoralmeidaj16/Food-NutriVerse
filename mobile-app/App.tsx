@@ -154,6 +154,23 @@ export default function App() {
     };
   }, []);
 
+  // Wake up the backend server on app start to avoid cold start delays
+  useEffect(() => {
+    const wakeUpServer = async () => {
+      try {
+        console.log('🔔 Waking up backend server...');
+        await fetch('https://food-nutriverse.onrender.com/health', {
+          method: 'GET',
+        });
+        console.log('✅ Backend server is awake');
+      } catch (error) {
+        console.log('⚠️ Backend wake-up failed, will retry on demand');
+      }
+    };
+
+    wakeUpServer();
+  }, []);
+
 
   const handleOnboardingComplete = (profile: UserProfile) => {
     setPendingProfile(profile);

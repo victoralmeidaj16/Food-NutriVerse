@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, ActivityIndicator } from 'react-native';
 import { ArrowRightIcon, CloseIcon } from './Icons';
 
 export const PlanningWizard = ({
@@ -13,6 +13,16 @@ export const PlanningWizard = ({
     const [preference, setPreference] = useState('Variada e equilibrada');
     const [mealsCount, setMealsCount] = useState(3);
     const [allowRepeats, setAllowRepeats] = useState(true);
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const handleGenerate = async () => {
+        setIsGenerating(true);
+        try {
+            await onGenerate(preference, mealsCount, allowRepeats);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
     return (
         <Modal animationType="slide" transparent={true} visible={true}>
@@ -20,7 +30,7 @@ export const PlanningWizard = ({
                 <View style={styles.container}>
                     <View style={styles.header}>
                         <Text style={styles.title}>Planejar Semana</Text>
-                        <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                        <TouchableOpacity onPress={onClose} style={styles.closeBtn} disabled={isGenerating}>
                             <CloseIcon size={24} color="#1F2937" />
                         </TouchableOpacity>
                     </View>
@@ -33,6 +43,7 @@ export const PlanningWizard = ({
                                     key={opt}
                                     onPress={() => setPreference(opt)}
                                     style={[styles.optionChip, preference === opt && styles.optionChipSelected]}
+                                    disabled={isGenerating}
                                 >
                                     <Text style={[styles.optionText, preference === opt && styles.optionTextSelected]}>{opt}</Text>
                                 </TouchableOpacity>
@@ -41,11 +52,19 @@ export const PlanningWizard = ({
 
                         <Text style={styles.label}>Refeições por dia</Text>
                         <View style={styles.counterRow}>
-                            <TouchableOpacity onPress={() => setMealsCount(Math.max(1, mealsCount - 1))} style={styles.counterBtn}>
+                            <TouchableOpacity
+                                onPress={() => setMealsCount(Math.max(1, mealsCount - 1))}
+                                style={styles.counterBtn}
+                                disabled={isGenerating}
+                            >
                                 <Text style={styles.counterBtnText}>-</Text>
                             </TouchableOpacity>
                             <Text style={styles.counterValue}>{mealsCount}</Text>
-                            <TouchableOpacity onPress={() => setMealsCount(Math.min(6, mealsCount + 1))} style={styles.counterBtn}>
+                            <TouchableOpacity
+                                onPress={() => setMealsCount(Math.min(6, mealsCount + 1))}
+                                style={styles.counterBtn}
+                                disabled={isGenerating}
+                            >
                                 <Text style={styles.counterBtnText}>+</Text>
                             </TouchableOpacity>
                         </View>
@@ -55,12 +74,14 @@ export const PlanningWizard = ({
                             <TouchableOpacity
                                 onPress={() => setAllowRepeats(true)}
                                 style={[styles.switchOption, allowRepeats && styles.switchActive]}
+                                disabled={isGenerating}
                             >
                                 <Text style={[styles.switchText, allowRepeats && styles.switchTextActive]}>Pode repetir</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={() => setAllowRepeats(false)}
                                 style={[styles.switchOption, !allowRepeats && styles.switchActive]}
+                                disabled={isGenerating}
                             >
                                 <Text style={[styles.switchText, !allowRepeats && styles.switchTextActive]}>Sempre diferente</Text>
                             </TouchableOpacity>
@@ -68,11 +89,21 @@ export const PlanningWizard = ({
                     </ScrollView>
 
                     <TouchableOpacity
-                        onPress={() => onGenerate(preference, mealsCount, allowRepeats)}
-                        style={styles.generateBtn}
+                        onPress={handleGenerate}
+                        style={[styles.generateBtn, isGenerating && styles.generateBtnLoading]}
+                        disabled={isGenerating}
                     >
-                        <Text style={styles.generateBtnText}>Gerar Plano Mágico</Text>
-                        <ArrowRightIcon size={20} color="black" />
+                        {isGenerating ? (
+                            <>
+                                <ActivityIndicator size="small" color="black" />
+                                <Text style={styles.generateBtnText}>Gerando...</Text>
+                            </>
+                        ) : (
+                            <>
+                                <Text style={styles.generateBtnText}>Gerar Plano Mágico</Text>
+                                <ArrowRightIcon size={20} color="black" />
+                            </>
+                        )}
                     </TouchableOpacity>
                 </View>
             </View>
@@ -215,5 +246,8 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '800',
         color: 'black',
+    },
+    generateBtnLoading: {
+        opacity: 0.8,
     },
 });
