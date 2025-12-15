@@ -23,7 +23,7 @@ import { generateFitnessRecipe, identifyIngredientsFromImage, generateWeeklyPlan
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { LoadingModal } from '../components/LoadingModal';
 import { PlanningWizard } from '../components/PlanningWizard';
-import { DailyTipCard } from '../components/DailyTipCard';
+// DailyTipCard removed
 import { EditProfileModal } from '../components/EditProfileModal';
 import { SubscriptionService } from '../services/subscriptionService';
 import { CopyMealModal } from '../components/CopyMealModal';
@@ -84,7 +84,7 @@ export const MainScreen = ({
     const [activePlanningDay, setActivePlanningDay] = useState(0);
     const [showPlanningWizard, setShowPlanningWizard] = useState(false);
     const [showShoppingList, setShowShoppingList] = useState(false);
-    const [showTip, setShowTip] = useState(true);
+    // DailyTip state removed
     const [showEditProfile, setShowEditProfile] = useState(false);
 
     const [copyMealModalVisible, setCopyMealModalVisible] = useState(false);
@@ -677,7 +677,7 @@ export const MainScreen = ({
                     </TouchableOpacity>
                 </View>
 
-                {showTip && <DailyTipCard onClose={() => setShowTip(false)} />}
+
 
                 {/* Premium CTA */}
                 <TouchableOpacity
