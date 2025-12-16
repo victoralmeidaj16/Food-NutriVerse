@@ -265,730 +265,743 @@ export const OnboardingScreen = ({
                 </TouchableOpacity>
             </ScrollView>
         );
+    };
 
-        const renderRestrictions = () => (
-            <ScrollView contentContainerStyle={styles.scrollStepContainer} keyboardShouldPersistTaps="handled">
-                <Text style={styles.title}>Restrições Alimentares</Text>
-                <Text style={styles.subtitle}>Selecione suas restrições ou preferências alimentares (opcional).</Text>
+    const renderRestrictions = () => (
+        <ScrollView contentContainerStyle={styles.scrollStepContainer} keyboardShouldPersistTaps="handled">
+            <Text style={styles.title}>{language === 'en' ? 'Dietary Restrictions' : 'Restrições Alimentares'}</Text>
+            <Text style={styles.subtitle}>{language === 'en' ? 'Select your dietary restrictions or preferences (optional).' : 'Selecione suas restrições ou preferências alimentares (opcional).'}</Text>
 
-                <View style={styles.tagsContainer}>
-                    {RESTRICTION_OPTIONS.map(opt => (
-                        <TouchableOpacity
-                            key={opt}
-                            onPress={() => toggleSelection(restrictions, opt, setRestrictions)}
-                            style={[styles.tag, restrictions.includes(opt) && styles.tagSelected]}
-                        >
-                            <Text style={[styles.tagText, restrictions.includes(opt) && styles.tagTextSelected]}>{opt}</Text>
-                        </TouchableOpacity>
-                    ))}
+            <View style={styles.tagsContainer}>
+                {RESTRICTION_OPTIONS.map(opt => (
                     <TouchableOpacity
-                        onPress={() => setShowCustomRestriction(!showCustomRestriction)}
-                        style={[styles.tag, showCustomRestriction && styles.tagSelected]}
+                        key={opt}
+                        onPress={() => toggleSelection(restrictions, opt, setRestrictions)}
+                        style={[styles.tag, restrictions.includes(opt) && styles.tagSelected]}
                     >
-                        <Text style={[styles.tagText, showCustomRestriction && styles.tagTextSelected]}>Outros</Text>
+                        <Text style={[styles.tagText, restrictions.includes(opt) && styles.tagTextSelected]}>{opt}</Text>
                     </TouchableOpacity>
-                </View>
-
-                {showCustomRestriction && (
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Digite sua restrição personalizada</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Ex: Intolerância à lactose"
-                            value={customRestriction}
-                            onChangeText={setCustomRestriction}
-                            onSubmitEditing={() => {
-                                if (customRestriction.trim()) {
-                                    setRestrictions([...restrictions, customRestriction.trim()]);
-                                    setCustomRestriction('');
-                                    setShowCustomRestriction(false);
-                                }
-                            }}
-                        />
-                        {customRestriction.trim() && (
-                            <TouchableOpacity
-                                style={[styles.primaryButton, { marginTop: 12 }]}
-                                onPress={() => {
-                                    setRestrictions([...restrictions, customRestriction.trim()]);
-                                    setCustomRestriction('');
-                                    setShowCustomRestriction(false);
-                                }}
-                            >
-                                <Text style={styles.primaryButtonText}>Adicionar</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                )}
-
+                ))}
                 <TouchableOpacity
-                    style={styles.primaryButton}
-                    onPress={handleNext}
+                    onPress={() => setShowCustomRestriction(!showCustomRestriction)}
+                    style={[styles.tag, showCustomRestriction && styles.tagSelected]}
                 >
-                    <Text style={styles.primaryButtonText}>Continuar</Text>
-                </TouchableOpacity>
-            </ScrollView>
-        );
-
-        const renderRoutine = () => (
-            <ScrollView contentContainerStyle={styles.scrollStepContainer} keyboardShouldPersistTaps="handled">
-                <Text style={styles.title}>Rotina e Preferências</Text>
-
-                <Text style={styles.label}>Refeições por dia</Text>
-                <View style={styles.rowOptions}>
-                    {[3, 4, 5, 6].map(num => (
-                        <TouchableOpacity
-                            key={num}
-                            onPress={() => setMealsPerDay(num)}
-                            style={[styles.circleOption, mealsPerDay === num && styles.circleOptionSelected]}
-                        >
-                            <Text style={[styles.circleText, mealsPerDay === num && styles.circleTextSelected]}>{num}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                <Text style={[styles.label, { marginTop: 24 }]}>Tempo para cozinhar</Text>
-                <View style={styles.optionsList}>
-                    <TouchableOpacity
-                        onPress={() => setCookingTime('FAST')}
-                        style={[styles.optionCard, cookingTime === 'FAST' && styles.optionCardSelected]}
-                    >
-                        <Text style={{ fontSize: 20, marginRight: 12 }}>⚡</Text>
-                        <Text style={styles.optionText}>Rápidas (até 20min)</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => setCookingTime('ELABORATE')}
-                        style={[styles.optionCard, cookingTime === 'ELABORATE' && styles.optionCardSelected]}
-                    >
-                        <Text style={{ fontSize: 20, marginRight: 12 }}>👨‍🍳</Text>
-                        <Text style={styles.optionText}>Elaboradas</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.switchRow}>
-                    <Text style={styles.switchLabel}>Usa micro-ondas?</Text>
-                    <TouchableOpacity
-                        onPress={() => setUseMicrowave(!useMicrowave)}
-                        style={[styles.switch, useMicrowave && styles.switchActive]}
-                    >
-                        <View style={[styles.switchThumb, useMicrowave && styles.switchThumbActive]} />
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.switchRow}>
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.switchLabel}>Repetir receitas na semana?</Text>
-                        <Text style={styles.switchDescription}>Facilita o preparo de marmitas para a semana</Text>
-                    </View>
-                    <TouchableOpacity
-                        onPress={() => setRepeatMeals(!repeatMeals)}
-                        style={[styles.switch, repeatMeals && styles.switchActive]}
-                    >
-                        <View style={[styles.switchThumb, repeatMeals && styles.switchThumbActive]} />
-                    </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
-                    <Text style={styles.primaryButtonText}>Gerar meu plano</Text>
-                </TouchableOpacity>
-            </ScrollView>
-        );
-
-        useEffect(() => {
-            if (step === 6) {
-                // Reset states
-                setLoadingProgress(0);
-                setShowPlanPreview(false);
-
-                const loadingSteps = [
-                    { progress: 15, message: 'Analisando seu perfil nutricional...', delay: 0 },
-                    { progress: 35, message: `Calculando suas calorias ideais (${height}cm, ${weight}kg)...`, delay: 800 },
-                    { progress: 55, message: `Buscando receitas para ${mealsPerDay} refeições/dia...`, delay: 1600 },
-                    { progress: 75, message: restrictions.length > 0 ? `Filtrando por: ${restrictions.slice(0, 2).join(', ')}...` : 'Selecionando ingredientes frescos...', delay: 2400 },
-                    { progress: 90, message: cookingTime === 'FAST' ? 'Priorizando receitas rápidas...' : 'Incluindo receitas elaboradas...', delay: 3400 },
-                    { progress: 100, message: 'Finalizando seu plano personalizado!', delay: 4600 }
-                ];
-
-                loadingSteps.forEach(({ progress, message, delay }) => {
-                    setTimeout(() => {
-                        setLoadingProgress(progress);
-                        setLoadingMessage(message);
-                    }, delay);
-                });
-
-                setTimeout(() => {
-                    setShowPlanPreview(true);
-                    Animated.timing(fadeAnim, {
-                        toValue: 1,
-                        duration: 800,
-                        useNativeDriver: true
-                    }).start();
-                }, 5500);
-            }
-        }, [step, height, weight, mealsPerDay, restrictions, cookingTime]);
-
-        const renderResult = () => {
-            if (!showPlanPreview) {
-                return (
-                    <View style={styles.centerStep}>
-                        <Text style={{ fontSize: 60, marginBottom: 20 }}>🥕</Text>
-                        <Text style={styles.title}>Criando sua estratégia...</Text>
-                        <Text style={styles.subtitle}>A IA está personalizando tudo para você.</Text>
-
-                        <View style={styles.progressContainer}>
-                            <View style={styles.progressBar}>
-                                <View style={[styles.progressFill, { width: `${loadingProgress}%` }]} />
-                            </View>
-                            <Text style={styles.progressText}>{loadingProgress}%</Text>
-                        </View>
-
-                        {loadingMessage ? (
-                            <Text style={styles.loadingMessage}>{loadingMessage}</Text>
-                        ) : null}
-                    </View>
-                );
-            }
-
-            // Calculate personalized calories based on user data
-            const calculateCalories = () => {
-                const weightNum = Number(weight) || 70;
-                const heightNum = Number(height) || 170;
-                const ageNum = Number(age) || 25;
-
-                // BMR calculation (Mifflin-St Jeor)
-                let bmr = (10 * weightNum) + (6.25 * heightNum) - (5 * ageNum) + 5;
-
-                // Activity multiplier
-                const activityMultiplier = {
-                    [ActivityLevel.LOW]: 1.2,
-                    [ActivityLevel.MEDIUM]: 1.55,
-                    [ActivityLevel.HIGH]: 1.9
-                }[activity] || 1.55;
-
-                let tdee = bmr * activityMultiplier;
-
-                // Adjust for goal
-                if (goal === UserGoal.LOSE_WEIGHT) tdee -= 500;
-                else if (goal === UserGoal.GAIN_MUSCLE) tdee += 300;
-
-                return Math.round(tdee / 100) * 100; // Round to nearest 100
-            };
-
-            // Get personalized meals based on goal and preferences
-            const getMealSuggestions = () => {
-                const isVegetarian = restrictions.includes('Vegetariano');
-                const isVegan = restrictions.includes('Vegano');
-                const isFast = cookingTime === 'FAST';
-
-                const breakfastOptions = {
-                    [UserGoal.LOSE_WEIGHT]: isFast ? 'Omelete Proteico Light' : 'Panqueca de Aveia com Frutas',
-                    [UserGoal.GAIN_MUSCLE]: isFast ? 'Ovos Mexidos com Abacate' : 'Tapioca Recheada Proteica',
-                    [UserGoal.MAINTAIN]: isFast ? 'Iogurte com Granola' : 'Pão Integral com Pasta de Amendoim',
-                    [UserGoal.EAT_HEALTHY]: isFast ? 'Smoothie Bowl Verde' : 'Overnight Oats de Frutas Vermelhas'
-                };
-
-                const lunchOptions = {
-                    [UserGoal.LOSE_WEIGHT]: isVegetarian ? 'Salada Completa com Grão-de-Bico' : (isFast ? 'Frango Grelhado e Legumes' : 'Peixe Assado com Quinoa'),
-                    [UserGoal.GAIN_MUSCLE]: isVegetarian ? 'Buddha Bowl Proteico' : (isFast ? 'Filé com Batata Doce' : 'Carne Moída com Arroz Integral'),
-                    [UserGoal.MAINTAIN]: isVegetarian ? 'Wrap de Hummus' : (isFast ? 'Strogonoff Fitness' : 'Risoto de Frango'),
-                    [UserGoal.EAT_HEALTHY]: isVegetarian ? 'Bowl Mediterrâneo' : (isFast ? 'Salmão com Brócolis' : 'Frango Curry com Legumes')
-                };
-
-                const dinnerOptions = {
-                    [UserGoal.LOSE_WEIGHT]: isFast ? 'Sopa Detox' : 'Omelete de Claras com Salada',
-                    [UserGoal.GAIN_MUSCLE]: isFast ? 'Wrap de Frango' : 'Carne com Legumes Assados',
-                    [UserGoal.MAINTAIN]: isFast ? 'Sanduiche Natural' : 'Macarrão Integral ao Molho',
-                    [UserGoal.EAT_HEALTHY]: isFast ? 'Salada Caesar' : 'Poke Bowl de Atum'
-                };
-
-                if (isVegan) {
-                    return [
-                        'Smoothie de Banana com Aveia',
-                        'Tofu Grelhado com Quinoa',
-                        'Hamburguer de Grão-de-Bico'
-                    ];
-                }
-
-                return [
-                    breakfastOptions[goal] || breakfastOptions[UserGoal.EAT_HEALTHY],
-                    lunchOptions[goal] || lunchOptions[UserGoal.EAT_HEALTHY],
-                    dinnerOptions[goal] || dinnerOptions[UserGoal.EAT_HEALTHY]
-                ];
-            };
-
-            const calories = calculateCalories();
-            const meals = getMealSuggestions();
-            const goalText = {
-                [UserGoal.LOSE_WEIGHT]: 'perder peso',
-                [UserGoal.GAIN_MUSCLE]: 'ganhar massa magra',
-                [UserGoal.MAINTAIN]: 'manter o peso',
-                [UserGoal.EAT_HEALTHY]: 'se alimentar melhor'
-            }[goal] || 'seu objetivo';
-
-            return (
-                <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
-                    <Text style={styles.title}>Seu Plano NutriVerse está pronto 🎉</Text>
-                    <Text style={styles.subtitle}>100% personalizado para {goalText}.</Text>
-
-                    <View style={styles.previewCard}>
-                        <View style={styles.dayHeader}>
-                            <Text style={styles.dayTitle}>Dia 1</Text>
-                            <Text style={styles.calText}>~{calories} kcal</Text>
-                        </View>
-                        {meals.slice(0, mealsPerDay).map((meal, idx) => (
-                            <View key={idx} style={styles.mealRow}>
-                                <View style={styles.dot} />
-                                <Text style={styles.mealText}>{meal}</Text>
-                            </View>
-                        ))}
-                    </View>
-
-                    <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
-                        <Text style={styles.primaryButtonText}>Ver plano completo</Text>
-                    </TouchableOpacity>
-                </Animated.View>
-            );
-        };
-
-        const renderSocialProof = () => (
-            <View style={styles.stepContainer}>
-                <Text style={styles.title}>Junte-se a +12.000 pessoas</Text>
-                <Text style={styles.subtitle}>Veja o que estão falando sobre o NutriVerse.</Text>
-
-                <View style={styles.testimonialCard}>
-                    <Text style={styles.testimonialText}>"Finalmente consegui seguir uma dieta! As receitas são muito fáceis e uso tudo que tenho na geladeira."</Text>
-                    <View style={styles.userRow}>
-                        <View style={styles.avatar}><Text>👩</Text></View>
-                        <Text style={styles.userName}>Mariana S., perdeu 5kg</Text>
-                    </View>
-                </View>
-
-                <View style={styles.testimonialCard}>
-                    <Text style={styles.testimonialText}>"O scanner de despensa é bruxaria! Economizo muito tempo e dinheiro."</Text>
-                    <View style={styles.userRow}>
-                        <View style={styles.avatar}><Text>👨</Text></View>
-                        <Text style={styles.userName}>Carlos E., ganhou massa</Text>
-                    </View>
-                </View>
-
-                <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
-                    <Text style={styles.primaryButtonText}>Liberar meu acesso</Text>
+                    <Text style={[styles.tagText, showCustomRestriction && styles.tagTextSelected]}>{language === 'en' ? 'Other' : 'Outros'}</Text>
                 </TouchableOpacity>
             </View>
-        );
 
-        if (step === 8) {
-            return <PaywallScreen onPurchase={handleFinish} onRestore={handleFinish} onClose={handleFinish} />;
+            {showCustomRestriction && (
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>{language === 'en' ? 'Enter your custom restriction' : 'Digite sua restrição personalizada'}</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder={language === 'en' ? 'E.g. Lactose intolerance' : 'Ex: Intolerância à lactose'}
+                        value={customRestriction}
+                        onChangeText={setCustomRestriction}
+                        onSubmitEditing={() => {
+                            if (customRestriction.trim()) {
+                                setRestrictions([...restrictions, customRestriction.trim()]);
+                                setCustomRestriction('');
+                                setShowCustomRestriction(false);
+                            }
+                        }}
+                    />
+                    {customRestriction.trim() && (
+                        <TouchableOpacity
+                            style={[styles.primaryButton, { marginTop: 12 }]}
+                            onPress={() => {
+                                setRestrictions([...restrictions, customRestriction.trim()]);
+                                setCustomRestriction('');
+                                setShowCustomRestriction(false);
+                            }}
+                        >
+                            <Text style={styles.primaryButtonText}>{language === 'en' ? 'Add' : 'Adicionar'}</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            )}
+
+            <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={handleNext}
+            >
+                <Text style={styles.primaryButtonText}>{t('common.continue')}</Text>
+            </TouchableOpacity>
+        </ScrollView>
+    );
+
+    const renderRoutine = () => (
+        <ScrollView contentContainerStyle={styles.scrollStepContainer} keyboardShouldPersistTaps="handled">
+            <Text style={styles.title}>{language === 'en' ? 'Routine & Preferences' : 'Rotina e Preferências'}</Text>
+
+            <Text style={styles.label}>{language === 'en' ? 'Meals per day' : 'Refeições por dia'}</Text>
+            <View style={styles.rowOptions}>
+                {[3, 4, 5, 6].map(num => (
+                    <TouchableOpacity
+                        key={num}
+                        onPress={() => setMealsPerDay(num)}
+                        style={[styles.circleOption, mealsPerDay === num && styles.circleOptionSelected]}
+                    >
+                        <Text style={[styles.circleText, mealsPerDay === num && styles.circleTextSelected]}>{num}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
+            <Text style={[styles.label, { marginTop: 24 }]}>{language === 'en' ? 'Time to cook' : 'Tempo para cozinhar'}</Text>
+            <View style={styles.optionsList}>
+                <TouchableOpacity
+                    onPress={() => setCookingTime('FAST')}
+                    style={[styles.optionCard, cookingTime === 'FAST' && styles.optionCardSelected]}
+                >
+                    <Text style={{ fontSize: 20, marginRight: 12 }}>⚡</Text>
+                    <Text style={styles.optionText}>{language === 'en' ? 'Quick (up to 20min)' : 'Rápidas (até 20min)'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    onPress={() => setCookingTime('ELABORATE')}
+                    style={[styles.optionCard, cookingTime === 'ELABORATE' && styles.optionCardSelected]}
+                >
+                    <Text style={{ fontSize: 20, marginRight: 12 }}>👨‍🍳</Text>
+                    <Text style={styles.optionText}>{language === 'en' ? 'Elaborate' : 'Elaboradas'}</Text>
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>{language === 'en' ? 'Use microwave?' : 'Usa micro-ondas?'}</Text>
+                <TouchableOpacity
+                    onPress={() => setUseMicrowave(!useMicrowave)}
+                    style={[styles.switch, useMicrowave && styles.switchActive]}
+                >
+                    <View style={[styles.switchThumb, useMicrowave && styles.switchThumbActive]} />
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.switchRow}>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.switchLabel}>{language === 'en' ? 'Repeat recipes during the week?' : 'Repetir receitas na semana?'}</Text>
+                    <Text style={styles.switchDescription}>{language === 'en' ? 'Makes meal prepping easier' : 'Facilita o preparo de marmitas para a semana'}</Text>
+                </View>
+                <TouchableOpacity
+                    onPress={() => setRepeatMeals(!repeatMeals)}
+                    style={[styles.switch, repeatMeals && styles.switchActive]}
+                >
+                    <View style={[styles.switchThumb, repeatMeals && styles.switchThumbActive]} />
+                </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
+                <Text style={styles.primaryButtonText}>{language === 'en' ? 'Generate my plan' : 'Gerar meu plano'}</Text>
+            </TouchableOpacity>
+        </ScrollView>
+    );
+
+    useEffect(() => {
+        if (step === 6) {
+            // Reset states
+            setLoadingProgress(0);
+            setShowPlanPreview(false);
+
+            const loadingSteps = language === 'en' ? [
+                { progress: 15, message: 'Analyzing your nutritional profile...', delay: 0 },
+                { progress: 35, message: `Calculating your ideal calories (${height}cm, ${weight}kg)...`, delay: 800 },
+                { progress: 55, message: `Finding recipes for ${mealsPerDay} meals/day...`, delay: 1600 },
+                { progress: 75, message: restrictions.length > 0 ? `Filtering by: ${restrictions.slice(0, 2).join(', ')}...` : 'Selecting fresh ingredients...', delay: 2400 },
+                { progress: 90, message: cookingTime === 'FAST' ? 'Prioritizing quick recipes...' : 'Including elaborate recipes...', delay: 3400 },
+                { progress: 100, message: 'Finalizing your personalized plan!', delay: 4600 }
+            ] : [
+                { progress: 15, message: 'Analisando seu perfil nutricional...', delay: 0 },
+                { progress: 35, message: `Calculando suas calorias ideais (${height}cm, ${weight}kg)...`, delay: 800 },
+                { progress: 55, message: `Buscando receitas para ${mealsPerDay} refeições/dia...`, delay: 1600 },
+                { progress: 75, message: restrictions.length > 0 ? `Filtrando por: ${restrictions.slice(0, 2).join(', ')}...` : 'Selecionando ingredientes frescos...', delay: 2400 },
+                { progress: 90, message: cookingTime === 'FAST' ? 'Priorizando receitas rápidas...' : 'Incluindo receitas elaboradas...', delay: 3400 },
+                { progress: 100, message: 'Finalizando seu plano personalizado!', delay: 4600 }
+            ];
+
+            loadingSteps.forEach(({ progress, message, delay }) => {
+                setTimeout(() => {
+                    setLoadingProgress(progress);
+                    setLoadingMessage(message);
+                }, delay);
+            });
+
+            setTimeout(() => {
+                setShowPlanPreview(true);
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: 800,
+                    useNativeDriver: true
+                }).start();
+            }, 5500);
+        }
+    }, [step, height, weight, mealsPerDay, restrictions, cookingTime]);
+
+    const renderResult = () => {
+        if (!showPlanPreview) {
+            return (
+                <View style={styles.centerStep}>
+                    <Text style={{ fontSize: 60, marginBottom: 20 }}>🥕</Text>
+                    <Text style={styles.title}>{language === 'en' ? 'Creating your strategy...' : 'Criando sua estratégia...'}</Text>
+                    <Text style={styles.subtitle}>{language === 'en' ? 'AI is personalizing everything for you.' : 'A IA está personalizando tudo para você.'}</Text>
+
+                    <View style={styles.progressContainer}>
+                        <View style={styles.progressBar}>
+                            <View style={[styles.progressFill, { width: `${loadingProgress}%` }]} />
+                        </View>
+                        <Text style={styles.progressText}>{loadingProgress}%</Text>
+                    </View>
+
+                    {loadingMessage ? (
+                        <Text style={styles.loadingMessage}>{loadingMessage}</Text>
+                    ) : null}
+                </View>
+            );
         }
 
-        return (
-            <SafeAreaView style={styles.container}>
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-                    {step > 0 && (
-                        <View style={styles.progressBarContainer}>
-                            <View style={styles.progressBarTrack}>
-                                <View style={[styles.progressBarFill, { width: `${(step / 8) * 100}%` }]} />
-                            </View>
-                        </View>
-                    )}
+        // Calculate personalized calories based on user data
+        const calculateCalories = () => {
+            const weightNum = Number(weight) || 70;
+            const heightNum = Number(height) || 170;
+            const ageNum = Number(age) || 25;
 
-                    <View style={styles.content}>
-                        {step === 0 && renderHero()}
-                        {step === 1 && renderPainPoints()}
-                        {step === 2 && renderGoal()}
-                        {step === 3 && renderProfile()}
-                        {step === 4 && renderRestrictions()}
-                        {step === 5 && renderRoutine()}
-                        {step === 6 && renderResult()}
-                        {step === 7 && renderSocialProof()}
+            // BMR calculation (Mifflin-St Jeor)
+            let bmr = (10 * weightNum) + (6.25 * heightNum) - (5 * ageNum) + 5;
+
+            // Activity multiplier
+            const activityMultiplier = {
+                [ActivityLevel.LOW]: 1.2,
+                [ActivityLevel.MEDIUM]: 1.55,
+                [ActivityLevel.HIGH]: 1.9
+            }[activity] || 1.55;
+
+            let tdee = bmr * activityMultiplier;
+
+            // Adjust for goal
+            if (goal === UserGoal.LOSE_WEIGHT) tdee -= 500;
+            else if (goal === UserGoal.GAIN_MUSCLE) tdee += 300;
+
+            return Math.round(tdee / 100) * 100; // Round to nearest 100
+        };
+
+        // Get personalized meals based on goal and preferences
+        const getMealSuggestions = () => {
+            const isVegetarian = restrictions.includes('Vegetariano');
+            const isVegan = restrictions.includes('Vegano');
+            const isFast = cookingTime === 'FAST';
+
+            const breakfastOptions = {
+                [UserGoal.LOSE_WEIGHT]: isFast ? 'Omelete Proteico Light' : 'Panqueca de Aveia com Frutas',
+                [UserGoal.GAIN_MUSCLE]: isFast ? 'Ovos Mexidos com Abacate' : 'Tapioca Recheada Proteica',
+                [UserGoal.MAINTAIN]: isFast ? 'Iogurte com Granola' : 'Pão Integral com Pasta de Amendoim',
+                [UserGoal.EAT_HEALTHY]: isFast ? 'Smoothie Bowl Verde' : 'Overnight Oats de Frutas Vermelhas'
+            };
+
+            const lunchOptions = {
+                [UserGoal.LOSE_WEIGHT]: isVegetarian ? 'Salada Completa com Grão-de-Bico' : (isFast ? 'Frango Grelhado e Legumes' : 'Peixe Assado com Quinoa'),
+                [UserGoal.GAIN_MUSCLE]: isVegetarian ? 'Buddha Bowl Proteico' : (isFast ? 'Filé com Batata Doce' : 'Carne Moída com Arroz Integral'),
+                [UserGoal.MAINTAIN]: isVegetarian ? 'Wrap de Hummus' : (isFast ? 'Strogonoff Fitness' : 'Risoto de Frango'),
+                [UserGoal.EAT_HEALTHY]: isVegetarian ? 'Bowl Mediterrâneo' : (isFast ? 'Salmão com Brócolis' : 'Frango Curry com Legumes')
+            };
+
+            const dinnerOptions = {
+                [UserGoal.LOSE_WEIGHT]: isFast ? 'Sopa Detox' : 'Omelete de Claras com Salada',
+                [UserGoal.GAIN_MUSCLE]: isFast ? 'Wrap de Frango' : 'Carne com Legumes Assados',
+                [UserGoal.MAINTAIN]: isFast ? 'Sanduiche Natural' : 'Macarrão Integral ao Molho',
+                [UserGoal.EAT_HEALTHY]: isFast ? 'Salada Caesar' : 'Poke Bowl de Atum'
+            };
+
+            if (isVegan) {
+                return [
+                    'Smoothie de Banana com Aveia',
+                    'Tofu Grelhado com Quinoa',
+                    'Hamburguer de Grão-de-Bico'
+                ];
+            }
+
+            return [
+                breakfastOptions[goal] || breakfastOptions[UserGoal.EAT_HEALTHY],
+                lunchOptions[goal] || lunchOptions[UserGoal.EAT_HEALTHY],
+                dinnerOptions[goal] || dinnerOptions[UserGoal.EAT_HEALTHY]
+            ];
+        };
+
+        const calories = calculateCalories();
+        const meals = getMealSuggestions();
+        const goalText = language === 'en' ? {
+            [UserGoal.LOSE_WEIGHT]: 'losing weight',
+            [UserGoal.GAIN_MUSCLE]: 'building muscle',
+            [UserGoal.MAINTAIN]: 'maintaining weight',
+            [UserGoal.EAT_HEALTHY]: 'eating healthier'
+        }[goal] || 'your goal' : {
+            [UserGoal.LOSE_WEIGHT]: 'perder peso',
+            [UserGoal.GAIN_MUSCLE]: 'ganhar massa magra',
+            [UserGoal.MAINTAIN]: 'manter o peso',
+            [UserGoal.EAT_HEALTHY]: 'se alimentar melhor'
+        }[goal] || 'seu objetivo';
+
+        return (
+            <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
+                <Text style={styles.title}>{language === 'en' ? 'Your NutriVerse Plan is ready 🎉' : 'Seu Plano NutriVerse está pronto 🎉'}</Text>
+                <Text style={styles.subtitle}>{language === 'en' ? `100% personalized for ${goalText}.` : `100% personalizado para ${goalText}.`}</Text>
+
+                <View style={styles.previewCard}>
+                    <View style={styles.dayHeader}>
+                        <Text style={styles.dayTitle}>{language === 'en' ? 'Day 1' : 'Dia 1'}</Text>
+                        <Text style={styles.calText}>~{calories} kcal</Text>
                     </View>
-                </KeyboardAvoidingView>
-            </SafeAreaView>
+                    {meals.slice(0, mealsPerDay).map((meal, idx) => (
+                        <View key={idx} style={styles.mealRow}>
+                            <View style={styles.dot} />
+                            <Text style={styles.mealText}>{meal}</Text>
+                        </View>
+                    ))}
+                </View>
+
+                <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
+                    <Text style={styles.primaryButtonText}>{language === 'en' ? 'See full plan' : 'Ver plano completo'}</Text>
+                </TouchableOpacity>
+            </Animated.View>
         );
     };
 
-    const styles = StyleSheet.create({
-        container: {
-            flex: 1,
-            backgroundColor: '#FAFAFA',
-        },
-        content: {
-            flex: 1,
-            padding: 24,
-        },
-        centerStep: {
-            flex: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        stepContainer: {
-            flex: 1,
-            paddingTop: 20,
-        },
-        scrollStepContainer: {
-            flexGrow: 1,
-            paddingTop: 20,
-            paddingBottom: 40,
-        },
-        heroImagePlaceholder: {
-            width: 120,
-            height: 120,
-            borderRadius: 60,
-            backgroundColor: '#a6f000',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 32,
-        },
-        heroTitle: {
-            fontSize: 36,
-            fontWeight: '800',
-            color: '#111827',
-            textAlign: 'center',
-            marginBottom: 16,
-            lineHeight: 42,
-        },
-        heroSubtitle: {
-            fontSize: 18,
-            color: '#6B7280',
-            textAlign: 'center',
-            marginBottom: 40,
-            lineHeight: 26,
-        },
-        title: {
-            fontSize: 28,
-            fontWeight: '800',
-            color: '#111827',
-            marginBottom: 12,
-        },
-        subtitle: {
-            fontSize: 16,
-            color: '#6B7280',
-            marginBottom: 32,
-        },
-        primaryButton: {
-            backgroundColor: '#a6f000',
-            width: '100%',
-            height: 64,
-            borderRadius: 20,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            shadowColor: '#a6f000',
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.3,
-            shadowRadius: 16,
-            elevation: 8,
-            marginBottom: 16,
-        },
-        primaryButtonText: {
-            fontSize: 18,
-            fontWeight: '800',
-            color: 'black',
-        },
-        buttonDisabled: {
-            backgroundColor: '#E5E7EB',
-            shadowOpacity: 0,
-        },
-        loginLink: {
-            fontSize: 16,
-            fontWeight: '700',
-            color: '#111827',
-        },
-        optionsList: {
-            gap: 12,
-            marginBottom: 32,
-        },
-        optionCard: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: 'white',
-            padding: 20,
-            borderRadius: 16,
-            borderWidth: 2,
-            borderColor: 'transparent',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 4,
-            elevation: 2,
-        },
-        optionCardSelected: {
-            borderColor: '#a6f000',
-            backgroundColor: 'rgba(166, 240, 0, 0.05)',
-        },
-        checkbox: {
-            width: 24,
-            height: 24,
-            borderRadius: 6,
-            borderWidth: 2,
-            borderColor: '#E5E7EB',
-            marginRight: 16,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        checkboxSelected: {
-            borderColor: '#a6f000',
-            backgroundColor: '#a6f000',
-        },
-        optionText: {
-            fontSize: 16,
-            fontWeight: '600',
-            color: '#1F2937',
-            flex: 1,
-        },
-        inputGroup: {
-            marginBottom: 20,
-        },
-        label: {
-            fontSize: 14,
-            fontWeight: '700',
-            color: '#374151',
-            marginBottom: 8,
-        },
-        input: {
-            backgroundColor: 'white',
-            borderWidth: 1,
-            borderColor: '#E5E7EB',
-            borderRadius: 16,
-            padding: 16,
-            fontSize: 16,
-            color: '#1F2937',
-        },
-        rowOptions: {
-            flexDirection: 'row',
-            gap: 8,
-            flexWrap: 'wrap',
-        },
-        smallOption: {
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-            borderRadius: 12,
-            backgroundColor: 'white',
-            borderWidth: 1,
-            borderColor: '#E5E7EB',
-        },
-        smallOptionSelected: {
-            backgroundColor: 'black',
-            borderColor: 'black',
-        },
-        smallOptionText: {
-            fontWeight: '600',
-            color: '#374151',
-        },
-        smallOptionTextSelected: {
-            color: 'white',
-        },
-        tagsContainer: {
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 8,
-            marginBottom: 32,
-        },
-        tag: {
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-            borderRadius: 12,
-            backgroundColor: 'white',
-            borderWidth: 1,
-            borderColor: '#E5E7EB',
-        },
-        tagSelected: {
-            backgroundColor: '#a6f000',
-            borderColor: '#a6f000',
-        },
-        tagText: {
-            fontWeight: '600',
-            color: '#374151',
-        },
-        tagTextSelected: {
-            color: 'black',
-        },
-        circleOption: {
-            width: 50,
-            height: 50,
-            borderRadius: 25,
-            backgroundColor: 'white',
-            borderWidth: 1,
-            borderColor: '#E5E7EB',
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        circleOptionSelected: {
-            backgroundColor: 'black',
-            borderColor: 'black',
-        },
-        circleText: {
-            fontSize: 18,
-            fontWeight: '700',
-            color: '#374151',
-        },
-        circleTextSelected: {
-            color: 'white',
-        },
-        switchRow: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 24,
-            backgroundColor: 'white',
-            padding: 16,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: '#E5E7EB',
-        },
-        switchLabel: {
-            fontSize: 16,
-            fontWeight: '600',
-            color: '#1F2937',
-        },
-        switchDescription: {
-            fontSize: 13,
-            fontWeight: '400',
-            color: '#6B7280',
-            marginTop: 4,
-        },
-        switch: {
-            width: 50,
-            height: 30,
-            borderRadius: 15,
-            backgroundColor: '#E5E7EB',
-            padding: 2,
-        },
-        switchActive: {
-            backgroundColor: '#a6f000',
-        },
-        switchThumb: {
-            width: 26,
-            height: 26,
-            borderRadius: 13,
-            backgroundColor: 'white',
-        },
-        switchThumbActive: {
-            transform: [{ translateX: 20 }],
-        },
-        previewCard: {
-            backgroundColor: 'white',
-            borderRadius: 24,
-            padding: 24,
-            marginBottom: 32,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 12,
-            elevation: 5,
-            borderWidth: 1,
-            borderColor: '#F3F4F6',
-        },
-        dayHeader: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            marginBottom: 16,
-            paddingBottom: 16,
-            borderBottomWidth: 1,
-            borderBottomColor: '#F3F4F6',
-        },
-        dayTitle: {
-            fontSize: 18,
-            fontWeight: '800',
-            color: '#111827',
-        },
-        calText: {
-            color: '#6B7280',
-            fontWeight: '600',
-        },
-        mealRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginBottom: 12,
-            gap: 12,
-        },
-        dot: {
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: '#a6f000',
-        },
-        mealText: {
-            fontSize: 16,
-            color: '#374151',
-        },
-        testimonialCard: {
-            backgroundColor: 'white',
-            padding: 20,
-            borderRadius: 20,
-            marginBottom: 16,
-            borderWidth: 1,
-            borderColor: '#F3F4F6',
-        },
-        testimonialText: {
-            fontSize: 16,
-            fontStyle: 'italic',
-            color: '#374151',
-            marginBottom: 12,
-            lineHeight: 24,
-        },
-        userRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-        },
-        avatar: {
-            width: 32,
-            height: 32,
-            borderRadius: 16,
-            backgroundColor: '#F3F4F6',
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        userName: {
-            fontSize: 14,
-            fontWeight: '700',
-            color: '#111827',
-        },
-        progressBarContainer: {
-            paddingHorizontal: 24,
-            paddingTop: 12,
-            paddingBottom: 12,
-        },
-        progressBarTrack: {
-            height: 4,
-            backgroundColor: '#E5E7EB',
-            borderRadius: 2,
-            overflow: 'hidden',
-        },
-        progressBarFill: {
-            height: '100%',
-            backgroundColor: '#a6f000',
-        },
-        progressContainer: {
-            width: '100%',
-            marginTop: 40,
-            marginBottom: 20,
-        },
-        progressBar: {
-            height: 8,
-            backgroundColor: '#E5E7EB',
-            borderRadius: 4,
-            overflow: 'hidden',
-            marginBottom: 12,
-        },
-        progressFill: {
-            height: '100%',
-            backgroundColor: '#a6f000',
-            borderRadius: 4,
-        },
-        progressText: {
-            fontSize: 18,
-            fontWeight: '700',
-            color: '#111827',
-            textAlign: 'center',
-        },
-        loadingMessage: {
-            fontSize: 15,
-            fontWeight: '500',
-            color: '#6B7280',
-            textAlign: 'center',
-            marginTop: 24,
-            paddingHorizontal: 32,
-        },
-    });
+    const renderSocialProof = () => (
+        <View style={styles.stepContainer}>
+            <Text style={styles.title}>{language === 'en' ? 'Join +12,000 people' : 'Junte-se a +12.000 pessoas'}</Text>
+            <Text style={styles.subtitle}>{language === 'en' ? 'See what they\'re saying about NutriVerse.' : 'Veja o que estão falando sobre o NutriVerse.'}</Text>
+
+            <View style={styles.testimonialCard}>
+                <Text style={styles.testimonialText}>{language === 'en' ? '"I finally managed to stick to a diet! The recipes are so easy and I use everything in my fridge."' : '"Finalmente consegui seguir uma dieta! As receitas são muito fáceis e uso tudo que tenho na geladeira."'}</Text>
+                <View style={styles.userRow}>
+                    <View style={styles.avatar}><Text>👩</Text></View>
+                    <Text style={styles.userName}>{language === 'en' ? 'Mariana S., lost 11lbs' : 'Mariana S., perdeu 5kg'}</Text>
+                </View>
+            </View>
+
+            <View style={styles.testimonialCard}>
+                <Text style={styles.testimonialText}>{language === 'en' ? '"The pantry scanner is magic! I save so much time and money."' : '"O scanner de despensa é bruxaria! Economizo muito tempo e dinheiro."'}</Text>
+                <View style={styles.userRow}>
+                    <View style={styles.avatar}><Text>👨</Text></View>
+                    <Text style={styles.userName}>{language === 'en' ? 'Carlos E., gained muscle' : 'Carlos E., ganhou massa'}</Text>
+                </View>
+            </View>
+
+            <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
+                <Text style={styles.primaryButtonText}>{language === 'en' ? 'Unlock my access' : 'Liberar meu acesso'}</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
+    if (step === 8) {
+        return <PaywallScreen onPurchase={handleFinish} onRestore={handleFinish} onClose={handleFinish} />;
+    }
+
+    return (
+        <SafeAreaView style={styles.container}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                {step > 0 && (
+                    <View style={styles.progressBarContainer}>
+                        <View style={styles.progressBarTrack}>
+                            <View style={[styles.progressBarFill, { width: `${(step / 8) * 100}%` }]} />
+                        </View>
+                    </View>
+                )}
+
+                <View style={styles.content}>
+                    {step === 0 && renderHero()}
+                    {step === 1 && renderPainPoints()}
+                    {step === 2 && renderGoal()}
+                    {step === 3 && renderProfile()}
+                    {step === 4 && renderRestrictions()}
+                    {step === 5 && renderRoutine()}
+                    {step === 6 && renderResult()}
+                    {step === 7 && renderSocialProof()}
+                </View>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#FAFAFA',
+    },
+    content: {
+        flex: 1,
+        padding: 24,
+    },
+    centerStep: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    stepContainer: {
+        flex: 1,
+        paddingTop: 20,
+    },
+    scrollStepContainer: {
+        flexGrow: 1,
+        paddingTop: 20,
+        paddingBottom: 40,
+    },
+    heroImagePlaceholder: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: '#a6f000',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 32,
+    },
+    heroTitle: {
+        fontSize: 36,
+        fontWeight: '800',
+        color: '#111827',
+        textAlign: 'center',
+        marginBottom: 16,
+        lineHeight: 42,
+    },
+    heroSubtitle: {
+        fontSize: 18,
+        color: '#6B7280',
+        textAlign: 'center',
+        marginBottom: 40,
+        lineHeight: 26,
+    },
+    title: {
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#111827',
+        marginBottom: 12,
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#6B7280',
+        marginBottom: 32,
+    },
+    primaryButton: {
+        backgroundColor: '#a6f000',
+        width: '100%',
+        height: 64,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        shadowColor: '#a6f000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 8,
+        marginBottom: 16,
+    },
+    primaryButtonText: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: 'black',
+    },
+    buttonDisabled: {
+        backgroundColor: '#E5E7EB',
+        shadowOpacity: 0,
+    },
+    loginLink: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    optionsList: {
+        gap: 12,
+        marginBottom: 32,
+    },
+    optionCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        padding: 20,
+        borderRadius: 16,
+        borderWidth: 2,
+        borderColor: 'transparent',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    optionCardSelected: {
+        borderColor: '#a6f000',
+        backgroundColor: 'rgba(166, 240, 0, 0.05)',
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: '#E5E7EB',
+        marginRight: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkboxSelected: {
+        borderColor: '#a6f000',
+        backgroundColor: '#a6f000',
+    },
+    optionText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1F2937',
+        flex: 1,
+    },
+    inputGroup: {
+        marginBottom: 20,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#374151',
+        marginBottom: 8,
+    },
+    input: {
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 16,
+        padding: 16,
+        fontSize: 16,
+        color: '#1F2937',
+    },
+    rowOptions: {
+        flexDirection: 'row',
+        gap: 8,
+        flexWrap: 'wrap',
+    },
+    smallOption: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    smallOptionSelected: {
+        backgroundColor: 'black',
+        borderColor: 'black',
+    },
+    smallOptionText: {
+        fontWeight: '600',
+        color: '#374151',
+    },
+    smallOptionTextSelected: {
+        color: 'white',
+    },
+    tagsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 32,
+    },
+    tag: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    tagSelected: {
+        backgroundColor: '#a6f000',
+        borderColor: '#a6f000',
+    },
+    tagText: {
+        fontWeight: '600',
+        color: '#374151',
+    },
+    tagTextSelected: {
+        color: 'black',
+    },
+    circleOption: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    circleOptionSelected: {
+        backgroundColor: 'black',
+        borderColor: 'black',
+    },
+    circleText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#374151',
+    },
+    circleTextSelected: {
+        color: 'white',
+    },
+    switchRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+        backgroundColor: 'white',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    switchLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1F2937',
+    },
+    switchDescription: {
+        fontSize: 13,
+        fontWeight: '400',
+        color: '#6B7280',
+        marginTop: 4,
+    },
+    switch: {
+        width: 50,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: '#E5E7EB',
+        padding: 2,
+    },
+    switchActive: {
+        backgroundColor: '#a6f000',
+    },
+    switchThumb: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        backgroundColor: 'white',
+    },
+    switchThumbActive: {
+        transform: [{ translateX: 20 }],
+    },
+    previewCard: {
+        backgroundColor: 'white',
+        borderRadius: 24,
+        padding: 24,
+        marginBottom: 32,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 5,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+    },
+    dayHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+    },
+    dayTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#111827',
+    },
+    calText: {
+        color: '#6B7280',
+        fontWeight: '600',
+    },
+    mealRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        gap: 12,
+    },
+    dot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#a6f000',
+    },
+    mealText: {
+        fontSize: 16,
+        color: '#374151',
+    },
+    testimonialCard: {
+        backgroundColor: 'white',
+        padding: 20,
+        borderRadius: 20,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+    },
+    testimonialText: {
+        fontSize: 16,
+        fontStyle: 'italic',
+        color: '#374151',
+        marginBottom: 12,
+        lineHeight: 24,
+    },
+    userRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    avatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    userName: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    progressBarContainer: {
+        paddingHorizontal: 24,
+        paddingTop: 12,
+        paddingBottom: 12,
+    },
+    progressBarTrack: {
+        height: 4,
+        backgroundColor: '#E5E7EB',
+        borderRadius: 2,
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        backgroundColor: '#a6f000',
+    },
+    progressContainer: {
+        width: '100%',
+        marginTop: 40,
+        marginBottom: 20,
+    },
+    progressBar: {
+        height: 8,
+        backgroundColor: '#E5E7EB',
+        borderRadius: 4,
+        overflow: 'hidden',
+        marginBottom: 12,
+    },
+    progressFill: {
+        height: '100%',
+        backgroundColor: '#a6f000',
+        borderRadius: 4,
+    },
+    progressText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111827',
+        textAlign: 'center',
+    },
+    loadingMessage: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: '#6B7280',
+        textAlign: 'center',
+        marginTop: 24,
+        paddingHorizontal: 32,
+    },
+});
