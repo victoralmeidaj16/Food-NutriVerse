@@ -7,6 +7,7 @@ import { ArrowRightIcon, BookHeartIcon, TimerIcon, FlameIcon, ExchangeIcon, Ligh
 import { AddToPlanModal } from '../components/AddToPlanModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getReferencesByIds } from '../services/healthReferences';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -27,6 +28,7 @@ export const RecipeDetailScreen = ({
     weeklyPlan?: WeeklyPlan | null;
     onAddToPlan?: (recipe: Recipe, dayIndex: number, slotIndex: number) => void;
 }) => {
+    const { t, language } = useLanguage();
     const [cookingMode, setCookingMode] = useState(false);
     const [showAddToPlan, setShowAddToPlan] = useState(false);
 
@@ -137,7 +139,7 @@ export const RecipeDetailScreen = ({
                     <View style={styles.modalOverlay}>
                         <View style={styles.saveModalContent}>
                             <View style={styles.saveModalHeader}>
-                                <Text style={styles.saveModalTitle}>Salvar Receita</Text>
+                                <Text style={styles.saveModalTitle}>{language === 'en' ? 'Save Recipe' : 'Salvar Receita'}</Text>
                                 <TouchableOpacity onPress={() => setShowSaveModal(false)}>
                                     <CloseIcon size={24} color="#1F2937" />
                                 </TouchableOpacity>
@@ -157,7 +159,7 @@ export const RecipeDetailScreen = ({
                                             </View>
                                             <View style={{ flex: 1 }}>
                                                 <Text style={styles.listName}>{list.name}</Text>
-                                                <Text style={styles.listCount}>{list.recipeIds.length} receitas</Text>
+                                                <Text style={styles.listCount}>{list.recipeIds.length} {language === 'en' ? 'recipes' : 'receitas'}</Text>
                                             </View>
                                             {isAlreadyInList && <CheckCircleIcon size={20} color="#16a34a" />}
                                         </TouchableOpacity>
@@ -169,7 +171,7 @@ export const RecipeDetailScreen = ({
                                 <View style={styles.createListInputContainer}>
                                     <TextInput
                                         style={styles.createListInput}
-                                        placeholder="Nome da lista (ex: Café da Manhã)"
+                                        placeholder={language === 'en' ? "List name (e.g. Breakfast)" : "Nome da lista (ex: Café da Manhã)"}
                                         value={newListName}
                                         onChangeText={setNewListName}
                                         autoFocus
@@ -186,7 +188,7 @@ export const RecipeDetailScreen = ({
                                     <View style={styles.plusIcon}>
                                         <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>+</Text>
                                     </View>
-                                    <Text style={styles.createNewListText}>Criar nova lista</Text>
+                                    <Text style={styles.createNewListText}>{language === 'en' ? 'Create new list' : 'Criar nova lista'}</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -232,7 +234,7 @@ export const RecipeDetailScreen = ({
                         <View style={styles.warningBanner}>
                             <AlertTriangleIcon size={20} color="#B45309" />
                             <Text style={styles.warningText}>
-                                Contém ingredientes que você não gosta: {conflictingIngredients.map(i => i.name).join(', ')}
+                                {language === 'en' ? 'Contains ingredients you don\'t like:' : 'Contém ingredientes que você não gosta:'} {conflictingIngredients.map(i => i.name).join(', ')}
                             </Text>
                         </View>
                     )}
@@ -242,14 +244,14 @@ export const RecipeDetailScreen = ({
                     {/* Macros Grid */}
                     <View style={styles.macrosSection}>
                         <View style={styles.macrosHeader}>
-                            <Text style={styles.macrosSectionTitle}>Informação Nutricional</Text>
+                            <Text style={styles.macrosSectionTitle}>{language === 'en' ? 'Nutritional Information' : 'Informação Nutricional'}</Text>
                             {null}
                         </View>
                         <View style={styles.macrosGrid}>
                             {Object.entries(recipe.macros).map(([key, val]) => (
                                 <View key={key} style={styles.macroCard}>
                                     <Text style={styles.macroLabel}>
-                                        {key === 'protein' ? 'Prot' : key === 'carbs' ? 'Carb' : key === 'fats' ? 'Gord' : 'Cal'}
+                                        {key === 'protein' ? (language === 'en' ? 'Prot' : 'Prot') : key === 'carbs' ? (language === 'en' ? 'Carb' : 'Carb') : key === 'fats' ? (language === 'en' ? 'Fats' : 'Gord') : 'Cal'}
                                     </Text>
                                     <Text style={styles.macroValue}>{val}</Text>
                                     <Text style={styles.macroUnit}>{key === 'calories' ? '' : 'g'}</Text>
@@ -258,7 +260,7 @@ export const RecipeDetailScreen = ({
                         </View>
                     </View>
 
-                    <Text style={styles.sectionTitle}>Ingredientes</Text>
+                    <Text style={styles.sectionTitle}>{t('recipe.ingredients')}</Text>
                     <View style={styles.ingredientsList}>
                         {recipe.ingredients.map((ing, i) => (
                             <View key={i} style={styles.ingredientItem}>
@@ -277,7 +279,7 @@ export const RecipeDetailScreen = ({
                         <View style={styles.fitSwap}>
                             <View style={styles.fitSwapHeader}>
                                 <ExchangeIcon size={20} color="#15803d" />
-                                <Text style={styles.fitSwapTitle}>FitSwap (Trocas)</Text>
+                                <Text style={styles.fitSwapTitle}>{language === 'en' ? 'FitSwap (Substitutions)' : 'FitSwap (Trocas)'}</Text>
                             </View>
                             {recipe.substitutions.map((sub, i) => (
                                 <View key={i} style={styles.substitutionItem}>
@@ -292,7 +294,7 @@ export const RecipeDetailScreen = ({
                         </View>
                     )}
 
-                    <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Modo de Preparo</Text>
+                    <Text style={[styles.sectionTitle, { marginTop: 32 }]}>{t('recipe.instructions')}</Text>
                     <View style={styles.instructionsList}>
                         {recipe.instructions.map((step, i) => (
                             <View key={i} style={styles.stepItem}>
@@ -313,7 +315,7 @@ export const RecipeDetailScreen = ({
                             style={styles.startCookingBtn}
                         >
                             <ChefHatIcon size={24} color="black" />
-                            <Text style={styles.startCookingText}>Modo Cozinhar</Text>
+                            <Text style={styles.startCookingText}>{language === 'en' ? 'Cooking Mode' : 'Modo Cozinhar'}</Text>
                             <ArrowRightIcon size={24} color="black" />
                         </TouchableOpacity>
                     </View>
@@ -330,6 +332,7 @@ export const RecipeDetailScreen = ({
 };
 
 const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void }) => {
+    const { language } = useLanguage();
     const [step, setStep] = useState(0); // 0 = Ingredients Check, 1+ = Instructions
     const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
 
@@ -389,7 +392,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
                 {step === 0 ? (
                     <View style={{ flex: 1 }}>
                         <View style={styles.checkHeader}>
-                            <Text style={styles.cookingTitle}>Separe os ingredientes</Text>
+                            <Text style={styles.cookingTitle}>{language === 'en' ? 'Gather your ingredients' : 'Separe os ingredientes'}</Text>
                         </View>
                         <ScrollView contentContainerStyle={styles.checkList}>
                             <View style={styles.ingredientsCard}>
@@ -416,7 +419,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
                         <View style={styles.bottomActions}>
                             <TouchableOpacity onPress={selectAll} style={styles.checkAllBtn}>
                                 <CheckCircleIcon size={24} color="#a6f000" />
-                                <Text style={styles.checkAllText}>Marcar Todos</Text>
+                                <Text style={styles.checkAllText}>{language === 'en' ? 'Select All' : 'Marcar Todos'}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -424,7 +427,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
                                 style={[styles.nextBtn, checkedIngredients.size === 0 && styles.nextBtnDisabled]}
                                 disabled={checkedIngredients.size === 0}
                             >
-                                <Text style={styles.nextBtnText}>Começar Receita</Text>
+                                <Text style={styles.nextBtnText}>{language === 'en' ? 'Start Recipe' : 'Começar Receita'}</Text>
                                 <ArrowRightIcon size={20} color="black" />
                             </TouchableOpacity>
                         </View>
@@ -432,7 +435,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
                 ) : (
                     <View style={{ flex: 1, justifyContent: 'space-between' }}>
                         <View style={{ flex: 1, justifyContent: 'center' }}>
-                            <Text style={styles.stepLabel}>PASSO {step}</Text>
+                            <Text style={styles.stepLabel}>{language === 'en' ? 'STEP' : 'PASSO'} {step}</Text>
                             <Text style={styles.instructionText}>
                                 {recipe.instructions[currentInstructionIndex]}
                             </Text>
@@ -443,7 +446,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
                                 onPress={() => setStep(step - 1)}
                                 style={styles.prevBtn}
                             >
-                                <Text style={styles.prevBtnText}>Anterior</Text>
+                                <Text style={styles.prevBtnText}>{language === 'en' ? 'Previous' : 'Anterior'}</Text>
                             </TouchableOpacity>
 
                             {step < totalSteps ? (
@@ -451,7 +454,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
                                     onPress={() => setStep(step + 1)}
                                     style={styles.nextBtn}
                                 >
-                                    <Text style={styles.nextBtnText}>Próximo Passo</Text>
+                                    <Text style={styles.nextBtnText}>{language === 'en' ? 'Next Step' : 'Próximo Passo'}</Text>
                                     <ArrowRightIcon size={20} color="black" />
                                 </TouchableOpacity>
                             ) : (
@@ -459,7 +462,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
                                     onPress={() => setStep(step + 1)} // Go to completion page
                                     style={[styles.nextBtn, { backgroundColor: '#15803d' }]}
                                 >
-                                    <Text style={[styles.nextBtnText, { color: 'white' }]}>Concluir</Text>
+                                    <Text style={[styles.nextBtnText, { color: 'white' }]}>{language === 'en' ? 'Complete' : 'Concluir'}</Text>
                                     <CheckIcon size={20} color="white" />
                                 </TouchableOpacity>
                             )}
@@ -472,6 +475,8 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
 };
 
 const CompletionView = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void }) => {
+    const { language } = useLanguage();
+
     return (
         <View style={styles.completionContainer}>
             <TouchableOpacity onPress={onClose} style={styles.closeCompletionBtn}>
@@ -483,9 +488,9 @@ const CompletionView = ({ recipe, onClose }: { recipe: Recipe, onClose: () => vo
                     <Text style={{ fontSize: 64 }}>🎉</Text>
                 </View>
 
-                <Text style={styles.completionTitle}>Parabéns!</Text>
+                <Text style={styles.completionTitle}>{language === 'en' ? 'Congratulations!' : 'Parabéns!'}</Text>
                 <Text style={styles.completionSubtitle}>
-                    Você concluiu a receita{'\n'}
+                    {language === 'en' ? 'You completed the recipe' : 'Você concluiu a receita'}{'\n'}
                     <Text style={{ fontWeight: '800', color: '#1F2937' }}>{recipe.name}</Text>
                 </Text>
 
@@ -494,26 +499,26 @@ const CompletionView = ({ recipe, onClose }: { recipe: Recipe, onClose: () => vo
                         <View style={[styles.shortcutIcon, { backgroundColor: '#ecfccb' }]}>
                             <BookHeartIcon size={24} color="#65a30d" />
                         </View>
-                        <Text style={styles.shortcutLabel}>Salvar</Text>
+                        <Text style={styles.shortcutLabel}>{language === 'en' ? 'Save' : 'Salvar'}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.shortcutBtn}>
                         <View style={[styles.shortcutIcon, { backgroundColor: '#dbeafe' }]}>
                             <CalendarIcon size={24} color="#2563eb" />
                         </View>
-                        <Text style={styles.shortcutLabel}>Planejar</Text>
+                        <Text style={styles.shortcutLabel}>{language === 'en' ? 'Plan' : 'Planejar'}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.shortcutBtn}>
                         <View style={[styles.shortcutIcon, { backgroundColor: '#f3e8ff' }]}>
                             <ShoppingBagIcon size={24} color="#9333ea" />
                         </View>
-                        <Text style={styles.shortcutLabel}>Lista</Text>
+                        <Text style={styles.shortcutLabel}>{language === 'en' ? 'List' : 'Lista'}</Text>
                     </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity onPress={onClose} style={styles.finishBtn}>
-                    <Text style={styles.finishBtnText}>Voltar ao Início</Text>
+                    <Text style={styles.finishBtnText}>{language === 'en' ? 'Back to Home' : 'Voltar ao Início'}</Text>
                 </TouchableOpacity>
             </View>
         </View>
