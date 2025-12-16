@@ -3,14 +3,35 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dim
 import { CheckIcon, SparklesIcon, LockIcon } from '../components/Icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { iapService, PRODUCT_IDS } from '../services/iapService';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
 export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: () => void, onRestore: () => void, onClose: () => void }) => {
+    const { t, language } = useLanguage();
     const [selectedPlan, setSelectedPlan] = useState<'YEARLY' | 'MONTHLY'>('YEARLY');
     const closeButtonOpacity = useRef(new Animated.Value(0)).current;
     const [loading, setLoading] = useState(false);
     const [productsLoaded, setProductsLoaded] = useState(false);
+
+    // Benefits list - translated
+    const benefits = language === 'en' ? [
+        "Personalized weekly planning",
+        "Unlimited AI recipes",
+        "Pantry Scanner",
+        "Cravings Transformation",
+        "Smart shopping list",
+        "No ads",
+        "Immediate access to your plan"
+    ] : [
+        "Planejamento semanal personalizado",
+        "Receitas ilimitadas com IA",
+        "Scanner de Despensa",
+        "Transformação de Desejos",
+        "Lista de compras inteligente",
+        "Sem anúncios",
+        "Acesso imediato ao seu plano"
+    ];
 
     useEffect(() => {
         // Fade in close button after 4 seconds
@@ -49,21 +70,21 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
 
             if (result.success) {
                 Alert.alert(
-                    'Sucesso!',
-                    'Assinatura ativada com sucesso!',
+                    t('paywall.purchaseSuccess'),
+                    t('paywall.welcomePro'),
                     [
                         {
-                            text: 'OK',
+                            text: t('common.ok'),
                             onPress: () => onPurchase()
                         }
                     ]
                 );
-            } else if (result.error && !result.error.includes('cancelada')) {
-                Alert.alert('Erro', result.error);
+            } else if (result.error && !result.error.includes('cancelada') && !result.error.includes('cancelled')) {
+                Alert.alert(t('common.error'), result.error);
             }
         } catch (error) {
             console.error('Purchase error:', error);
-            Alert.alert('Erro', 'Não foi possível processar a compra. Tente novamente.');
+            Alert.alert(t('common.error'), t('errors.purchaseFailed'));
         } finally {
             setLoading(false);
         }
@@ -77,29 +98,48 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
 
             if (result.success) {
                 Alert.alert(
-                    'Sucesso!',
-                    'Compra restaurada com sucesso!',
+                    t('paywall.subscriptionRestored'),
+                    t('paywall.welcomeBack'),
                     [
                         {
-                            text: 'OK',
+                            text: t('common.ok'),
                             onPress: () => onRestore()
                         }
                     ]
                 );
             } else {
-                Alert.alert('Aviso', result.error || 'Nenhuma compra anterior encontrada');
+                Alert.alert(t('common.warning'), result.error || t('messages.noPreviousPurchases'));
             }
         } catch (error) {
             console.error('Restore error:', error);
-            Alert.alert('Erro', 'Não foi possível restaurar compras. Tente novamente.');
+            Alert.alert(t('common.error'), t('errors.restoreFailed'));
         } finally {
             setLoading(false);
         }
     };
 
     // Get formatted prices from IAP
-    const yearlyPrice = productsLoaded ? iapService.formatPrice(PRODUCT_IDS.YEARLY) : 'R$ 79,90';
-    const monthlyPrice = productsLoaded ? iapService.formatPrice(PRODUCT_IDS.MONTHLY) : 'R$ 19,90';
+    const yearlyPrice = productsLoaded ? iapService.formatPrice(PRODUCT_IDS.YEARLY) : (language === 'en' ? '$29.99' : 'R$ 79,90');
+    const monthlyPrice = productsLoaded ? iapService.formatPrice(PRODUCT_IDS.MONTHLY) : (language === 'en' ? '$4.99' : 'R$ 19,90');
+
+    const paywallTitle = language === 'en'
+        ? "Eat well every day. Without thinking."
+        : "Alimente-se bem todos os dias. Sem pensar.";
+
+    const ctaText = language === 'en' ? "Start Now" : "Começar Agora";
+    const restoreText = language === 'en' ? "Restore purchases" : "Restaurar compras";
+    const continueText = language === 'en' ? "Continue with limited version" : "Continuar com versão limitada";
+    const loadingText = language === 'en' ? "Loading payment options..." : "Carregando opções de pagamento...";
+    const disclaimerText = language === 'en'
+        ? "Subscription renews automatically. Cancel anytime in store settings."
+        : "A assinatura é renovada automaticamente. Cancele a qualquer momento nas configurações da loja.";
+    const bestChoiceText = language === 'en' ? "BEST CHOICE" : "MELHOR ESCOLHA";
+    const saveText = language === 'en' ? "Save 70%" : "Economize 70%";
+    const yearlyLabel = language === 'en' ? "Yearly" : "Anual";
+    const monthlyLabel = language === 'en' ? "Monthly" : "Mensal";
+    const perYear = language === 'en' ? "/year" : "/ano";
+    const perMonth = language === 'en' ? "/month" : "/mês";
+    const equivalentText = language === 'en' ? "Equivalent to $2.50/month" : "Equivalente a R$ 6,66/mês";
 
     return (
         <SafeAreaView style={styles.container}>
@@ -113,19 +153,11 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
                     <View style={styles.iconContainer}>
                         <SparklesIcon size={40} color="#a6f000" />
                     </View>
-                    <Text style={styles.title}>Alimente-se bem todos os dias. Sem pensar.</Text>
+                    <Text style={styles.title}>{paywallTitle}</Text>
                 </View>
 
                 <View style={styles.benefitsContainer}>
-                    {[
-                        "Planejamento semanal personalizado",
-                        "Receitas ilimitadas com IA",
-                        "Scanner de Despensa",
-                        "Transformação de Desejos",
-                        "Lista de compras inteligente",
-                        "Sem anúncios",
-                        "Acesso imediato ao seu plano"
-                    ].map((benefit, index) => (
+                    {benefits.map((benefit, index) => (
                         <View key={index} style={styles.benefitRow}>
                             <View style={styles.checkCircle}>
                                 <CheckIcon size={12} color="black" />
@@ -142,15 +174,15 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
                     >
                         {selectedPlan === 'YEARLY' && (
                             <View style={styles.bestValueBadge}>
-                                <Text style={styles.bestValueText}>MELHOR ESCOLHA</Text>
+                                <Text style={styles.bestValueText}>{bestChoiceText}</Text>
                             </View>
                         )}
                         <View style={styles.planHeader}>
-                            <Text style={styles.planTitle}>Anual</Text>
-                            <Text style={styles.planSave}>Economize 70%</Text>
+                            <Text style={styles.planTitle}>{yearlyLabel}</Text>
+                            <Text style={styles.planSave}>{saveText}</Text>
                         </View>
-                        <Text style={styles.planPrice}>{yearlyPrice}<Text style={styles.planPerMonth}>/ano</Text></Text>
-                        <Text style={styles.planBilled}>Equivalente a R$ 6,66/mês</Text>
+                        <Text style={styles.planPrice}>{yearlyPrice}<Text style={styles.planPerMonth}>{perYear}</Text></Text>
+                        <Text style={styles.planBilled}>{equivalentText}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -158,9 +190,9 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
                         style={[styles.planCard, selectedPlan === 'MONTHLY' && styles.planCardSelected]}
                     >
                         <View style={styles.planHeader}>
-                            <Text style={styles.planTitle}>Mensal</Text>
+                            <Text style={styles.planTitle}>{monthlyLabel}</Text>
                         </View>
-                        <Text style={styles.planPrice}>{monthlyPrice}<Text style={styles.planPerMonth}>/mês</Text></Text>
+                        <Text style={styles.planPrice}>{monthlyPrice}<Text style={styles.planPerMonth}>{perMonth}</Text></Text>
                     </TouchableOpacity>
                 </View>
 
@@ -172,17 +204,17 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
                     {loading ? (
                         <ActivityIndicator color="black" />
                     ) : (
-                        <Text style={styles.ctaText}>Começar Agora</Text>
+                        <Text style={styles.ctaText}>{ctaText}</Text>
                     )}
                 </TouchableOpacity>
 
                 <View style={styles.footer}>
                     <TouchableOpacity onPress={handleRestore} disabled={loading}>
-                        <Text style={styles.footerLink}>Restaurar compras</Text>
+                        <Text style={styles.footerLink}>{restoreText}</Text>
                     </TouchableOpacity>
                     <Text style={styles.footerDivider}>•</Text>
                     <TouchableOpacity onPress={onClose}>
-                        <Text style={styles.footerLink}>Continuar com versão limitada</Text>
+                        <Text style={styles.footerLink}>{continueText}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -190,13 +222,13 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
                     <View style={{ alignItems: 'center', marginTop: 12 }}>
                         <ActivityIndicator size="small" color="#6B7280" />
                         <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>
-                            Carregando opções de pagamento...
+                            {loadingText}
                         </Text>
                     </View>
                 )}
 
                 <Text style={styles.disclaimer}>
-                    A assinatura é renovada automaticamente. Cancele a qualquer momento nas configurações da loja.
+                    {disclaimerText}
                 </Text>
             </ScrollView>
         </SafeAreaView>
