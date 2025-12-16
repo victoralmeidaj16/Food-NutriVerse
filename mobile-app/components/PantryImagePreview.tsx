@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput } from 'react-native';
 import { CameraIcon, PlusIcon, CheckIcon, CloseIcon } from './Icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLanguage } from '../context/LanguageContext';
 
 interface PantryImagePreviewProps {
     visible: boolean;
@@ -25,6 +26,7 @@ export const PantryImagePreview = ({
     const [showManualInput, setShowManualInput] = useState(false);
     const [manualIngredients, setManualIngredients] = useState<string[]>([]);
     const [currentInput, setCurrentInput] = useState('');
+    const { language } = useLanguage();
 
     const handleAddManual = () => {
         if (currentInput.trim()) {
@@ -59,11 +61,12 @@ export const PantryImagePreview = ({
     return (
         <Modal visible={visible} animationType="slide" transparent={false}>
             <View style={styles.container}>
-                {/* Header */}
                 <View style={styles.header}>
-                    <Text style={styles.title}>Fotos da Despensa</Text>
+                    <Text style={styles.title}>
+                        {language === 'en' ? 'Pantry Photos' : 'Fotos da Despensa'}
+                    </Text>
                     <Text style={styles.subtitle}>
-                        {images.length} {images.length === 1 ? 'foto' : 'fotos'}
+                        {images.length} {language === 'en' ? (images.length === 1 ? 'photo' : 'photos') : (images.length === 1 ? 'foto' : 'fotos')}
                         {manualIngredients.length > 0 && ` • ${manualIngredients.length} manual`}
                     </Text>
                 </View>
@@ -91,13 +94,15 @@ export const PantryImagePreview = ({
                 {/* Manual Ingredients Section */}
                 {showManualInput && (
                     <View style={styles.manualSection}>
-                        <Text style={styles.manualTitle}>Ingredientes Manuais</Text>
+                        <Text style={styles.manualTitle}>
+                            {language === 'en' ? 'Manual Ingredients' : 'Ingredientes Manuais'}
+                        </Text>
 
                         {/* Input Row */}
                         <View style={styles.inputRow}>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Ex: Tomate, Cebola..."
+                                placeholder={language === 'en' ? 'E.g. Tomato, Onion...' : 'Ex: Tomate, Cebola...'}
                                 value={currentInput}
                                 onChangeText={setCurrentInput}
                                 onSubmitEditing={handleAddManual}
@@ -127,7 +132,6 @@ export const PantryImagePreview = ({
                     </View>
                 )}
 
-                {/* Actions */}
                 <View style={styles.actions}>
                     {/* Add More Photos */}
                     <TouchableOpacity
@@ -137,7 +141,9 @@ export const PantryImagePreview = ({
                         <View style={styles.iconCircle}>
                             <CameraIcon size={24} color="#a6f000" />
                         </View>
-                        <Text style={styles.actionText}>Adicionar Mais</Text>
+                        <Text style={styles.actionText}>
+                            {language === 'en' ? 'Add More' : 'Adicionar Mais'}
+                        </Text>
                     </TouchableOpacity>
 
                     {/* Add Manually */}
@@ -149,12 +155,13 @@ export const PantryImagePreview = ({
                             <PlusIcon size={24} color="#a6f000" />
                         </View>
                         <Text style={styles.actionText}>
-                            {showManualInput ? 'Ocultar' : 'Adicionar Manual'}
+                            {showManualInput
+                                ? (language === 'en' ? 'Hide' : 'Ocultar')
+                                : (language === 'en' ? 'Add Manual' : 'Adicionar Manual')}
                         </Text>
                     </TouchableOpacity>
                 </View>
 
-                {/* Analyze Button */}
                 <TouchableOpacity
                     onPress={handleAnalyze}
                     style={styles.analyzeButtonContainer}
@@ -166,13 +173,17 @@ export const PantryImagePreview = ({
                         style={styles.analyzeButton}
                     >
                         <CheckIcon size={24} color="black" />
-                        <Text style={styles.analyzeText}>Analisar Ingredientes</Text>
+                        <Text style={styles.analyzeText}>
+                            {language === 'en' ? 'Analyze Ingredients' : 'Analisar Ingredientes'}
+                        </Text>
                     </LinearGradient>
                 </TouchableOpacity>
 
                 {/* Cancel */}
                 <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
-                    <Text style={styles.cancelText}>Cancelar</Text>
+                    <Text style={styles.cancelText}>
+                        {language === 'en' ? 'Cancel' : 'Cancelar'}
+                    </Text>
                 </TouchableOpacity>
             </View>
         </Modal>

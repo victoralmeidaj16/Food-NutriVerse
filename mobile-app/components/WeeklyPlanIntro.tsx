@@ -2,17 +2,24 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { SparklesIcon, CheckIcon, ArrowRightIcon, CalendarIcon } from './Icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLanguage } from '../context/LanguageContext';
 
 export const WeeklyPlanIntro = ({ onStart }: { onStart: () => void }) => {
+    const { language } = useLanguage();
+
     return (
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
                 <View style={styles.iconContainer}>
                     <CalendarIcon size={48} color="#a6f000" />
                 </View>
-                <Text style={styles.title}>Sua Semana, Organizada.</Text>
+                <Text style={styles.title}>
+                    {language === 'en' ? 'Your Week, Organized.' : 'Sua Semana, Organizada.'}
+                </Text>
                 <Text style={styles.subtitle}>
-                    Deixe a IA planejar suas refeições com base nos seus objetivos e preferências.
+                    {language === 'en'
+                        ? 'Let AI plan your meals based on your goals and preferences.'
+                        : 'Deixe a IA planejar suas refeições com base nos seus objetivos e preferências.'}
                 </Text>
             </View>
 
@@ -22,9 +29,13 @@ export const WeeklyPlanIntro = ({ onStart }: { onStart: () => void }) => {
                         <SparklesIcon size={24} color="#a6f000" />
                     </View>
                     <View style={styles.benefitContent}>
-                        <Text style={styles.benefitTitle}>Personalizado para você</Text>
+                        <Text style={styles.benefitTitle}>
+                            {language === 'en' ? 'Personalized for you' : 'Personalizado para você'}
+                        </Text>
                         <Text style={styles.benefitDesc}>
-                            Cardápios adaptados ao seu objetivo (perda de peso, ganho de massa, etc).
+                            {language === 'en'
+                                ? 'Menus adapted to your goal (weight loss, muscle gain, etc).'
+                                : 'Cardápios adaptados ao seu objetivo (perda de peso, ganho de massa, etc).'}
                         </Text>
                     </View>
                 </View>
@@ -34,9 +45,13 @@ export const WeeklyPlanIntro = ({ onStart }: { onStart: () => void }) => {
                         <CheckIcon size={24} color="#a6f000" />
                     </View>
                     <View style={styles.benefitContent}>
-                        <Text style={styles.benefitTitle}>Lista de Compras Automática</Text>
+                        <Text style={styles.benefitTitle}>
+                            {language === 'en' ? 'Automatic Shopping List' : 'Lista de Compras Automática'}
+                        </Text>
                         <Text style={styles.benefitDesc}>
-                            Gere a lista de compras completa com um clique.
+                            {language === 'en'
+                                ? 'Generate the complete shopping list with one click.'
+                                : 'Gere a lista de compras completa com um clique.'}
                         </Text>
                     </View>
                 </View>
@@ -46,21 +61,29 @@ export const WeeklyPlanIntro = ({ onStart }: { onStart: () => void }) => {
                         <CheckIcon size={24} color="#a6f000" />
                     </View>
                     <View style={styles.benefitContent}>
-                        <Text style={styles.benefitTitle}>Economize Tempo</Text>
+                        <Text style={styles.benefitTitle}>
+                            {language === 'en' ? 'Save Time' : 'Economize Tempo'}
+                        </Text>
                         <Text style={styles.benefitDesc}>
-                            Não perca mais tempo pensando no que comer.
+                            {language === 'en'
+                                ? "Don't waste time thinking about what to eat."
+                                : 'Não perca mais tempo pensando no que comer.'}
                         </Text>
                     </View>
                 </View>
             </View>
 
             <TouchableOpacity onPress={onStart} style={styles.ctaButton}>
-                <Text style={styles.ctaText}>Gerar Plano Mágico</Text>
+                <Text style={styles.ctaText}>
+                    {language === 'en' ? 'Generate Magic Plan' : 'Gerar Plano Mágico'}
+                </Text>
                 <ArrowRightIcon size={20} color="black" />
             </TouchableOpacity>
 
             <Text style={styles.disclaimer}>
-                Você pode regenerar ou editar o plano a qualquer momento.
+                {language === 'en'
+                    ? 'You can regenerate or edit the plan at any time.'
+                    : 'Você pode regenerar ou editar o plano a qualquer momento.'}
             </Text>
         </ScrollView>
     );

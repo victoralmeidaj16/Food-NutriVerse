@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import { CloseIcon, CheckIcon, CalendarIcon } from './Icons';
 import { WeeklyPlan } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 interface CopyMealModalProps {
     visible: boolean;
@@ -13,6 +14,7 @@ interface CopyMealModalProps {
 export const CopyMealModal = ({ visible, onClose, onCopy, plan }: CopyMealModalProps) => {
     const [selectedDay, setSelectedDay] = useState<number | null>(null);
     const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+    const { language } = useLanguage();
 
     const handleConfirm = () => {
         if (selectedDay !== null && selectedSlot !== null) {
@@ -26,14 +28,14 @@ export const CopyMealModal = ({ visible, onClose, onCopy, plan }: CopyMealModalP
             <View style={styles.overlay}>
                 <View style={styles.container}>
                     <View style={styles.header}>
-                        <Text style={styles.title}>Copiar para...</Text>
+                        <Text style={styles.title}>{language === 'en' ? 'Copy to...' : 'Copiar para...'}</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                             <CloseIcon size={24} color="#1F2937" />
                         </TouchableOpacity>
                     </View>
 
                     <ScrollView contentContainerStyle={styles.content}>
-                        <Text style={styles.sectionTitle}>Escolha o Dia</Text>
+                        <Text style={styles.sectionTitle}>{language === 'en' ? 'Choose Day' : 'Escolha o Dia'}</Text>
                         <View style={styles.grid}>
                             {plan.days.map((day, index) => (
                                 <TouchableOpacity
@@ -53,7 +55,7 @@ export const CopyMealModal = ({ visible, onClose, onCopy, plan }: CopyMealModalP
 
                         {selectedDay !== null && (
                             <>
-                                <Text style={styles.sectionTitle}>Escolha a Refeição</Text>
+                                <Text style={styles.sectionTitle}>{language === 'en' ? 'Choose Meal' : 'Escolha a Refeição'}</Text>
                                 <View style={styles.list}>
                                     {plan.days[selectedDay].meals.map((meal, index) => (
                                         <TouchableOpacity
@@ -66,7 +68,7 @@ export const CopyMealModal = ({ visible, onClose, onCopy, plan }: CopyMealModalP
                                             </Text>
                                             {meal.recipe && (
                                                 <Text style={styles.existingRecipeText} numberOfLines={1}>
-                                                    (Substituir: {meal.recipe.name})
+                                                    ({language === 'en' ? 'Replace' : 'Substituir'}: {meal.recipe.name})
                                                 </Text>
                                             )}
                                         </TouchableOpacity>
@@ -82,7 +84,7 @@ export const CopyMealModal = ({ visible, onClose, onCopy, plan }: CopyMealModalP
                             onPress={handleConfirm}
                             disabled={selectedDay === null || selectedSlot === null}
                         >
-                            <Text style={styles.confirmBtnText}>Confirmar Cópia</Text>
+                            <Text style={styles.confirmBtnText}>{language === 'en' ? 'Confirm Copy' : 'Confirmar Cópia'}</Text>
                             <CheckIcon size={20} color={selectedDay === null || selectedSlot === null ? "#9CA3AF" : "black"} />
                         </TouchableOpacity>
                     </View>
