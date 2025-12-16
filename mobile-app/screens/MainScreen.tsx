@@ -816,7 +816,7 @@ export const MainScreen = ({
                             style={styles.seeMoreGradient}
                         >
                             <TouchableOpacity onPress={() => setShowAllRecipes(true)} style={styles.seeMoreButton}>
-                                <Text style={styles.seeMoreText}>Ver mais</Text>
+                                <Text style={styles.seeMoreText}>{language === 'en' ? 'See more' : 'Ver mais'}</Text>
                                 <ArrowRightIcon size={16} color="#000" />
                             </TouchableOpacity>
                         </LinearGradient>
@@ -829,8 +829,10 @@ export const MainScreen = ({
     const renderExplore = () => (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             <View style={styles.exploreHeader}>
-                <Text style={styles.pageTitle}>Explorar</Text>
-                <Text style={styles.pageSubtitle}>Descubra receitas ou use o que tem em casa.</Text>
+                <Text style={styles.pageTitle}>{language === 'en' ? 'Explore' : 'Explorar'}</Text>
+                <Text style={styles.pageSubtitle}>
+                    {language === 'en' ? 'Discover recipes or use what you have at home.' : 'Descubra receitas ou use o que tem em casa.'}
+                </Text>
             </View>
 
             {/* Mode Switch */}
@@ -840,13 +842,17 @@ export const MainScreen = ({
                         onPress={() => changeExploreMode('TEXT')}
                         style={[styles.modeButton, exploreMode === 'TEXT' && styles.modeButtonActive]}
                     >
-                        <Text style={[styles.modeText, exploreMode === 'TEXT' && styles.modeTextActive]}>Desejo</Text>
+                        <Text style={[styles.modeText, exploreMode === 'TEXT' && styles.modeTextActive]}>
+                            {language === 'en' ? 'Craving' : 'Desejo'}
+                        </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => changeExploreMode('PANTRY')}
                         style={[styles.modeButton, exploreMode === 'PANTRY' && styles.modeButtonActive]}
                     >
-                        <Text style={[styles.modeText, exploreMode === 'PANTRY' && styles.modeTextActive]}>Despensa</Text>
+                        <Text style={[styles.modeText, exploreMode === 'PANTRY' && styles.modeTextActive]}>
+                            {language === 'en' ? 'Pantry' : 'Despensa'}
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -856,16 +862,20 @@ export const MainScreen = ({
                     <View style={styles.magicCard}>
                         <View style={styles.magicHeader}>
                             <SparklesIcon size={32} color="#a6f000" />
-                            <Text style={styles.magicTitle}>Transformação Mágica</Text>
+                            <Text style={styles.magicTitle}>
+                                {language === 'en' ? 'Magic Transformation' : 'Transformação Mágica'}
+                            </Text>
                         </View>
                         <Text style={styles.magicDesc}>
-                            Digite o nome de qualquer prato "gordo" e a IA criará uma versão saudável e deliciosa para você.
+                            {language === 'en'
+                                ? 'Type the name of any "unhealthy" dish and the AI will create a healthy and delicious version for you.'
+                                : 'Digite o nome de qualquer prato "gordo" e a IA criará uma versão saudável e deliciosa para você.'}
                         </Text>
 
                         <View style={styles.inputWrapper}>
                             <TextInput
                                 style={styles.textInput}
-                                placeholder="Ex: Pizza, Lasanha, Brigadeiro..."
+                                placeholder={language === 'en' ? 'E.g. Pizza, Lasagna, Brownie...' : 'Ex: Pizza, Lasanha, Brigadeiro...'}
                                 value={dishInput}
                                 onChangeText={setDishInput}
                                 placeholderTextColor="#9CA3AF"
@@ -881,7 +891,9 @@ export const MainScreen = ({
                     </View>
 
                     <View style={styles.suggestionsContainer}>
-                        <Text style={styles.sectionTitle}>Sugestões Populares</Text>
+                        <Text style={styles.sectionTitle}>
+                            {language === 'en' ? 'Popular Suggestions' : 'Sugestões Populares'}
+                        </Text>
                         <View style={styles.tagsRow}>
                             {["Pizza Fit", "Hambúrguer", "Lasanha de Berinjela", "Brownie Low Carb", "Strogonoff Light"].map((s, i) => (
                                 <TouchableOpacity key={i} onPress={() => setDishInput(s)} style={styles.suggestionTag}>
@@ -896,7 +908,9 @@ export const MainScreen = ({
                     <View style={styles.scannerCard}>
                         <View style={styles.scannerHeader}>
                             <CameraIcon size={32} color="#a6f000" />
-                            <Text style={styles.scannerTitle}>Scanner de Despensa</Text>
+                            <Text style={styles.scannerTitle}>
+                                {language === 'en' ? 'Pantry Scanner' : 'Scanner de Despensa'}
+                            </Text>
                         </View>
                         <Text style={styles.scannerDesc}>
                             Tire uma foto dos seus ingredientes ou adicione manualmente.
@@ -1201,9 +1215,9 @@ export const MainScreen = ({
         return (
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
-                    <Text style={styles.pageTitle}>Perfil</Text>
+                    <Text style={styles.pageTitle}>{language === 'en' ? 'Profile' : 'Perfil'}</Text>
                     <TouchableOpacity onPress={() => setShowEditProfile(true)}>
-                        <Text style={styles.editProfileText}>Editar</Text>
+                        <Text style={styles.editProfileText}>{language === 'en' ? 'Edit' : 'Editar'}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -1217,27 +1231,32 @@ export const MainScreen = ({
                     </View>
                     <Text style={styles.profileName}>{userProfile?.name}</Text>
                     <Text style={styles.profileGoal}>
-                        {userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Queimar Gordura' :
-                            userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Ganhar Massa' : 'Saudável'}
+                        {language === 'en'
+                            ? (userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Burn Fat' :
+                                userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Build Muscle' : 'Healthy')
+                            : (userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Queimar Gordura' :
+                                userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Ganhar Massa' : 'Saudável')}
                     </Text>
                     <TouchableOpacity onPress={() => setShowEditProfile(true)} style={{ marginTop: 10 }}>
-                        <Text style={{ color: '#a6f000', fontWeight: '600' }}>Editar Perfil</Text>
+                        <Text style={{ color: '#a6f000', fontWeight: '600' }}>
+                            {language === 'en' ? 'Edit Profile' : 'Editar Perfil'}
+                        </Text>
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.statsContainer}>
                     <View style={styles.statBox}>
                         <Text style={styles.statValue}>{userProfile?.dietaryRestrictions.length || 0}</Text>
-                        <Text style={styles.statLabel}>Restrições</Text>
+                        <Text style={styles.statLabel}>{language === 'en' ? 'Restrictions' : 'Restrições'}</Text>
                     </View>
                     <View style={styles.statBox}>
                         <Text style={styles.statValue}>{userProfile?.dislikes.length || 0}</Text>
-                        <Text style={styles.statLabel}>Não Gosta</Text>
+                        <Text style={styles.statLabel}>{language === 'en' ? 'Dislikes' : 'Não Gosta'}</Text>
                     </View>
                 </View>
 
                 <View style={styles.menuSection}>
-                    <Text style={styles.menuTitle}>Suporte & Legal</Text>
+                    <Text style={styles.menuTitle}>{language === 'en' ? 'Support & Legal' : 'Suporte & Legal'}</Text>
 
                     <TouchableOpacity
                         style={styles.menuItem}
@@ -1246,7 +1265,7 @@ export const MainScreen = ({
                         <View style={styles.menuIconBox}>
                             <HelpCircleIcon size={20} color="#4B5563" />
                         </View>
-                        <Text style={styles.menuItemText}>Fale Conosco</Text>
+                        <Text style={styles.menuItemText}>{language === 'en' ? 'Contact Us' : 'Fale Conosco'}</Text>
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
 
@@ -1257,7 +1276,7 @@ export const MainScreen = ({
                         <View style={styles.menuIconBox}>
                             <FileTextIcon size={20} color="#4B5563" />
                         </View>
-                        <Text style={styles.menuItemText}>Termos de Uso</Text>
+                        <Text style={styles.menuItemText}>{language === 'en' ? 'Terms of Use' : 'Termos de Uso'}</Text>
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
 
@@ -1268,7 +1287,7 @@ export const MainScreen = ({
                         <View style={styles.menuIconBox}>
                             <LockIcon size={20} color="#4B5563" />
                         </View>
-                        <Text style={styles.menuItemText}>Política de Privacidade</Text>
+                        <Text style={styles.menuItemText}>{language === 'en' ? 'Privacy Policy' : 'Política de Privacidade'}</Text>
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
 
@@ -1279,7 +1298,7 @@ export const MainScreen = ({
                         <View style={[styles.menuIconBox, { backgroundColor: '#E0F2FE' }]}>
                             <FileTextIcon size={20} color="#0369A1" />
                         </View>
-                        <Text style={styles.menuItemText}>Fontes e Referências</Text>
+                        <Text style={styles.menuItemText}>{language === 'en' ? 'Sources & References' : 'Fontes e Referências'}</Text>
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
                 </View>
@@ -1300,7 +1319,9 @@ export const MainScreen = ({
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={handleDeleteAccount} style={styles.deleteAccountButton}>
-                    <Text style={styles.deleteAccountText}>Excluir minha conta</Text>
+                    <Text style={styles.deleteAccountText}>
+                        {language === 'en' ? 'Delete my account' : 'Excluir minha conta'}
+                    </Text>
                 </TouchableOpacity>
             </ScrollView>
         );
