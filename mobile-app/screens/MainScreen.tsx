@@ -19,7 +19,7 @@ import {
     FileTextIcon, HelpCircleIcon, LockIcon
 } from '../components/Icons';
 import { MOCK_RECIPES } from '../services/mockData';
-import { generateFitnessRecipe, identifyIngredientsFromImage, generateWeeklyPlan, generateShoppingList } from '../services/geminiService';
+import { generateFitnessRecipe, identifyIngredientsFromImage, generateWeeklyPlan, generateShoppingList, SupportedLanguage } from '../services/geminiService';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { LoadingModal } from '../components/LoadingModal';
 import { PlanningWizard } from '../components/PlanningWizard';
@@ -275,7 +275,7 @@ export const MainScreen = ({
             const detected = await identifyIngredientsFromImage(base64, (status, progress) => {
                 setLoadingStatus(status);
                 setLoadingProgress(progress);
-            });
+            }, language as SupportedLanguage);
             setPantryIngredients(prev => [...new Set([...prev, ...detected])]);
         } catch (error) {
             Alert.alert(t('common.error'), t('errors.imageAnalysisFailed'));
@@ -317,7 +317,7 @@ export const MainScreen = ({
                 const detected = await identifyIngredientsFromImage(base64, (status, progress) => {
                     setLoadingStatus(status);
                     setLoadingProgress(progress * 0.7); // 70% for analysis
-                });
+                }, language as SupportedLanguage);
 
                 console.log('✅ Detected ingredients:', detected);
                 allIngredients.push(...detected);
@@ -353,7 +353,8 @@ export const MainScreen = ({
                 (status, progress) => {
                     setLoadingStatus(status);
                     setLoadingProgress(0.8 + (progress * 0.2)); // 80-100%
-                }
+                },
+                language as SupportedLanguage
             );
 
             if (recipe) {
@@ -484,7 +485,8 @@ export const MainScreen = ({
                 (status, progress) => {
                     setLoadingStatus(status);
                     setLoadingProgress(progress);
-                }
+                },
+                language as SupportedLanguage
             );
             if (result) {
                 setGeneratedRecipes(prev => {
@@ -526,7 +528,7 @@ export const MainScreen = ({
         setLoadingMsg(t('loading.generatingPlan'));
 
         try {
-            const plan = await generateWeeklyPlan(userProfile, preference, mealsCount, allowRepeats);
+            const plan = await generateWeeklyPlan(userProfile, preference, mealsCount, allowRepeats, language as SupportedLanguage);
             if (plan) {
                 setWeeklyPlan(plan);
                 storageService.saveWeeklyPlan(plan); // Save
@@ -551,7 +553,7 @@ export const MainScreen = ({
         setLoading(true);
         setLoadingMsg(t('loading.calculatingList'));
         try {
-            const list = await generateShoppingList(weeklyPlan);
+            const list = await generateShoppingList(weeklyPlan, language as SupportedLanguage);
             if (list) {
                 setShoppingList(list);
                 storageService.saveShoppingList(list); // Save
@@ -619,7 +621,9 @@ export const MainScreen = ({
                                 mealSlot.timeSlot,
                                 userProfile.goal,
                                 userProfile.dietaryRestrictions,
-                                userProfile.dislikes || []
+                                userProfile.dislikes || [],
+                                undefined,
+                                language as SupportedLanguage
                             );
 
                             if (newRecipe) {
