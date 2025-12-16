@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, SafeAreaView } from 'react-native';
 import { ArrowLeftIcon, ExternalLinkIcon } from './Icons';
 import { HEALTH_REFERENCES, HealthReference, getReferencesByCategory } from '../services/healthReferences';
+import { useLanguage } from '../context/LanguageContext';
 
 interface SourcesScreenProps {
     onBack: () => void;
@@ -9,8 +10,15 @@ interface SourcesScreenProps {
 
 export const SourcesScreen: React.FC<SourcesScreenProps> = ({ onBack }) => {
     const [selectedCategory, setSelectedCategory] = useState<HealthReference['category'] | 'all'>('all');
+    const { language } = useLanguage();
 
-    const categories = [
+    const categories = language === 'en' ? [
+        { id: 'all' as const, label: 'All' },
+        { id: 'macros' as const, label: 'Macronutrients' },
+        { id: 'health_tips' as const, label: 'Health Tips' },
+        { id: 'dietary_restrictions' as const, label: 'Restrictions' },
+        { id: 'general' as const, label: 'General' },
+    ] : [
         { id: 'all' as const, label: 'Todas' },
         { id: 'macros' as const, label: 'Macronutrientes' },
         { id: 'health_tips' as const, label: 'Dicas de Saúde' },
@@ -44,7 +52,9 @@ export const SourcesScreen: React.FC<SourcesScreenProps> = ({ onBack }) => {
                 <TouchableOpacity onPress={onBack} style={styles.backButton}>
                     <ArrowLeftIcon size={24} color="#111827" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Fontes e Referências</Text>
+                <Text style={styles.headerTitle}>
+                    {language === 'en' ? 'Sources & References' : 'Fontes e Referências'}
+                </Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -53,9 +63,13 @@ export const SourcesScreen: React.FC<SourcesScreenProps> = ({ onBack }) => {
                 showsVerticalScrollIndicator={false}
             >
                 <View style={styles.intro}>
-                    <Text style={styles.introTitle}>Transparência Científica</Text>
+                    <Text style={styles.introTitle}>
+                        {language === 'en' ? 'Scientific Transparency' : 'Transparência Científica'}
+                    </Text>
                     <Text style={styles.introText}>
-                        Todas as informações nutricionais e de saúde fornecidas pelo Food NutriVerse são baseadas em pesquisas e diretrizes de instituições reconhecidas mundialmente.
+                        {language === 'en'
+                            ? 'All nutritional and health information provided by Food NutriVerse is based on research and guidelines from globally recognized institutions.'
+                            : 'Todas as informações nutricionais e de saúde fornecidas pelo Food NutriVerse são baseadas em pesquisas e diretrizes de instituições reconhecidas mundialmente.'}
                     </Text>
                 </View>
 
@@ -86,7 +100,9 @@ export const SourcesScreen: React.FC<SourcesScreenProps> = ({ onBack }) => {
 
                 <View style={styles.referencesContainer}>
                     <Text style={styles.sectionTitle}>
-                        {filteredReferences.length} {filteredReferences.length === 1 ? 'Fonte' : 'Fontes'}
+                        {filteredReferences.length} {language === 'en'
+                            ? (filteredReferences.length === 1 ? 'Source' : 'Sources')
+                            : (filteredReferences.length === 1 ? 'Fonte' : 'Fontes')}
                     </Text>
 
                     {filteredReferences.map((ref, index) => (
@@ -111,7 +127,9 @@ export const SourcesScreen: React.FC<SourcesScreenProps> = ({ onBack }) => {
                                 style={styles.linkButton}
                             >
                                 <ExternalLinkIcon size={18} color="#a6f000" />
-                                <Text style={styles.linkButtonText}>Acessar fonte completa</Text>
+                                <Text style={styles.linkButtonText}>
+                                    {language === 'en' ? 'Access full source' : 'Acessar fonte completa'}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     ))}
@@ -119,14 +137,20 @@ export const SourcesScreen: React.FC<SourcesScreenProps> = ({ onBack }) => {
 
                 <View style={styles.footer}>
                     <View style={styles.disclaimerBox}>
-                        <Text style={styles.disclaimerTitle}>⚕️ Aviso Importante</Text>
+                        <Text style={styles.disclaimerTitle}>
+                            {language === 'en' ? '⚕️ Important Notice' : '⚕️ Aviso Importante'}
+                        </Text>
                         <Text style={styles.disclaimerText}>
-                            As informações fornecidas são para fins educacionais e não substituem orientação médica ou nutricional profissional. Consulte sempre um profissional de saúde qualificado para recomendações personalizadas.
+                            {language === 'en'
+                                ? 'The information provided is for educational purposes and does not replace professional medical or nutritional advice. Always consult a qualified health professional for personalized recommendations.'
+                                : 'As informações fornecidas são para fins educacionais e não substituem orientação médica ou nutricional profissional. Consulte sempre um profissional de saúde qualificado para recomendações personalizadas.'}
                         </Text>
                     </View>
 
                     <View style={styles.institutionsBox}>
-                        <Text style={styles.institutionsTitle}>Instituições Consultadas</Text>
+                        <Text style={styles.institutionsTitle}>
+                            {language === 'en' ? 'Institutions Consulted' : 'Instituições Consultadas'}
+                        </Text>
                         <Text style={styles.institutionsText}>
                             • Harvard Medical School{'\n'}
                             • World Health Organization (WHO){'\n'}
@@ -139,7 +163,7 @@ export const SourcesScreen: React.FC<SourcesScreenProps> = ({ onBack }) => {
                     </View>
 
                     <Text style={styles.footerText}>
-                        Última atualização: Dezembro 2025
+                        {language === 'en' ? 'Last updated: December 2025' : 'Última atualização: Dezembro 2025'}
                     </Text>
                 </View>
             </ScrollView>

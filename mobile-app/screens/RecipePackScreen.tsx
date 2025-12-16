@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, SafeAreaVi
 import { Recipe, UserGoal } from '../types';
 import { RECIPE_PACKS } from '../services/recipePacks';
 import { ArrowLeftIcon, ClockIcon, FlameIcon, ChefHatIcon } from '../components/Icons';
+import { useLanguage } from '../context/LanguageContext';
 
 export const RecipePackScreen = ({
     goal,
@@ -14,6 +15,7 @@ export const RecipePackScreen = ({
     onRecipeClick: (recipe: Recipe) => void;
 }) => {
     const pack = RECIPE_PACKS[goal] || RECIPE_PACKS[UserGoal.EAT_HEALTHY];
+    const { language } = useLanguage();
 
     return (
         <SafeAreaView style={styles.container}>
@@ -21,7 +23,9 @@ export const RecipePackScreen = ({
                 <TouchableOpacity onPress={onBack} style={styles.backButton}>
                     <ArrowLeftIcon size={24} color="#1F2937" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Pack de Receitas</Text>
+                <Text style={styles.headerTitle}>
+                    {language === 'en' ? 'Recipe Pack' : 'Pack de Receitas'}
+                </Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -61,7 +65,9 @@ export const RecipePackScreen = ({
                                         </View>
                                         <View style={styles.metaItem}>
                                             <ChefHatIcon size={14} color="#6B7280" />
-                                            <Text style={styles.metaText}>{recipe.instructions.length} passos</Text>
+                                            <Text style={styles.metaText}>
+                                                {recipe.instructions.length} {language === 'en' ? 'steps' : 'passos'}
+                                            </Text>
                                         </View>
                                     </View>
                                 </View>
@@ -76,7 +82,9 @@ export const RecipePackScreen = ({
                                         {recipe.description}
                                     </Text>
                                     <View style={styles.arrowRow}>
-                                        <Text style={styles.viewRecipeText}>Ver Receita</Text>
+                                        <Text style={styles.viewRecipeText}>
+                                            {language === 'en' ? 'View Recipe' : 'Ver Receita'}
+                                        </Text>
                                         <Text style={{ fontSize: 18, color: '#a6f000' }}>→</Text>
                                     </View>
                                 </View>

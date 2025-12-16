@@ -2,17 +2,24 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LightbulbIcon, CloseIcon } from './Icons';
+import { useLanguage } from '../context/LanguageContext';
 
 export const DailyTipCard = ({ onClose }: { onClose: () => void }) => {
+    const { language } = useLanguage();
+
     return (
         <View style={styles.container}>
             <View style={styles.iconContainer}>
                 <LightbulbIcon size={24} color="#ca8a04" />
             </View>
             <View style={styles.content}>
-                <Text style={styles.title}>Dica do Dia</Text>
+                <Text style={styles.title}>
+                    {language === 'en' ? 'Tip of the Day' : 'Dica do Dia'}
+                </Text>
                 <Text style={styles.text}>
-                    Beber água 30min antes das refeições ajuda na digestão e saciedade.
+                    {language === 'en'
+                        ? 'Drinking water 30min before meals helps with digestion and satiety.'
+                        : 'Beber água 30min antes das refeições ajuda na digestão e saciedade.'}
                 </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>

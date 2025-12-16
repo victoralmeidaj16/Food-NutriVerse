@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Linking, SafeAreaView } from 'react-native';
 import { ExternalLinkIcon, XIcon, InfoIcon } from './Icons';
 import { HealthReference } from '../services/healthReferences';
+import { useLanguage } from '../context/LanguageContext';
 
 interface CitationBadgeProps {
     references: HealthReference[];
@@ -15,6 +16,7 @@ export const CitationBadge: React.FC<CitationBadgeProps> = ({
     showLabel = false
 }) => {
     const [modalVisible, setModalVisible] = useState(false);
+    const { language } = useLanguage();
 
     console.log('🔍 CitationBadge received references:', references);
 
@@ -43,7 +45,9 @@ export const CitationBadge: React.FC<CitationBadgeProps> = ({
             >
                 <InfoIcon size={iconSize} color="#6B7280" />
                 {showLabel && (
-                    <Text style={styles.badgeLabel}>Fonte</Text>
+                    <Text style={styles.badgeLabel}>
+                        {language === 'en' ? 'Source' : 'Fonte'}
+                    </Text>
                 )}
             </TouchableOpacity>
 
@@ -57,7 +61,9 @@ export const CitationBadge: React.FC<CitationBadgeProps> = ({
                     <View style={styles.modalContainer}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>
-                                {references.length === 1 ? 'Fonte Científica' : 'Fontes Científicas'}
+                                {language === 'en'
+                                    ? (references.length === 1 ? 'Scientific Source' : 'Scientific Sources')
+                                    : (references.length === 1 ? 'Fonte Científica' : 'Fontes Científicas')}
                             </Text>
                             <TouchableOpacity
                                 onPress={() => setModalVisible(false)}
@@ -89,14 +95,18 @@ export const CitationBadge: React.FC<CitationBadgeProps> = ({
                                         style={styles.linkButton}
                                     >
                                         <ExternalLinkIcon size={16} color="#a6f000" />
-                                        <Text style={styles.linkText}>Acessar fonte</Text>
+                                        <Text style={styles.linkText}>
+                                            {language === 'en' ? 'Access source' : 'Acessar fonte'}
+                                        </Text>
                                     </TouchableOpacity>
                                 </View>
                             ))}
 
                             <View style={styles.disclaimer}>
                                 <Text style={styles.disclaimerText}>
-                                    💡 As informações nutricionais fornecidas são baseadas em diretrizes de instituições de saúde reconhecidas. Para orientação personalizada, consulte um profissional de saúde.
+                                    {language === 'en'
+                                        ? '💡 Nutritional information provided is based on guidelines from recognized health institutions. For personalized guidance, consult a health professional.'
+                                        : '💡 As informações nutricionais fornecidas são baseadas em diretrizes de instituições de saúde reconhecidas. Para orientação personalizada, consulte um profissional de saúde.'}
                                 </Text>
                             </View>
                         </ScrollView>
