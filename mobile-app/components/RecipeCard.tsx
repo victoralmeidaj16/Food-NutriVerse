@@ -89,9 +89,15 @@ export const RecipeCard = ({
 
 const getDifficultyColor = (diff: string) => {
     switch (diff) {
-        case 'Fácil': return '#22C55E';
-        case 'Médio': return '#EAB308';
-        case 'Difícil': return '#EF4444';
+        case 'Fácil':
+        case 'Easy':
+            return '#22C55E';
+        case 'Médio':
+        case 'Medium':
+            return '#EAB308';
+        case 'Difícil':
+        case 'Hard':
+            return '#EF4444';
         default: return '#22C55E';
     }
 };

@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView,
 import * as ImagePicker from 'expo-image-picker';
 import { UserProfile, UserGoal, ActivityLevel, RESTRICTION_OPTIONS } from '../types';
 import { CloseIcon, CheckIcon, CameraIcon, UserIcon, PlusIcon, TrashIcon } from './Icons';
+import { useLanguage } from '../context/LanguageContext';
 
 export const EditProfileModal = ({
   profile,
@@ -20,6 +21,7 @@ export const EditProfileModal = ({
   const [dislikes, setDislikes] = useState<string[]>(profile.dislikes || []);
   const [newDislike, setNewDislike] = useState('');
   const [profilePicture, setProfilePicture] = useState<string | undefined>(profile.profilePicture);
+  const { t, language } = useLanguage();
 
   const pickImage = async () => {
     // No permissions request is necessary for launching the image library
@@ -58,7 +60,7 @@ export const EditProfileModal = ({
 
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert("Erro", "O nome não pode ficar vazio.");
+      Alert.alert(t('common.error'), language === 'en' ? "Name cannot be empty." : "O nome não pode ficar vazio.");
       return;
     }
     onSave({
@@ -77,7 +79,7 @@ export const EditProfileModal = ({
     <Modal animationType="slide" presentationStyle="pageSheet" visible={true}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Editar Perfil</Text>
+          <Text style={styles.title}>{language === 'en' ? 'Edit Profile' : 'Editar Perfil'}</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <CloseIcon size={24} color="#1F2937" />
           </TouchableOpacity>
@@ -99,29 +101,34 @@ export const EditProfileModal = ({
               </View>
             </TouchableOpacity>
             <TouchableOpacity onPress={pickImage}>
-              <Text style={styles.changePhotoText}>Alterar Foto</Text>
+              <Text style={styles.changePhotoText}>{language === 'en' ? 'Change Photo' : 'Alterar Foto'}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>Nome</Text>
+            <Text style={styles.label}>{language === 'en' ? 'Name' : 'Nome'}</Text>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder="Seu nome"
+              placeholder={language === 'en' ? 'Your name' : 'Seu nome'}
             />
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>Objetivo</Text>
+            <Text style={styles.label}>{language === 'en' ? 'Goal' : 'Objetivo'}</Text>
             <View style={styles.optionsRow}>
-              {[
+              {(language === 'en' ? [
+                { label: 'Lose Weight', val: UserGoal.LOSE_WEIGHT },
+                { label: 'Build Muscle', val: UserGoal.GAIN_MUSCLE },
+                { label: 'Maintain', val: UserGoal.MAINTAIN },
+                { label: 'Eat Healthy', val: UserGoal.EAT_HEALTHY }
+              ] : [
                 { label: 'Perder Peso', val: UserGoal.LOSE_WEIGHT },
                 { label: 'Ganhar Massa', val: UserGoal.GAIN_MUSCLE },
                 { label: 'Manter', val: UserGoal.MAINTAIN },
                 { label: 'Saudável', val: UserGoal.EAT_HEALTHY }
-              ].map(opt => (
+              ]).map(opt => (
                 <TouchableOpacity
                   key={opt.val}
                   onPress={() => setGoal(opt.val)}
@@ -136,13 +143,17 @@ export const EditProfileModal = ({
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>Nível de Atividade</Text>
+            <Text style={styles.label}>{language === 'en' ? 'Activity Level' : 'Nível de Atividade'}</Text>
             <View style={styles.optionsRow}>
-              {[
+              {(language === 'en' ? [
+                { label: 'Low', val: ActivityLevel.LOW },
+                { label: 'Medium', val: ActivityLevel.MEDIUM },
+                { label: 'High', val: ActivityLevel.HIGH }
+              ] : [
                 { label: 'Baixo', val: ActivityLevel.LOW },
                 { label: 'Médio', val: ActivityLevel.MEDIUM },
                 { label: 'Alto', val: ActivityLevel.HIGH }
-              ].map(opt => (
+              ]).map(opt => (
                 <TouchableOpacity
                   key={opt.val}
                   onPress={() => setActivityLevel(opt.val)}
@@ -157,7 +168,7 @@ export const EditProfileModal = ({
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>Restrições Alimentares</Text>
+            <Text style={styles.label}>{language === 'en' ? 'Dietary Restrictions' : 'Restrições Alimentares'}</Text>
             <View style={styles.optionsRow}>
               {RESTRICTION_OPTIONS.map(opt => (
                 <TouchableOpacity
@@ -174,15 +185,15 @@ export const EditProfileModal = ({
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>O que você NÃO gosta/come?</Text>
-            <Text style={styles.helperText}>Esses alimentos serão evitados nas receitas.</Text>
+            <Text style={styles.label}>{language === 'en' ? "What you DON'T like/eat?" : 'O que você NÃO gosta/come?'}</Text>
+            <Text style={styles.helperText}>{language === 'en' ? 'These foods will be avoided in recipes.' : 'Esses alimentos serão evitados nas receitas.'}</Text>
 
             <View style={styles.addDislikeRow}>
               <TextInput
                 style={[styles.input, { flex: 1 }]}
                 value={newDislike}
                 onChangeText={setNewDislike}
-                placeholder="Ex: Cebola, Pimentão..."
+                placeholder={language === 'en' ? 'E.g. Onion, Pepper...' : 'Ex: Cebola, Pimentão...'}
                 onSubmitEditing={addDislike}
               />
               <TouchableOpacity onPress={addDislike} style={styles.addBtn}>
@@ -206,7 +217,7 @@ export const EditProfileModal = ({
 
         <View style={styles.footer}>
           <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>
-            <Text style={styles.saveBtnText}>Salvar Alterações</Text>
+            <Text style={styles.saveBtnText}>{language === 'en' ? 'Save Changes' : 'Salvar Alterações'}</Text>
             <CheckIcon size={20} color="black" />
           </TouchableOpacity>
         </View>
