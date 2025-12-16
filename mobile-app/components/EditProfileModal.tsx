@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, Alert, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { UserProfile, UserGoal, ActivityLevel, RESTRICTION_OPTIONS } from '../types';
+import { UserProfile, UserGoal, ActivityLevel, RESTRICTION_OPTIONS, getRestrictionOptions } from '../types';
 import { CloseIcon, CheckIcon, CameraIcon, UserIcon, PlusIcon, TrashIcon } from './Icons';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -170,13 +170,13 @@ export const EditProfileModal = ({
           <View style={styles.section}>
             <Text style={styles.label}>{language === 'en' ? 'Dietary Restrictions' : 'Restrições Alimentares'}</Text>
             <View style={styles.optionsRow}>
-              {RESTRICTION_OPTIONS.map(opt => (
+              {getRestrictionOptions(language).map((opt, index) => (
                 <TouchableOpacity
                   key={opt}
-                  onPress={() => toggleRestriction(opt)}
-                  style={[styles.optionChip, restrictions.includes(opt) && styles.optionChipSelected]}
+                  onPress={() => toggleRestriction(RESTRICTION_OPTIONS[index])}
+                  style={[styles.optionChip, restrictions.includes(RESTRICTION_OPTIONS[index]) && styles.optionChipSelected]}
                 >
-                  <Text style={[styles.optionText, restrictions.includes(opt) && styles.optionTextSelected]}>
+                  <Text style={[styles.optionText, restrictions.includes(RESTRICTION_OPTIONS[index]) && styles.optionTextSelected]}>
                     {opt}
                   </Text>
                 </TouchableOpacity>

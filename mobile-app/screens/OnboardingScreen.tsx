@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Dimensions, KeyboardAvoidingView, Platform, LayoutAnimation, UIManager, Image, Animated, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, RESTRICTION_OPTIONS, SubscriptionPlan } from '../types';
+import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, RESTRICTION_OPTIONS, SubscriptionPlan, getRestrictionOptions } from '../types';
 import { ArrowRightIcon, CheckIcon, StarIcon, TimerIcon, FlameIcon } from '../components/Icons';
 import { PaywallScreen } from './PaywallScreen';
 import { useLanguage } from '../context/LanguageContext';
@@ -273,13 +273,16 @@ export const OnboardingScreen = ({
             <Text style={styles.subtitle}>{language === 'en' ? 'Select your dietary restrictions or preferences (optional).' : 'Selecione suas restrições ou preferências alimentares (opcional).'}</Text>
 
             <View style={styles.tagsContainer}>
-                {RESTRICTION_OPTIONS.map(opt => (
+                {getRestrictionOptions(language).map((opt, index) => (
                     <TouchableOpacity
                         key={opt}
-                        onPress={() => toggleSelection(restrictions, opt, setRestrictions)}
-                        style={[styles.tag, restrictions.includes(opt) && styles.tagSelected]}
+                        onPress={() => {
+                            const ptOpt = RESTRICTION_OPTIONS[index];
+                            toggleSelection(restrictions, ptOpt, setRestrictions);
+                        }}
+                        style={[styles.tag, restrictions.includes(RESTRICTION_OPTIONS[index]) && styles.tagSelected]}
                     >
-                        <Text style={[styles.tagText, restrictions.includes(opt) && styles.tagTextSelected]}>{opt}</Text>
+                        <Text style={[styles.tagText, restrictions.includes(RESTRICTION_OPTIONS[index]) && styles.tagTextSelected]}>{opt}</Text>
                     </TouchableOpacity>
                 ))}
                 <TouchableOpacity

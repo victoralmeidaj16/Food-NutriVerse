@@ -162,6 +162,19 @@ export const RESTRICTION_OPTIONS = [
     "Diabético"
 ];
 
+// Bilingual restriction options
+export const getRestrictionOptions = (language: 'en' | 'pt' = 'pt') => {
+    return language === 'en' ? [
+        "Gluten-Free",
+        "Lactose-Free",
+        "Vegan",
+        "Vegetarian",
+        "Low Carb",
+        "Sugar-Free",
+        "Diabetic"
+    ] : RESTRICTION_OPTIONS;
+};
+
 export const RECIPE_CATEGORIES = [
     { id: 'Café da Manhã', icon: '☕', label: 'Café' },
     { id: 'Almoço', icon: '🍲', label: 'Almoço' },
@@ -170,3 +183,15 @@ export const RECIPE_CATEGORIES = [
     { id: 'Pré-Treino', icon: '⚡', label: 'Pré-Treino' },
     { id: 'Sobremesa', icon: '🍫', label: 'Doces Fit' },
 ];
+
+// Bilingual recipe categories
+export const getRecipeCategories = (language: 'en' | 'pt' = 'pt') => {
+    return language === 'en' ? [
+        { id: 'Breakfast', icon: '☕', label: 'Breakfast' },
+        { id: 'Lunch', icon: '🍲', label: 'Lunch' },
+        { id: 'Snacks', icon: '🍎', label: 'Snacks' },
+        { id: 'Dinner', icon: '🍽️', label: 'Dinner' },
+        { id: 'Pre-Workout', icon: '⚡', label: 'Pre-Workout' },
+        { id: 'Dessert', icon: '🍫', label: 'Fit Sweets' },
+    ] : RECIPE_CATEGORIES;
+};
