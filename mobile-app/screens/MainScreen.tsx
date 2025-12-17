@@ -754,10 +754,15 @@ export const MainScreen = ({
                         <View style={styles.packContent}>
                             <View style={styles.packTextContainer}>
                                 <Text style={styles.packTitleLight}>
-                                    {userProfile?.goal === UserGoal.LOSE_WEIGHT ? '5 Receitas para Perda de Peso' :
-                                        userProfile?.goal === UserGoal.GAIN_MUSCLE ? '5 Receitas para Ganho de Massa' : '5 Receitas Saudáveis'}
+                                    {language === 'en'
+                                        ? (userProfile?.goal === UserGoal.LOSE_WEIGHT ? '5 Recipes for Weight Loss' :
+                                            userProfile?.goal === UserGoal.GAIN_MUSCLE ? '5 Recipes for Muscle Gain' : '5 Healthy Recipes')
+                                        : (userProfile?.goal === UserGoal.LOSE_WEIGHT ? '5 Receitas para Perda de Peso' :
+                                            userProfile?.goal === UserGoal.GAIN_MUSCLE ? '5 Receitas para Ganho de Massa' : '5 Receitas Saudáveis')}
                                 </Text>
-                                <Text style={styles.packSubtitleLight}>Selecionadas para seu objetivo</Text>
+                                <Text style={styles.packSubtitleLight}>
+                                    {language === 'en' ? 'Selected for your goal' : 'Selecionadas para seu objetivo'}
+                                </Text>
                             </View>
                             <View style={styles.packArrowLight}>
                                 <ArrowRightIcon size={20} color="black" />
@@ -793,11 +798,15 @@ export const MainScreen = ({
                 {/* Feed */}
                 <View style={styles.feedHeader}>
                     <Text style={styles.sectionTitle}>
-                        {selectedCategory ? `Receitas de ${RECIPE_CATEGORIES.find(c => c.id === selectedCategory)?.label}` : 'Destaques'}
+                        {selectedCategory
+                            ? (language === 'en'
+                                ? `${RECIPE_CATEGORIES.find(c => c.id === selectedCategory)?.label} Recipes`
+                                : `Receitas de ${RECIPE_CATEGORIES.find(c => c.id === selectedCategory)?.label}`)
+                            : (language === 'en' ? 'Highlights' : 'Destaques')}
                     </Text>
                     {selectedCategory && (
                         <TouchableOpacity onPress={() => setSelectedCategory(null)}>
-                            <Text style={styles.clearFilter}>Limpar</Text>
+                            <Text style={styles.clearFilter}>{language === 'en' ? 'Clear' : 'Limpar'}</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -927,7 +936,9 @@ export const MainScreen = ({
                     </View>
 
                     <View style={styles.manualInputSection}>
-                        <Text style={styles.sectionTitle}>Adicionar Manualmente</Text>
+                        <Text style={styles.sectionTitle}>
+                            {language === 'en' ? 'Add Manually' : 'Adicionar Manualmente'}
+                        </Text>
                         <View style={styles.miniInputRow}>
                             <TextInput
                                 style={styles.miniInput}
@@ -1154,21 +1165,21 @@ export const MainScreen = ({
         return (
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
-                    <Text style={styles.pageTitle}>Biblioteca</Text>
+                    <Text style={styles.pageTitle}>{language === 'en' ? 'Library' : 'Biblioteca'}</Text>
                 </View>
 
                 <View style={styles.statsContainer}>
                     <View style={styles.statBox}>
                         <Text style={styles.statValue}>{savedRecipes.size}</Text>
-                        <Text style={styles.statLabel}>Salvas</Text>
+                        <Text style={styles.statLabel}>{language === 'en' ? 'Saved' : 'Salvas'}</Text>
                     </View>
                     <View style={styles.statBox}>
                         <Text style={styles.statValue}>{generatedRecipes.length}</Text>
-                        <Text style={styles.statLabel}>Criadas</Text>
+                        <Text style={styles.statLabel}>{language === 'en' ? 'Created' : 'Criadas'}</Text>
                     </View>
                 </View>
 
-                <Text style={styles.sectionTitle}>Receitas Salvas</Text>
+                <Text style={styles.sectionTitle}>{language === 'en' ? 'Saved Recipes' : 'Receitas Salvas'}</Text>
                 {savedList.length > 0 ? (
                     <View style={styles.recipesList}>
                         {savedList.map(recipe => (
@@ -1341,12 +1352,16 @@ export const MainScreen = ({
             <View style={styles.bottomNav}>
                 <TouchableOpacity onPress={() => changeTab('HOME')} style={styles.navItem}>
                     <HomeIcon size={24} color={activeTab === 'HOME' ? '#a6f000' : '#9CA3AF'} fill={activeTab === 'HOME' ? '#a6f000' : 'none'} />
-                    <Text style={[styles.navLabel, activeTab === 'HOME' && styles.navLabelActive]}>Início</Text>
+                    <Text style={[styles.navLabel, activeTab === 'HOME' && styles.navLabelActive]}>
+                        {language === 'en' ? 'Home' : 'Início'}
+                    </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => changeTab('LIBRARY')} style={styles.navItem}>
                     <BookHeartIcon size={24} color={activeTab === 'LIBRARY' ? '#a6f000' : '#9CA3AF'} />
-                    <Text style={[styles.navLabel, activeTab === 'LIBRARY' && styles.navLabelActive]}>Biblioteca</Text>
+                    <Text style={[styles.navLabel, activeTab === 'LIBRARY' && styles.navLabelActive]}>
+                        {language === 'en' ? 'Library' : 'Biblioteca'}
+                    </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={handleExplorePress} style={styles.fabContainer} activeOpacity={1}>
@@ -1361,12 +1376,16 @@ export const MainScreen = ({
 
                 <TouchableOpacity onPress={() => changeTab('PLANNING')} style={styles.navItem}>
                     <CalendarIcon size={24} color={activeTab === 'PLANNING' ? '#a6f000' : '#9CA3AF'} />
-                    <Text style={[styles.navLabel, activeTab === 'PLANNING' && styles.navLabelActive]}>Agenda</Text>
+                    <Text style={[styles.navLabel, activeTab === 'PLANNING' && styles.navLabelActive]}>
+                        {language === 'en' ? 'Schedule' : 'Agenda'}
+                    </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => changeTab('PROFILE')} style={styles.navItem}>
                     <UserIcon size={24} color={activeTab === 'PROFILE' ? '#a6f000' : '#9CA3AF'} fill={activeTab === 'PROFILE' ? '#a6f000' : 'none'} />
-                    <Text style={[styles.navLabel, activeTab === 'PROFILE' && styles.navLabelActive]}>Perfil</Text>
+                    <Text style={[styles.navLabel, activeTab === 'PROFILE' && styles.navLabelActive]}>
+                        {language === 'en' ? 'Profile' : 'Perfil'}
+                    </Text>
                 </TouchableOpacity>
             </View>
 
