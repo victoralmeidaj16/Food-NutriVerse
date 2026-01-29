@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Dimensions, KeyboardAvoidingView, Platform, LayoutAnimation, UIManager, Image, Animated, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, RESTRICTION_OPTIONS, SubscriptionPlan, getRestrictionOptions } from '../types';
-import { ArrowRightIcon, CheckIcon, StarIcon, TimerIcon, FlameIcon } from '../components/Icons';
+import { ArrowRightIcon, CheckIcon, StarIcon, TimerIcon, FlameIcon, ArrowLeftIcon } from '../components/Icons';
 import { PaywallScreen } from './PaywallScreen';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -68,6 +68,12 @@ export const OnboardingScreen = ({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setStep(prev => prev + 1);
+    };
+
+    const handleBack = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setStep(prev => Math.max(0, prev - 1));
     };
 
     const handleFinish = () => {
@@ -600,10 +606,16 @@ export const OnboardingScreen = ({
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
                 {step > 0 && (
-                    <View style={styles.progressBarContainer}>
-                        <View style={styles.progressBarTrack}>
-                            <View style={[styles.progressBarFill, { width: `${(step / 8) * 100}%` }]} />
+                    <View style={styles.headerHeader}>
+                        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+                            <ArrowLeftIcon size={24} color="#1F2937" />
+                        </TouchableOpacity>
+                        <View style={styles.progressBarContainer}>
+                            <View style={styles.progressBarTrack}>
+                                <View style={[styles.progressBarFill, { width: `${(step / 8) * 100}%` }]} />
+                            </View>
                         </View>
+                        <View style={{ width: 40 }} />
                     </View>
                 )}
 
@@ -962,9 +974,8 @@ const styles = StyleSheet.create({
         color: '#111827',
     },
     progressBarContainer: {
-        paddingHorizontal: 24,
-        paddingTop: 12,
-        paddingBottom: 12,
+        flex: 1,
+        // padding removed as header handles it
     },
     progressBarTrack: {
         height: 4,
@@ -1006,5 +1017,21 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 24,
         paddingHorizontal: 32,
+    },
+    headerHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+        paddingTop: 12,
+        paddingBottom: 12,
+        gap: 12,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F3F4F6',
     },
 });

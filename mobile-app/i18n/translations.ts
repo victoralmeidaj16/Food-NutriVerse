@@ -153,7 +153,10 @@ export const translations = {
             recentRecipes: "Receitas Recentes",
             seeAll: "Ver tudo",
             noRecipesYet: "Nenhuma receita ainda",
-            generateFirst: "Gere sua primeira receita!"
+            generateFirst: "Gere sua primeira receita!",
+            fitMyRecipe: "Fitzar Receita",
+            fitMyRecipeDesc: "Transforme qualquer prato em versão saudável.",
+            categories: "Categorias"
         },
         explore: {
             title: "Explorar",
@@ -227,6 +230,7 @@ export const translations = {
         },
         recipe: {
             title: "Receita",
+            pack: "Pack de Receitas",
             prepTime: "Tempo de preparo",
             difficulty: "Dificuldade",
             calories: "calorias",
@@ -235,6 +239,7 @@ export const translations = {
             fats: "Gorduras",
             ingredients: "Ingredientes",
             instructions: "Modo de Preparo",
+            steps: "passos",
             healthTips: "Dicas de Saúde",
             substitutions: "Substituições",
             save: "Salvar",
@@ -244,7 +249,8 @@ export const translations = {
             selectDayAndMeal: "Selecione o dia e a refeição",
             easy: "Fácil",
             medium: "Médio",
-            hard: "Difícil"
+            hard: "Difícil",
+            view: "Ver Receita"
         },
         profile: {
             title: "Perfil",
@@ -472,7 +478,10 @@ export const translations = {
             recentRecipes: "Recent Recipes",
             seeAll: "See all",
             noRecipesYet: "No recipes yet",
-            generateFirst: "Generate your first recipe!"
+            generateFirst: "Generate your first recipe!",
+            fitMyRecipe: "Fit My Recipe",
+            fitMyRecipeDesc: "Transform any dish into a healthy version.",
+            categories: "Categories"
         },
         explore: {
             title: "Explore",
@@ -546,6 +555,7 @@ export const translations = {
         },
         recipe: {
             title: "Recipe",
+            pack: "Recipe Pack",
             prepTime: "Prep time",
             difficulty: "Difficulty",
             calories: "calories",
@@ -554,6 +564,7 @@ export const translations = {
             fats: "Fats",
             ingredients: "Ingredients",
             instructions: "Instructions",
+            steps: "steps",
             healthTips: "Health Tips",
             substitutions: "Substitutions",
             save: "Save",
@@ -563,7 +574,8 @@ export const translations = {
             selectDayAndMeal: "Select day and meal",
             easy: "Easy",
             medium: "Medium",
-            hard: "Hard"
+            hard: "Hard",
+            view: "View Recipe"
         },
         profile: {
             title: "Profile",

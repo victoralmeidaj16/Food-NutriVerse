@@ -16,54 +16,25 @@ export const SubscriptionService = {
     },
 
     // Checkers
+    // Checkers
     canGenerateRecipe: (profile: UserProfile): boolean => {
-        if (profile.isPro) return true;
-
-        const today = new Date().toISOString().split('T')[0];
-        const lastDate = profile.usageStats.lastGenerationDate.split('T')[0];
-
-        if (today !== lastDate) return true; // New day, reset implicitly
-        return profile.usageStats.recipesGeneratedToday < SubscriptionService.LIMITS.FREE.RECIPES_PER_DAY;
+        return profile.isPro;
     },
 
     canTransformDesire: (profile: UserProfile): boolean => {
-        if (profile.isPro) return true;
-
-        const today = new Date().toISOString().split('T')[0];
-        const lastDate = profile.usageStats.lastDesireDate.split('T')[0];
-
-        if (today !== lastDate) return true;
-        return profile.usageStats.desiresTransformedToday < SubscriptionService.LIMITS.FREE.DESIRES_PER_DAY;
+        return profile.isPro;
     },
 
     canSaveRecipe: (profile: UserProfile): boolean => {
-        if (profile.isPro) return true;
-        return profile.usageStats.savedRecipesCount < SubscriptionService.LIMITS.FREE.SAVED_RECIPES;
+        return profile.isPro;
     },
 
     canScanPantry: (profile: UserProfile): boolean => {
-        if (profile.isPro) return true;
-
-        // Simple week check: if last scan was > 7 days ago, reset
-        const now = new Date();
-        const lastScan = new Date(profile.usageStats.lastScanDate);
-        const diffTime = Math.abs(now.getTime() - lastScan.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays > 7) return true;
-        return profile.usageStats.pantryScansThisWeek < SubscriptionService.LIMITS.FREE.PANTRY_SCANS_PER_WEEK;
+        return profile.isPro;
     },
 
     canGenerateWeeklyPlan: (profile: UserProfile): boolean => {
-        if (profile.isPro) return true;
-
-        const now = new Date();
-        const lastGen = new Date(profile.usageStats.lastPlanGenerationDate || '2000-01-01');
-        const diffTime = Math.abs(now.getTime() - lastGen.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays > 7) return true;
-        return (profile.usageStats.weeklyPlansGeneratedThisWeek || 0) < SubscriptionService.LIMITS.FREE.WEEKLY_PLANS_PER_WEEK;
+        return profile.isPro;
     },
 
     // Actions (Return updated profile)
@@ -201,7 +172,7 @@ export const SubscriptionService = {
             } else {
                 // Purchase failed or was cancelled
                 console.error('Purchase failed:', result.error);
-                throw new Error(result.error || 'Falha na compra');
+                throw new Error(result.error || 'Purchase failed');
             }
         } catch (error: any) {
             console.error('upgradeToPro error:', error);

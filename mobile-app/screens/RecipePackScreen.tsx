@@ -15,7 +15,7 @@ export const RecipePackScreen = ({
     onRecipeClick: (recipe: Recipe) => void;
 }) => {
     const pack = RECIPE_PACKS[goal] || RECIPE_PACKS[UserGoal.EAT_HEALTHY];
-    const { language } = useLanguage();
+    const { language, t } = useLanguage();
 
     return (
         <SafeAreaView style={styles.container}>
@@ -24,7 +24,7 @@ export const RecipePackScreen = ({
                     <ArrowLeftIcon size={24} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>
-                    {language === 'en' ? 'Recipe Pack' : 'Pack de Receitas'}
+                    {t('recipe.pack')}
                 </Text>
                 <View style={{ width: 40 }} />
             </View>
@@ -66,7 +66,7 @@ export const RecipePackScreen = ({
                                         <View style={styles.metaItem}>
                                             <ChefHatIcon size={14} color="#6B7280" />
                                             <Text style={styles.metaText}>
-                                                {recipe.instructions.length} {language === 'en' ? 'steps' : 'passos'}
+                                                {recipe.instructions.length} {t('recipe.steps')}
                                             </Text>
                                         </View>
                                     </View>
@@ -83,7 +83,7 @@ export const RecipePackScreen = ({
                                     </Text>
                                     <View style={styles.arrowRow}>
                                         <Text style={styles.viewRecipeText}>
-                                            {language === 'en' ? 'View Recipe' : 'Ver Receita'}
+                                            {t('recipe.view')}
                                         </Text>
                                         <Text style={{ fontSize: 18, color: '#a6f000' }}>→</Text>
                                     </View>

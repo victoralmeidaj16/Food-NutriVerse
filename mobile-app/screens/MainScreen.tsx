@@ -37,6 +37,7 @@ import { deleteUserData } from '../services/userService';
 import { auth } from '../services/firebaseConfig';
 import { useLanguage } from '../context/LanguageContext';
 import { SourcesScreen } from '../components/SourcesScreen';
+import { getRecipeCategories } from '../types'; // Import getRecipeCategories
 
 export const MainScreen = ({
     user,
@@ -225,9 +226,9 @@ export const MainScreen = ({
             setPantryImages(prev => [...prev, result.assets[0].uri]);
             setShowPantryPreview(true);
 
-            // Update Usage Stats
-            const updatedProfile = SubscriptionService.incrementPantryScan(userProfile);
-            onUpdateProfile(updatedProfile);
+            // Increment usage removed
+            // const updatedProfile = SubscriptionService.incrementPantryScan(userProfile);
+            // onUpdateProfile(updatedProfile);
         }
     };
     const handleTakePhoto = async () => {
@@ -254,10 +255,6 @@ export const MainScreen = ({
         if (!result.canceled && result.assets[0].uri) {
             setPantryImages(prev => [...prev, result.assets[0].uri]);
             setShowPantryPreview(true);
-
-            // Update Usage Stats (same as pickImage)
-            const updatedProfile = SubscriptionService.incrementPantryScan(userProfile);
-            onUpdateProfile(updatedProfile);
         }
     };
 
@@ -412,9 +409,9 @@ export const MainScreen = ({
         // Proceed with saving
         onToggleSave(recipe);
 
-        // Update Usage Stats
-        const updatedProfile = SubscriptionService.incrementSavedRecipes(userProfile);
-        onUpdateProfile(updatedProfile);
+        // Increment usage removed
+        // const updatedProfile = SubscriptionService.incrementSavedRecipes(userProfile);
+        // onUpdateProfile(updatedProfile);
 
         Alert.alert(t('common.success'), t('messages.recipeSaved'));
     };
@@ -533,9 +530,9 @@ export const MainScreen = ({
                 setWeeklyPlan(plan);
                 storageService.saveWeeklyPlan(plan); // Save
 
-                // Update Usage Stats
-                const updatedProfile = SubscriptionService.incrementWeeklyPlanCount(userProfile);
-                onUpdateProfile(updatedProfile);
+                // Increment usage removed
+                // const updatedProfile = SubscriptionService.incrementWeeklyPlanCount(userProfile);
+                // onUpdateProfile(updatedProfile);
                 setActivePlanningDay(0);
             } else {
                 Alert.alert(t('common.error'), t('errors.planGenerationFailed'));
@@ -723,8 +720,8 @@ export const MainScreen = ({
                                 <SparklesIcon size={24} color="#a6f000" />
                             </View>
                             <View style={styles.ctaTextContainer}>
-                                <Text style={styles.ctaTitle}>Fitzar Receita</Text>
-                                <Text style={styles.ctaDesc}>Transforme qualquer prato em versão saudável.</Text>
+                                <Text style={styles.ctaTitle}>{t('home.fitMyRecipe')}</Text>
+                                <Text style={styles.ctaDesc}>{t('home.fitMyRecipeDesc')}</Text>
                             </View>
                         </View>
                         <View style={styles.ctaArrow}>
@@ -773,14 +770,14 @@ export const MainScreen = ({
 
                 {/* Categories */}
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Categorias</Text>
+                    <Text style={styles.sectionTitle}>{t('home.categories')}</Text>
                 </View>
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.categoriesList}
                 >
-                    {RECIPE_CATEGORIES.map(cat => {
+                    {getRecipeCategories(language).map(cat => {
                         const isSelected = selectedCategory === cat.id;
                         return (
                             <TouchableOpacity
@@ -800,8 +797,8 @@ export const MainScreen = ({
                     <Text style={styles.sectionTitle}>
                         {selectedCategory
                             ? (language === 'en'
-                                ? `${RECIPE_CATEGORIES.find(c => c.id === selectedCategory)?.label} Recipes`
-                                : `Receitas de ${RECIPE_CATEGORIES.find(c => c.id === selectedCategory)?.label}`)
+                                ? `${getRecipeCategories(language).find(c => c.id === selectedCategory)?.label} Recipes`
+                                : `Receitas de ${getRecipeCategories(language).find(c => c.id === selectedCategory)?.label}`)
                             : (language === 'en' ? 'Highlights' : 'Destaques')}
                     </Text>
                     {selectedCategory && (
@@ -1722,7 +1719,8 @@ const styles = StyleSheet.create({
     magicCard: {
         backgroundColor: '#111827',
         borderRadius: 32,
-        padding: 28,
+        padding: 32, // Increased padding
+        paddingVertical: 48, // Increased vertical padding for taller look
         marginHorizontal: 16,
         marginBottom: 24,
         shadowColor: '#000',
@@ -1748,16 +1746,16 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     magicTitle: {
-        fontSize: 22,
+        fontSize: 26, // Increased font size
         fontWeight: '800',
         color: '#FFFFFF',
         textAlign: 'center',
     },
     magicDesc: {
-        fontSize: 14,
+        fontSize: 16, // Increased font size
         color: '#9CA3AF',
-        marginBottom: 20,
-        lineHeight: 20,
+        marginBottom: 32, // Increased margin
+        lineHeight: 24, // Increased line height
         textAlign: 'center',
     },
     inputWrapper: {

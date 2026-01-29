@@ -29,6 +29,7 @@ export default function App() {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [pendingProfile, setPendingProfile] = useState<UserProfile | null>(null);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
+  const [signupMessage, setSignupMessage] = useState<string>('');
 
   const loadUserProfile = async (uid: string) => {
     try {
@@ -43,14 +44,16 @@ export default function App() {
     }
   };
 
-  const loadUserSpecificData = async (uid: string) => {
+  const loadUserSpecificData = async (uid: string): Promise<UserProfile | null> => {
     try {
+      let finalProfile: UserProfile | null = null;
       // Load profile from Firestore first, then local storage
       const profile = await getUserProfile(uid);
       if (profile) {
         setUserProfile(profile);
         setUser({ name: profile.name });
         await storageService.saveProfile(profile);
+        finalProfile = profile;
       } else {
         // If no profile in Firestore, check local storage
         const localProfile = await storageService.loadProfile();
@@ -59,6 +62,7 @@ export default function App() {
           setUser({ name: localProfile.name });
           // Optionally, save this local profile to Firestore if it's missing there
           await saveUserProfile(uid, localProfile);
+          finalProfile = localProfile;
         } else {
           // If no profile anywhere, create a default one
           const defaultProfile: UserProfile = {
@@ -88,6 +92,7 @@ export default function App() {
           await storageService.saveProfile(defaultProfile);
           setUserProfile(defaultProfile);
           setUser({ name: defaultProfile.name });
+          finalProfile = defaultProfile;
         }
       }
 
@@ -96,11 +101,13 @@ export default function App() {
 
       const plan = await storageService.loadWeeklyPlan();
       if (plan) setWeeklyPlan(plan);
-      if (plan) setWeeklyPlan(plan);
       else setWeeklyPlan(null);
+
+      return finalProfile;
 
     } catch (error) {
       console.error("Error loading user specific data:", error);
+      return null;
     }
   };
 
@@ -109,14 +116,53 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setFirebaseUser(currentUser);
       if (currentUser) {
-        await loadUserSpecificData(currentUser.uid);
-        setCurrentScreen('MAIN');
+        // Test Account Logic
+        if (currentUser.email === '123indiozinhos@gmail.com') {
+          console.log("🌟 Test Account Detected: Granting PRO Access");
+          const profile = await getUserProfile(currentUser.uid);
+          const testProfile = {
+            ...(profile || {}),
+            name: profile?.name || 'Tester',
+            email: currentUser.email,
+            isPro: true,
+            plan: SubscriptionPlan.YEARLY,
+            subscriptionExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+          } as UserProfile;
+
+          // Ensure we update it in potential local state too if needed, 
+          // but mainly just set it here for the session
+          setUserProfile(testProfile);
+          setUser({ name: testProfile.name });
+          setCurrentScreen('MAIN');
+          setIsLoading(false);
+          return;
+        }
+
+        const loadedProfile = await loadUserSpecificData(currentUser.uid);
+        if (loadedProfile?.isPro) {
+          setCurrentScreen('MAIN');
+        } else {
+          // Check if we are already in the main flow or just logged in
+          // If just logged in and not pro, what do we do?
+          // The request says "Paywall before login". 
+          // If they login and are NOT pro, they should probably see the paywall again 
+          // OR if they just came from the paywall (which is now before login), 
+          // maybe they shouldn't be here if they didn't pay?
+          // BUT invalidating the "Paywall before Login" logic: 
+          // If I pay, THEN I sign up.
+          // If I login (existing user), I might be Free or Pro.
+          // If Free, I should see Paywall? Yes, standard behavior.
+          setCurrentScreen('PAYWALL');
+        }
+
       } else {
         setUser(null);
         setUserProfile(null);
         setSavedRecipes(new Set());
         setWeeklyPlan(null); // Clear weekly plan on logout
-        // If we just logged out, go to ONBOARDING (or LOGIN? User asked for Onboarding first)
+        // Initial screen is now ONBOARDING
+        // currentScreen will be managed by components mostly, 
+        // but on logout we go to Onboarding
         setCurrentScreen('ONBOARDING');
       }
       setIsLoading(false);
@@ -125,58 +171,15 @@ export default function App() {
     return unsubscribe;
   }, []);
 
-  // Initialize IAP on app start
-  useEffect(() => {
-    const initIAP = async () => {
-      const initialized = await iapService.initialize();
-      if (initialized) {
-        console.log('App: IAP initialized successfully');
+  // ... (keep initIAP) ...
 
-        // Check if user has active subscription
-        const subStatus = await iapService.checkSubscriptionStatus();
-        if (subStatus.isActive && userProfile && firebaseUser) {
-          // Update user profile to reflect active subscription
-          const updatedProfile = {
-            ...userProfile,
-            isPro: true,
-            plan: subStatus.productId?.includes('yearly') ? SubscriptionPlan.YEARLY : SubscriptionPlan.MONTHLY,
-            subscriptionExpiry: new Date(subStatus.expiryDate || 0).toISOString()
-          };
-          await updateUserProfile(firebaseUser.uid, updatedProfile);
-          setUserProfile(updatedProfile);
-        }
-      }
-    };
-
-    initIAP();
-
-    // Cleanup on unmount
-    return () => {
-      iapService.disconnect();
-    };
-  }, []);
-
-  // Wake up the backend server on app start to avoid cold start delays
-  useEffect(() => {
-    const wakeUpServer = async () => {
-      try {
-        console.log('🔔 Waking up backend server...');
-        await fetch('https://food-nutriverse.onrender.com/health', {
-          method: 'GET',
-        });
-        console.log('✅ Backend server is awake');
-      } catch (error) {
-        console.log('⚠️ Backend wake-up failed, will retry on demand');
-      }
-    };
-
-    wakeUpServer();
-  }, []);
+  // ... (keep wakeUpServer) ...
 
 
   const handleOnboardingComplete = (profile: UserProfile) => {
     setPendingProfile(profile);
-    setCurrentScreen('SIGNUP');
+    // User finished onboarding. Show Paywall BEFORE Sign Up.
+    setCurrentScreen('PAYWALL');
   };
 
   const handleRecipeClick = (recipe: Recipe) => {
@@ -234,57 +237,40 @@ export default function App() {
     await storageService.saveWeeklyPlan(newPlan);
   };
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#a6f000" />
-      </View>
-    );
-  }
-
-  // If selectedRecipe is set, show detail screen overlay
-  if (selectedRecipe) {
-    return (
-      <RecipeDetailScreen
-        recipe={selectedRecipe}
-        onClose={() => setSelectedRecipe(null)}
-        onSave={handleSaveRecipe}
-        isSaved={savedRecipes.has(selectedRecipe.id)}
-        userDislikes={userProfile?.dislikes || []}
-        weeklyPlan={weeklyPlan}
-        onAddToPlan={handleAddToPlan}
-      />
-    );
-  }
-
   const renderScreen = () => {
     switch (currentScreen) {
       case 'ONBOARDING':
         return <OnboardingScreen onComplete={handleOnboardingComplete} onLogin={() => setCurrentScreen('LOGIN')} />;
       case 'LOGIN':
-        return <LoginScreen onNavigateToSignUp={() => setCurrentScreen('ONBOARDING')} />;
+        return <LoginScreen onNavigateToSignUp={() => setCurrentScreen('ONBOARDING')} />; // Or back to Paywall? Standard flow usually Login -> Main or Paywall
       case 'SIGNUP':
-        return <SignUpScreen onNavigateToLogin={() => setCurrentScreen('LOGIN')} initialProfile={pendingProfile} />;
+        return <SignUpScreen onNavigateToLogin={() => setCurrentScreen('LOGIN')} initialProfile={pendingProfile} welcomeMessage={signupMessage} />;
       case 'PAYWALL':
         return (
           <PaywallScreen
             onPurchase={() => {
-              // Refresh profile to get PRO status
-              if (firebaseUser) {
-                loadUserProfile(firebaseUser.uid);
-              }
-              setCurrentScreen('MAIN');
+              // User bought the plan. Now let them create an account.
+              setSignupMessage('Plano ativado! Finalize seu cadastro:');
+              setCurrentScreen('SIGNUP');
             }}
             onRestore={() => {
-              if (firebaseUser) {
-                loadUserProfile(firebaseUser.uid);
-              }
-              setCurrentScreen('MAIN');
+              // If restore is successful, we probably want them to login too? 
+              // Or if they restored, they might not have an account yet if it's device based?
+              // Usually restore implies an existing account.
+              // Let's send them to Login to link/restore account data.
+              setCurrentScreen('LOGIN');
             }}
-            onClose={() => setCurrentScreen('MAIN')}
+            onClose={() => {
+              // Explicitly removed close button, but if added back:
+              // For "Trial" maybe go to Signup?
+              // For now, no-op or maybe Login?
+              console.log('Paywall closed');
+            }}
+            onLogin={() => {
+              setCurrentScreen('LOGIN');
+            }}
           />
         );
-      case 'RECIPE_PACK':
         return (
           <RecipePackScreen
             goal={userProfile?.goal || UserGoal.LOSE_WEIGHT}
@@ -317,7 +303,19 @@ export default function App() {
     <LanguageProvider>
       <View style={styles.container}>
         <StatusBar barStyle="dark-content" />
-        {renderScreen()}
+        {selectedRecipe ? (
+          <RecipeDetailScreen
+            recipe={selectedRecipe}
+            onClose={() => setSelectedRecipe(null)}
+            onSave={handleSaveRecipe}
+            isSaved={savedRecipes.has(selectedRecipe.id)}
+            userDislikes={userProfile?.dislikes || []}
+            weeklyPlan={weeklyPlan}
+            onAddToPlan={handleAddToPlan}
+          />
+        ) : (
+          renderScreen()
+        )}
       </View>
     </LanguageProvider>
   );

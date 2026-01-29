@@ -4,6 +4,7 @@
 
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import type * as IAPTypes from 'expo-in-app-purchases';
 
 // Conditional import - only when not in Expo Go
 let InAppPurchases: any = null;
@@ -118,14 +119,14 @@ class IAPService {
     /**
      * Get product details
      */
-    getProduct(productId: string): InAppPurchases.IAPItemDetails | undefined {
+    getProduct(productId: string): IAPTypes.IAPItemDetails | undefined {
         return this.products.find(p => p.productId === productId);
     }
 
     /**
      * Get all available products
      */
-    getAllProducts(): InAppPurchases.IAPItemDetails[] {
+    getAllProducts(): IAPTypes.IAPItemDetails[] {
         return this.products;
     }
 
@@ -220,8 +221,8 @@ class IAPService {
 
             // Find the most recent valid subscription
             const validPurchases = results
-                .filter(p => p.acknowledged)
-                .sort((a, b) => b.purchaseTime - a.purchaseTime);
+                .filter((p: any) => p.acknowledged)
+                .sort((a: any, b: any) => b.purchaseTime - a.purchaseTime);
 
             if (validPurchases.length > 0) {
                 const latestPurchase = validPurchases[0];
@@ -250,7 +251,7 @@ class IAPService {
      * Set up listener for purchase events
      */
     private setupPurchaseListener(): void {
-        InAppPurchases.setPurchaseListener(({ responseCode, results, errorCode }) => {
+        InAppPurchases.setPurchaseListener(({ responseCode, results, errorCode }: { responseCode: number, results: IAPTypes.InAppPurchase[], errorCode: any }) => {
             console.log('IAP: Purchase update', { responseCode, errorCode });
 
             if (responseCode === InAppPurchases.IAPResponseCode.OK && results) {
@@ -271,7 +272,7 @@ class IAPService {
     /**
      * Finish a transaction (acknowledge the purchase)
      */
-    private async finishTransaction(purchase: InAppPurchases.InAppPurchase): Promise<void> {
+    private async finishTransaction(purchase: IAPTypes.InAppPurchase): Promise<void> {
         try {
             await InAppPurchases.finishTransactionAsync(purchase, true);
             console.log('IAP: Transaction finished', purchase.productId);
@@ -289,28 +290,69 @@ class IAPService {
         productId?: string;
         expiryDate?: number;
     }> {
+        if (this.useMockMode) {
+            // In mock mode, we currently don't persist state, so we always return inactive 
+            // unless we want to simulate a pro user for testing.
+            // For now, let's keep it safe and return inactive, 
+            // but you can uncomment the lines below to test "Pro" state in dev.
+            /*
+            return {
+                isActive: true,
+                productId: PRODUCT_IDS.YEARLY,
+                expiryDate: Date.now() + 1000000000
+            };
+            */
+            return { isActive: false };
+        }
+
         try {
+            // Get transaction history
             const { results } = await InAppPurchases.getPurchaseHistoryAsync();
 
             if (!results || results.length === 0) {
                 return { isActive: false };
             }
 
-            // For subscriptions, check if any are still valid
-            const activeSub = results.find(purchase => {
-                // In a real app, you'd validate the receipt with your backend
-                // For now, we just check if it's acknowledged
-                return purchase.acknowledged;
-            });
+            // Sort purchases by time (newest first) to check the most recent renewal/purchase
+            const sortedPurchases = results.sort((a: any, b: any) => b.purchaseTime - a.purchaseTime);
 
-            if (activeSub) {
-                return {
-                    isActive: true,
-                    productId: activeSub.productId,
-                    expiryDate: activeSub.purchaseTime + (365 * 24 * 60 * 60 * 1000) // Mock: 1 year from purchase
-                };
+            const now = Date.now();
+
+            for (const purchase of sortedPurchases) {
+                // Must be acknowledged
+                if (!purchase.acknowledged) continue;
+
+                // Determine duration based on product ID
+                let durationMs = 0;
+                if (purchase.productId === PRODUCT_IDS.MONTHLY) {
+                    // approximately 31 days to be safe for monthly renewals
+                    durationMs = 31 * 24 * 60 * 60 * 1000;
+                } else if (purchase.productId === PRODUCT_IDS.YEARLY) {
+                    // 366 days for leap year safety
+                    durationMs = 366 * 24 * 60 * 60 * 1000;
+                } else {
+                    // Unknown product, skip
+                    continue;
+                }
+
+                // Check expiration
+                // Note: On iOS, for a robust check, you should ideally validate 'transactionReceipt' 
+                // with the App Store Server API. This local check assumes 'purchaseTime' 
+                // is updated for renewals, which typically happens when 'getPurchaseHistoryAsync' is called.
+                const purchaseTime = purchase.purchaseTime;
+                const expirationTime = purchaseTime + durationMs;
+
+                if (expirationTime > now) {
+                    // Found a valid, non-expired subscription
+                    return {
+                        isActive: true,
+                        productId: purchase.productId,
+                        expiryDate: expirationTime
+                    };
+                }
             }
 
+            // No active subscription found
             return { isActive: false };
 
         } catch (error) {

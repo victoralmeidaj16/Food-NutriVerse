@@ -7,7 +7,7 @@ import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan } 
 import { MailIcon, LockIcon, EyeIcon, EyeOffIcon, ArrowRightIcon, UserIcon } from '../components/Icons';
 import { useLanguage } from '../context/LanguageContext';
 
-export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigateToLogin: () => void, initialProfile?: UserProfile | null }) => {
+export const SignUpScreen = ({ onNavigateToLogin, initialProfile, welcomeMessage }: { onNavigateToLogin: () => void, initialProfile?: UserProfile | null, welcomeMessage?: string }) => {
     const { t } = useLanguage();
     const [name, setName] = useState(initialProfile?.name === 'Atleta' ? '' : (initialProfile?.name || ''));
     const [email, setEmail] = useState('');
@@ -80,8 +80,8 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile }: { onNavigate
             <View style={styles.authContent}>
                 <View style={styles.logoContainer}>
                     <Text style={styles.authTitle}>{t('auth.createAccountTitle')}</Text>
-                    <Text style={styles.authSubtitle}>
-                        {initialProfile ? t('auth.createAccountSubtitle') : t('auth.createAccountSubtitle')}
+                    <Text style={[styles.authSubtitle, welcomeMessage ? { color: '#65A30D', fontWeight: '700', marginTop: 8 } : {}]}>
+                        {welcomeMessage || t('auth.createAccountSubtitle')}
                     </Text>
                 </View>
 

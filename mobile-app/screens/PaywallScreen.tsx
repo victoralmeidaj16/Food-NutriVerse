@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Animated, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Animated, Alert, ActivityIndicator, Linking } from 'react-native';
 import { CheckIcon, SparklesIcon, LockIcon } from '../components/Icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { iapService, PRODUCT_IDS } from '../services/iapService';
@@ -7,10 +7,10 @@ import { useLanguage } from '../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
-export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: () => void, onRestore: () => void, onClose: () => void }) => {
+export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onPurchase: () => void, onRestore: () => void, onClose: () => void, onLogin?: () => void }) => {
     const { t, language } = useLanguage();
     const [selectedPlan, setSelectedPlan] = useState<'YEARLY' | 'MONTHLY'>('YEARLY');
-    const closeButtonOpacity = useRef(new Animated.Value(0)).current;
+    // const closeButtonOpacity = useRef(new Animated.Value(0)).current; // Removed
     const [loading, setLoading] = useState(false);
     const [productsLoaded, setProductsLoaded] = useState(false);
 
@@ -33,52 +33,63 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
         "Acesso imediato ao seu plano"
     ];
 
-    useEffect(() => {
-        // Fade in close button after 4 seconds
-        const timer = setTimeout(() => {
-            Animated.timing(closeButtonOpacity, {
-                toValue: 1,
-                duration: 500,
-                useNativeDriver: true,
-            }).start();
-        }, 4000);
+    // Close button opacity removed
 
-        // Check if products are loaded
-        const checkProducts = () => {
+
+    useEffect(() => {
+        let attempts = 0;
+
+        // Function to check and load products
+        const loadProducts = async () => {
+            // First try to get existing products
             const products = iapService.getAllProducts();
             if (products.length > 0) {
                 setProductsLoaded(true);
+                setLoading(false);
+                return;
+            }
+
+            // If no products, try to initialize again (maybe App.tsx didn't finish or failed)
+            if (attempts < 5) { // Try a few times
+                console.log('Paywall: Products not loaded, attempting init...', attempts);
+                attempts++;
+                await iapService.initialize();
+
+                // Check again after init
+                const freshProducts = iapService.getAllProducts();
+                if (freshProducts.length > 0) {
+                    setProductsLoaded(true);
+                    setLoading(false);
+                }
+            } else {
+                // Failsafe: If we timed out (5 seconds), and we are in dev/simulator, forcing productsLoaded might be risky 
+                // but better than a stuck screen. 
+                // However, let's just stop loading so the user sees *something* (buttons will be disabled but maybe we can enable them?)
+                // Actually, if we are in Mock mode, initialize SHOULD have worked.
+                // Let's force a re-render or check via interval.
             }
         };
 
-        checkProducts();
-        const interval = setInterval(checkProducts, 1000);
+        // Initial check
+        loadProducts();
+
+        // Polling interval
+        const interval = setInterval(loadProducts, 1000);
 
         return () => {
-            clearTimeout(timer);
             clearInterval(interval);
         };
     }, []);
 
-    const handlePurchase = async () => {
+    const handlePurchase = async (productId: string) => {
         setLoading(true);
 
         try {
-            const productId = selectedPlan === 'YEARLY' ? PRODUCT_IDS.YEARLY : PRODUCT_IDS.MONTHLY;
-
             const result = await iapService.purchaseProduct(productId);
 
             if (result.success) {
-                Alert.alert(
-                    t('paywall.purchaseSuccess'),
-                    t('paywall.welcomePro'),
-                    [
-                        {
-                            text: t('common.ok'),
-                            onPress: () => onPurchase()
-                        }
-                    ]
-                );
+                // Immediate redirect
+                onPurchase();
             } else if (result.error && !result.error.includes('cancelada') && !result.error.includes('cancelled')) {
                 Alert.alert(t('common.error'), result.error);
             }
@@ -118,6 +129,10 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
         }
     };
 
+    const handleOpenLink = (url: string) => {
+        Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
+    };
+
     // Get formatted prices from IAP
     const yearlyPrice = productsLoaded ? iapService.formatPrice(PRODUCT_IDS.YEARLY) : (language === 'en' ? '$29.99' : 'R$ 79,90');
     const monthlyPrice = productsLoaded ? iapService.formatPrice(PRODUCT_IDS.MONTHLY) : (language === 'en' ? '$4.99' : 'R$ 19,90');
@@ -143,11 +158,7 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
 
     return (
         <SafeAreaView style={styles.container}>
-            <Animated.View style={[styles.closeButtonContainer, { opacity: closeButtonOpacity }]}>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                    <Text style={styles.closeButtonText}>✕</Text>
-                </TouchableOpacity>
-            </Animated.View>
+            {/* Close button removed */}
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.header}>
                     <View style={styles.iconContainer}>
@@ -169,14 +180,13 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
 
                 <View style={styles.plansContainer}>
                     <TouchableOpacity
-                        onPress={() => setSelectedPlan('YEARLY')}
-                        style={[styles.planCard, selectedPlan === 'YEARLY' && styles.planCardSelected]}
+                        onPress={() => handlePurchase(PRODUCT_IDS.YEARLY)}
+                        style={[styles.planCard, styles.planCardActive]} // Always look active/interactive
+                        disabled={loading}
                     >
-                        {selectedPlan === 'YEARLY' && (
-                            <View style={styles.bestValueBadge}>
-                                <Text style={styles.bestValueText}>{bestChoiceText}</Text>
-                            </View>
-                        )}
+                        <View style={styles.bestValueBadge}>
+                            <Text style={styles.bestValueText}>{bestChoiceText}</Text>
+                        </View>
                         <View style={styles.planHeader}>
                             <Text style={styles.planTitle}>{yearlyLabel}</Text>
                             <Text style={styles.planSave}>{saveText}</Text>
@@ -186,8 +196,9 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        onPress={() => setSelectedPlan('MONTHLY')}
-                        style={[styles.planCard, selectedPlan === 'MONTHLY' && styles.planCardSelected]}
+                        onPress={() => handlePurchase(PRODUCT_IDS.MONTHLY)}
+                        style={[styles.planCard, styles.planCardActive]} // Always look active/interactive
+                        disabled={loading}
                     >
                         <View style={styles.planHeader}>
                             <Text style={styles.planTitle}>{monthlyLabel}</Text>
@@ -196,27 +207,33 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose }: { onPurchase: 
                     </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity
-                    onPress={handlePurchase}
-                    style={[styles.ctaButton, loading && styles.ctaButtonDisabled]}
-                    disabled={loading || !productsLoaded}
-                >
-                    {loading ? (
-                        <ActivityIndicator color="black" />
-                    ) : (
-                        <Text style={styles.ctaText}>{ctaText}</Text>
-                    )}
-                </TouchableOpacity>
+                {/* CTA Button Removed as requested */}
 
                 <View style={styles.footer}>
                     <TouchableOpacity onPress={handleRestore} disabled={loading}>
                         <Text style={styles.footerLink}>{restoreText}</Text>
                     </TouchableOpacity>
+                    {/* Continue limited option removed */}
+                </View>
+
+                <View style={styles.legalFooter}>
+                    <TouchableOpacity onPress={() => handleOpenLink('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}>
+                        <Text style={styles.footerLink}>{t('profile.terms')}</Text>
+                    </TouchableOpacity>
                     <Text style={styles.footerDivider}>•</Text>
-                    <TouchableOpacity onPress={onClose}>
-                        <Text style={styles.footerLink}>{continueText}</Text>
+                    <TouchableOpacity onPress={() => handleOpenLink('https://victoralmeidaj16.github.io/Food-NutriVerse/privacy.html')}>
+                        <Text style={styles.footerLink}>{t('profile.privacy')}</Text>
                     </TouchableOpacity>
                 </View>
+
+                {onLogin && (
+                    <View style={styles.loginContainer}>
+                        <Text style={styles.loginText}>{language === 'en' ? "Already have an account?" : "Já tem uma conta?"}</Text>
+                        <TouchableOpacity onPress={onLogin}>
+                            <Text style={styles.loginLink}>{language === 'en' ? "Log in" : "Entrar"}</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 {!productsLoaded && (
                     <View style={{ alignItems: 'center', marginTop: 12 }}>
@@ -300,11 +317,11 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: 'transparent',
     },
-    planCardSelected: {
+    planCardActive: {
         borderColor: '#a6f000',
-        backgroundColor: '#F9FAFB', // Slightly lighter when selected
+        backgroundColor: '#FCFCFC',
     },
-    bestValueBadge: {
+    bestValueBadge: { // Modified to support absolute better
         position: 'absolute',
         top: -12,
         right: 16,
@@ -343,6 +360,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#6B7280', // Gray text
         fontWeight: '500',
+        marginTop: 8,
     },
     planBilled: {
         fontSize: 12,
@@ -374,6 +392,13 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
     },
     footer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 12,
+    },
+    legalFooter: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
@@ -412,5 +437,22 @@ const styles = StyleSheet.create({
         fontSize: 20,
         color: '#4B5563',
         fontWeight: '600',
+    },
+    loginContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 24,
+        marginTop: 8,
+    },
+    loginText: {
+        fontSize: 14,
+        color: '#6B7280',
+    },
+    loginLink: {
+        fontSize: 14,
+        color: '#a6f000', // Brand color
+        fontWeight: '700',
     },
 });

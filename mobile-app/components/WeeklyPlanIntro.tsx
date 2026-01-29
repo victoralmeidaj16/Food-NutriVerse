@@ -8,97 +8,105 @@ export const WeeklyPlanIntro = ({ onStart }: { onStart: () => void }) => {
     const { language } = useLanguage();
 
     return (
-        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-            <View style={styles.header}>
-                <View style={styles.iconContainer}>
-                    <CalendarIcon size={48} color="#a6f000" />
+        <View style={styles.rootContainer}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <View style={styles.header}>
+                    <View style={styles.iconContainer}>
+                        <CalendarIcon size={48} color="#a6f000" />
+                    </View>
+                    <Text style={styles.title}>
+                        {language === 'en' ? 'Your Week, Organized.' : 'Sua Semana, Organizada.'}
+                    </Text>
+                    <Text style={styles.subtitle}>
+                        {language === 'en'
+                            ? 'Let AI plan your meals based on your goals and preferences.'
+                            : 'Deixe a IA planejar suas refeições com base nos seus objetivos e preferências.'}
+                    </Text>
                 </View>
-                <Text style={styles.title}>
-                    {language === 'en' ? 'Your Week, Organized.' : 'Sua Semana, Organizada.'}
-                </Text>
-                <Text style={styles.subtitle}>
+
+                <View style={styles.benefitsContainer}>
+                    <View style={styles.benefitCard}>
+                        <View style={styles.benefitIcon}>
+                            <SparklesIcon size={24} color="#a6f000" />
+                        </View>
+                        <View style={styles.benefitContent}>
+                            <Text style={styles.benefitTitle}>
+                                {language === 'en' ? 'Personalized for you' : 'Personalizado para você'}
+                            </Text>
+                            <Text style={styles.benefitDesc}>
+                                {language === 'en'
+                                    ? 'Menus adapted to your goal (weight loss, muscle gain, etc).'
+                                    : 'Cardápios adaptados ao seu objetivo (perda de peso, ganho de massa, etc).'}
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.benefitCard}>
+                        <View style={styles.benefitIcon}>
+                            <CheckIcon size={24} color="#a6f000" />
+                        </View>
+                        <View style={styles.benefitContent}>
+                            <Text style={styles.benefitTitle}>
+                                {language === 'en' ? 'Automatic Shopping List' : 'Lista de Compras Automática'}
+                            </Text>
+                            <Text style={styles.benefitDesc}>
+                                {language === 'en'
+                                    ? 'Generate the complete shopping list with one click.'
+                                    : 'Gere a lista de compras completa com um clique.'}
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.benefitCard}>
+                        <View style={styles.benefitIcon}>
+                            <CheckIcon size={24} color="#a6f000" />
+                        </View>
+                        <View style={styles.benefitContent}>
+                            <Text style={styles.benefitTitle}>
+                                {language === 'en' ? 'Save Time' : 'Economize Tempo'}
+                            </Text>
+                            <Text style={styles.benefitDesc}>
+                                {language === 'en'
+                                    ? "Don't waste time thinking about what to eat."
+                                    : 'Não perca mais tempo pensando no que comer.'}
+                            </Text>
+                        </View>
+                    </View>
+                </View>
+            </ScrollView>
+
+            <View style={styles.footer}>
+                <TouchableOpacity onPress={onStart} style={styles.ctaButton}>
+                    <Text style={styles.ctaText}>
+                        {language === 'en' ? 'Generate Magic Plan' : 'Gerar Plano Mágico'}
+                    </Text>
+                    <ArrowRightIcon size={20} color="black" />
+                </TouchableOpacity>
+
+                <Text style={styles.disclaimer}>
                     {language === 'en'
-                        ? 'Let AI plan your meals based on your goals and preferences.'
-                        : 'Deixe a IA planejar suas refeições com base nos seus objetivos e preferências.'}
+                        ? 'You can regenerate or edit the plan at any time.'
+                        : 'Você pode regenerar ou editar o plano a qualquer momento.'}
                 </Text>
             </View>
-
-            <View style={styles.benefitsContainer}>
-                <View style={styles.benefitCard}>
-                    <View style={styles.benefitIcon}>
-                        <SparklesIcon size={24} color="#a6f000" />
-                    </View>
-                    <View style={styles.benefitContent}>
-                        <Text style={styles.benefitTitle}>
-                            {language === 'en' ? 'Personalized for you' : 'Personalizado para você'}
-                        </Text>
-                        <Text style={styles.benefitDesc}>
-                            {language === 'en'
-                                ? 'Menus adapted to your goal (weight loss, muscle gain, etc).'
-                                : 'Cardápios adaptados ao seu objetivo (perda de peso, ganho de massa, etc).'}
-                        </Text>
-                    </View>
-                </View>
-
-                <View style={styles.benefitCard}>
-                    <View style={styles.benefitIcon}>
-                        <CheckIcon size={24} color="#a6f000" />
-                    </View>
-                    <View style={styles.benefitContent}>
-                        <Text style={styles.benefitTitle}>
-                            {language === 'en' ? 'Automatic Shopping List' : 'Lista de Compras Automática'}
-                        </Text>
-                        <Text style={styles.benefitDesc}>
-                            {language === 'en'
-                                ? 'Generate the complete shopping list with one click.'
-                                : 'Gere a lista de compras completa com um clique.'}
-                        </Text>
-                    </View>
-                </View>
-
-                <View style={styles.benefitCard}>
-                    <View style={styles.benefitIcon}>
-                        <CheckIcon size={24} color="#a6f000" />
-                    </View>
-                    <View style={styles.benefitContent}>
-                        <Text style={styles.benefitTitle}>
-                            {language === 'en' ? 'Save Time' : 'Economize Tempo'}
-                        </Text>
-                        <Text style={styles.benefitDesc}>
-                            {language === 'en'
-                                ? "Don't waste time thinking about what to eat."
-                                : 'Não perca mais tempo pensando no que comer.'}
-                        </Text>
-                    </View>
-                </View>
-            </View>
-
-            <TouchableOpacity onPress={onStart} style={styles.ctaButton}>
-                <Text style={styles.ctaText}>
-                    {language === 'en' ? 'Generate Magic Plan' : 'Gerar Plano Mágico'}
-                </Text>
-                <ArrowRightIcon size={20} color="black" />
-            </TouchableOpacity>
-
-            <Text style={styles.disclaimer}>
-                {language === 'en'
-                    ? 'You can regenerate or edit the plan at any time.'
-                    : 'Você pode regenerar ou editar o plano a qualquer momento.'}
-            </Text>
-        </ScrollView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
+    rootContainer: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+    },
+    scrollContent: {
         flexGrow: 1,
         padding: 24,
-        alignItems: 'center',
-        justifyContent: 'center',
+        paddingBottom: 20,
     },
     header: {
         alignItems: 'center',
         marginBottom: 40,
+        marginTop: 20,
     },
     iconContainer: {
         width: 100,
@@ -128,7 +136,7 @@ const styles = StyleSheet.create({
     benefitsContainer: {
         width: '100%',
         gap: 16,
-        marginBottom: 40,
+        marginBottom: 20,
     },
     benefitCard: {
         flexDirection: 'row',
@@ -161,6 +169,14 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#6B7280',
         lineHeight: 20,
+    },
+    footer: {
+        padding: 24,
+        paddingTop: 16,
+        paddingBottom: 32, // Extra padding for safe area
+        backgroundColor: '#FFFFFF',
+        borderTopWidth: 1,
+        borderTopColor: '#F3F4F6',
     },
     ctaButton: {
         backgroundColor: '#a6f000',
