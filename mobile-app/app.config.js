@@ -4,7 +4,7 @@ module.exports = {
     expo: {
         name: "Food NutriVerse",
         slug: "mobile-app",
-        version: "1.0.1",
+        version: "1.0.2",
         orientation: "portrait",
         icon: "./assets/icon.png",
         userInterfaceStyle: "light",
@@ -17,7 +17,7 @@ module.exports = {
         ios: {
             supportsTablet: true,
             bundleIdentifier: "com.victoralmeidaj16.foodnutriverse",
-            buildNumber: "14",
+            buildNumber: "15",
             infoPlist: {
                 NSCameraUsageDescription: "Precisamos de acesso à câmera para você escanear ingredientes e gerar receitas personalizadas.",
                 NSPhotoLibraryUsageDescription: "Precisamos de acesso à galeria para você escolher fotos de ingredientes para análise.",
@@ -30,7 +30,7 @@ module.exports = {
                 backgroundColor: "#ffffff"
             },
             package: "com.victoralmeidaj16.foodnutriverse",
-            versionCode: 14,
+            versionCode: 15,
             edgeToEdgeEnabled: true,
             predictiveBackGestureEnabled: false
         },
