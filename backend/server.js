@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 require('dotenv').config();
 
 const app = express();
@@ -9,22 +9,21 @@ app.use(express.json({ limit: '50mb' }));
 
 const PORT = process.env.PORT || 3000;
 
-// Initialize Gemini
-// Note: In production (Render), ensure GOOGLE_API_KEY is set in Environment Variables
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+// Initialize Gemini (new SDK)
+const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
 
 // Root route - API Documentation/Status
 app.get('/', (req, res) => {
     res.json({
         status: 'online',
         service: 'Food NutriVerse API',
-        version: '1.0.0',
+        version: '1.1.0',
         endpoints: {
             generate: 'POST /api/generate-recipe',
             health: 'GET /health',
             status: 'GET /api/status'
         },
-        documentation: 'https://github.com/victoralmeidaj16/Food-NutriVerse' // Replace with actual docs URL if available
+        documentation: 'https://github.com/victoralmeidaj16/Food-NutriVerse'
     });
 });
 
@@ -50,25 +49,45 @@ app.post('/api/generate-recipe', async (req, res) => {
             return res.status(500).json({ error: 'API Key not configured on server' });
         }
 
-        if (!contents || !Array.isArray(contents)) {
-            console.error('Invalid contents:', contents);
-            return res.status(400).json({ error: 'contents must be an array' });
+        if (!contents) {
+            console.error('Missing contents');
+            return res.status(400).json({ error: 'contents is required' });
         }
 
-        console.log(`Generating recipe with model: ${modelName || "gemini-2.0-flash-exp"}`);
-        console.log(`Contents length: ${contents.length}`);
+        // Normalize contents: accept string or array
+        let normalizedContents;
+        if (typeof contents === 'string') {
+            normalizedContents = contents;
+        } else if (Array.isArray(contents)) {
+            normalizedContents = contents;
+        } else {
+            normalizedContents = contents;
+        }
 
-        // Use the requested model or default to flash-exp
-        const model = genAI.getGenerativeModel({
-            model: modelName || "gemini-2.0-flash-exp",
-            generationConfig: config
+        // Use gemini-2.0-flash as default (gemini-2.0-flash-exp is deprecated)
+        const resolvedModel = (modelName || 'gemini-2.0-flash')
+            .replace('gemini-2.0-flash-exp', 'gemini-2.0-flash')
+            .replace('gemini-2.5-flash', 'gemini-2.0-flash');
+
+        console.log(`Generating with model: ${resolvedModel}`);
+
+        // Build generation config
+        const generationConfig = {};
+        if (config) {
+            if (config.temperature !== undefined) generationConfig.temperature = config.temperature;
+            if (config.responseMimeType) generationConfig.responseMimeType = config.responseMimeType;
+            if (config.responseSchema) generationConfig.responseSchema = config.responseSchema;
+        }
+
+        const response = await genAI.models.generateContent({
+            model: resolvedModel,
+            contents: normalizedContents,
+            config: Object.keys(generationConfig).length > 0 ? generationConfig : undefined
         });
 
-        const result = await model.generateContent(contents);
-        const response = await result.response;
-        const text = response.text();
-
+        const text = response.text;
         res.json({ text });
+
     } catch (error) {
         console.error('Error generating content:', error);
         res.status(500).json({
@@ -103,7 +122,7 @@ app.post('/api/generate-image', async (req, res) => {
             minimalist and modern presentation
         `;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-preview-06-06:predict?key=${process.env.GOOGLE_API_KEY}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${process.env.GOOGLE_API_KEY}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -155,5 +174,4 @@ app.get('/health', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Access from iOS Simulator: http://192.168.1.107:${PORT}`);
 });

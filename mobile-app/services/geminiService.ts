@@ -204,17 +204,19 @@ export const identifyIngredientsFromImage = async (
         onProgress?.(lang.progress.sendingImage, 0.2);
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
             model: "gemini-2.0-flash",
-            contents: [
-                {
-                    inlineData: {
-                        mimeType: 'image/jpeg',
-                        data: base64Image
+            contents: [{
+                parts: [
+                    {
+                        inlineData: {
+                            mimeType: 'image/jpeg',
+                            data: base64Image
+                        }
+                    },
+                    {
+                        text: promptText
                     }
-                },
-                {
-                    text: promptText
-                }
-            ],
+                ]
+            }],
             config: {
                 responseMimeType: "application/json",
                 responseSchema: ingredientSchema,
@@ -393,7 +395,7 @@ export const generateFitnessRecipe = async (
     try {
         onProgress?.(lang.progress.analyzing, 0.3);
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-2.0-flash-exp",
+            model: "gemini-2.0-flash",
             contents: [{ text: prompt }],
             config: {
                 responseMimeType: "application/json",
@@ -510,7 +512,7 @@ export const generateWeeklyPlan = async (
     try {
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
             model: "gemini-2.0-flash",
-            contents: prompt,
+            contents: [{ text: prompt }],
             config: {
                 responseMimeType: "application/json",
                 responseSchema: planSchema,
@@ -610,7 +612,7 @@ export const generateShoppingList = async (
     try {
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
             model: "gemini-2.0-flash",
-            contents: prompt,
+            contents: [{ text: prompt }],
             config: {
                 responseMimeType: "application/json",
                 responseSchema: listSchema
