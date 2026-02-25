@@ -487,7 +487,7 @@ export const MainScreen = ({
             );
             if (result) {
                 setGeneratedRecipes(prev => {
-                    const newList = [result, ...prev].slice(0, 20); // Keep last 20
+                    const newList = [result, ...prev].slice(0, 100); // Keep last 100 recipes in history
                     storageService.saveHistory(newList);
                     return newList;
                 });

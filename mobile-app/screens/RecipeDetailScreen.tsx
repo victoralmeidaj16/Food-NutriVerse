@@ -55,6 +55,14 @@ export const RecipeDetailScreen = ({
             Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true })
         ]).start();
 
+        if (!isSaved) {
+            onSave(recipe); // Save globally immediately if it isn't
+        } else {
+            onSave(recipe); // Toggle off if they press the heart again and the modal doesn't prevent it, actually wait, the modal pops up so let's KEEP the toggle behavior but ALSO show modal. No, if they press it and it IS saved, maybe just show modal to manage lists, OR unsave it. Let's just unsave it if they click the heart, but wait, the original logic showed the modal for both.
+            // Let's just keep original but we handle toggle correctly:
+            // Actually, let's only toggle if they click the heart. 
+        }
+
         setShowSaveModal(true);
     };
 
@@ -72,8 +80,10 @@ export const RecipeDetailScreen = ({
         setUserLists(updatedLists);
         await storageService.saveUserLists(updatedLists);
 
-        // Also trigger the main onSave to ensure it's in the "All Saved" list if needed
-        onSave(recipe);
+        // Ensure it is in the global library, but don't toggle it off if it's already there!
+        if (!isSaved) {
+            onSave(recipe);
+        }
 
         setNewListName('');
         setIsCreatingList(false);
@@ -92,7 +102,10 @@ export const RecipeDetailScreen = ({
 
         setUserLists(updatedLists);
         await storageService.saveUserLists(updatedLists);
-        onSave(recipe); // Ensure it's marked as saved globally
+
+        if (!isSaved) {
+            onSave(recipe); // Ensure it's marked as saved globally, without toggling off
+        }
         setShowSaveModal(false);
     };
 

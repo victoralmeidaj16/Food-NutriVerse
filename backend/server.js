@@ -122,31 +122,25 @@ app.post('/api/generate-image', async (req, res) => {
             minimalist and modern presentation
         `;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${process.env.GOOGLE_API_KEY}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                instances: [{ prompt: enhancedPrompt }],
-                parameters: {
+        const response = await genAI.models.generateContent({
+            model: 'gemini-3-pro-image-preview',
+            contents: enhancedPrompt,
+            config: {
+                responseModalities: ['TEXT', 'IMAGE'],
+                imageConfig: {
                     aspectRatio: '1:1',
-                    sampleCount: 1
-                }
-            })
+                    imageSize: '1K',
+                },
+            },
         });
 
-        if (!response.ok) {
-            const err = await response.text();
-            console.error('Imagen API error:', err);
-            // Return fallback URL instead of error
-            const seed = Math.floor(Math.random() * 999999);
-            const fallbackUrl = `https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${encodeURIComponent(prompt)}%20clean%20white%20background%20elegant%20plating?seed=${seed}&width=1024&height=1024&nologo=true`;
-            return res.json({ imageUrl: fallbackUrl, fallback: true });
+        let b64 = null;
+        if (response.candidates && response.candidates[0].content.parts) {
+            const imagePart = response.candidates[0].content.parts.find(p => p.inlineData);
+            if (imagePart) {
+                b64 = imagePart.inlineData.data;
+            }
         }
-
-        const json = await response.json();
-        const b64 = json.predictions?.[0]?.bytesBase64Encoded;
 
         if (!b64 || b64.length < 10000) {
             console.error('Invalid base64 image received');
