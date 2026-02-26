@@ -41,7 +41,7 @@ const TIPS_EN = [
 export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, status }) => {
     const { language } = useLanguage();
     const TIPS = language === 'en' ? TIPS_EN : TIPS_PT;
-    const tipTitle = language === 'en' ? 'NutriVerse Tip:' : 'Dica NutriVerse:';
+    const tipTitle = language === 'en' ? 'Fitswap Tip:' : 'Dica Fitswap:';
 
     const [tipIndex, setTipIndex] = useState(0);
     const progressAnim = useRef(new Animated.Value(0)).current;

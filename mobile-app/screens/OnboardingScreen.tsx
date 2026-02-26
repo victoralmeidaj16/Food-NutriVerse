@@ -548,7 +548,7 @@ export const OnboardingScreen = ({
 
         return (
             <Animated.View style={[styles.stepContainer, { opacity: fadeAnim }]}>
-                <Text style={styles.title}>{language === 'en' ? 'Your NutriVerse Plan is ready 🎉' : 'Seu Plano NutriVerse está pronto 🎉'}</Text>
+                <Text style={styles.title}>{language === 'en' ? 'Your Fitswap Plan is ready 🎉' : 'Seu Plano Fitswap está pronto 🎉'}</Text>
                 <Text style={styles.subtitle}>{language === 'en' ? `100% personalized for ${goalText}.` : `100% personalizado para ${goalText}.`}</Text>
 
                 <View style={styles.previewCard}>
@@ -574,7 +574,7 @@ export const OnboardingScreen = ({
     const renderSocialProof = () => (
         <View style={styles.stepContainer}>
             <Text style={styles.title}>{language === 'en' ? 'Join +12,000 people' : 'Junte-se a +12.000 pessoas'}</Text>
-            <Text style={styles.subtitle}>{language === 'en' ? 'See what they\'re saying about NutriVerse.' : 'Veja o que estão falando sobre o NutriVerse.'}</Text>
+            <Text style={styles.subtitle}>{language === 'en' ? 'See what they\'re saying about Fitswap.' : 'Veja o que estão falando sobre o Fitswap.'}</Text>
 
             <View style={styles.testimonialCard}>
                 <Text style={styles.testimonialText}>{language === 'en' ? '"I finally managed to stick to a diet! The recipes are so easy and I use everything in my fridge."' : '"Finalmente consegui seguir uma dieta! As receitas são muito fáceis e uso tudo que tenho na geladeira."'}</Text>

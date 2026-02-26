@@ -10,7 +10,7 @@ export type SupportedLanguage = 'en' | 'pt';
 // Bilingual constants for AI prompts
 const AI_PROMPTS = {
     en: {
-        role: "Act as Chef NutriVerse, expert in sports nutrition and functional gastronomy.",
+        role: "Act as Chef Fitswap, expert in sports nutrition and functional gastronomy.",
         categories: ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Pre-Workout', 'Dessert'] as const,
         difficulties: ['Easy', 'Medium', 'Hard'] as const,
         days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const,
@@ -41,7 +41,7 @@ const AI_PROMPTS = {
         }
     },
     pt: {
-        role: "Atue como o Chef NutriVerse, especialista em nutrição esportiva e gastronomia funcional.",
+        role: "Atue como o Chef Fitswap, especialista em nutrição esportiva e gastronomia funcional.",
         categories: ['Café da Manhã', 'Almoço', 'Jantar', 'Lanches', 'Pré-Treino', 'Sobremesa'] as const,
         difficulties: ['Fácil', 'Médio', 'Difícil'] as const,
         days: ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'] as const,

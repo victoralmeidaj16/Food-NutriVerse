@@ -67,7 +67,7 @@ export const translations = {
         },
         onboarding: {
             heroTitle: "Coma bem todos os dias. Sem esforço.",
-            heroSubtitle: "O NutriVerse cria sua semana alimentar completa — baseada no seu corpo, objetivo e ingredientes que você já tem.",
+            heroSubtitle: "O Fitswap cria sua semana alimentar completa — baseada no seu corpo, objetivo e ingredientes que você já tem.",
             loginLink: "Já tenho conta",
             painPointsTitle: "Qual dessas situações parece com você?",
             painPoints: {
@@ -80,10 +80,10 @@ export const translations = {
             profileTitle: "Seu Perfil Nutricional",
             profileSubtitle: "Para calcularmos suas calorias exatas.",
             routineTitle: "Rotina e Preferências",
-            resultTitle: "Seu Plano NutriVerse está pronto 🎉",
+            resultTitle: "Seu Plano Fitswap está pronto 🎉",
             resultSubtitle: "100% personalizado para",
             socialProofTitle: "Junte-se a +12.000 pessoas",
-            socialProofSubtitle: "Veja o que estão falando sobre o NutriVerse.",
+            socialProofSubtitle: "Veja o que estão falando sobre o Fitswap.",
             generatePlan: "Gerar meu plano",
             viewFullPlan: "Ver plano completo",
             unlockAccess: "Liberar meu acesso",
@@ -297,7 +297,7 @@ export const translations = {
             subscriptionRestored: "Assinatura Restaurada!",
             welcomeBack: "Bem-vindo de volta! Seu acesso PRO foi restaurado.",
             purchaseSuccess: "Compra realizada com sucesso!",
-            welcomePro: "Seja bem-vindo ao NutriVerse PRO!"
+            welcomePro: "Seja bem-vindo ao Fitswap PRO!"
         },
         pantryPreview: {
             title: "Revisar Fotos",
@@ -392,7 +392,7 @@ export const translations = {
         },
         onboarding: {
             heroTitle: "Eat well every day. Effortlessly.",
-            heroSubtitle: "NutriVerse creates your complete meal week — based on your body, goal, and ingredients you already have.",
+            heroSubtitle: "Fitswap creates your complete meal week — based on your body, goal, and ingredients you already have.",
             loginLink: "I already have an account",
             painPointsTitle: "Which of these sounds like you?",
             painPoints: {
@@ -405,10 +405,10 @@ export const translations = {
             profileTitle: "Your Nutritional Profile",
             profileSubtitle: "To calculate your exact calories.",
             routineTitle: "Routine & Preferences",
-            resultTitle: "Your NutriVerse Plan is ready 🎉",
+            resultTitle: "Your Fitswap Plan is ready 🎉",
             resultSubtitle: "100% personalized for",
             socialProofTitle: "Join +12,000 people",
-            socialProofSubtitle: "See what they're saying about NutriVerse.",
+            socialProofSubtitle: "See what they're saying about Fitswap.",
             generatePlan: "Generate my plan",
             viewFullPlan: "View full plan",
             unlockAccess: "Unlock my access",
@@ -622,7 +622,7 @@ export const translations = {
             subscriptionRestored: "Subscription Restored!",
             welcomeBack: "Welcome back! Your PRO access has been restored.",
             purchaseSuccess: "Purchase successful!",
-            welcomePro: "Welcome to NutriVerse PRO!"
+            welcomePro: "Welcome to Fitswap PRO!"
         },
         pantryPreview: {
             title: "Review Photos",
