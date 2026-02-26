@@ -15,14 +15,13 @@ const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
 // Root route - API Documentation/Status
 app.get('/', (req, res) => {
     res.json({
-        status: 'online',
-        service: 'Food NutriVerse API',
-        version: '1.1.0',
-        endpoints: {
-            generate: 'POST /api/generate-recipe',
-            health: 'GET /health',
-            status: 'GET /api/status'
-        },
+        status: 'ok',
+        service: 'Fitswap API',
+        environment: process.env.NODE_ENV || 'development',
+        version: process.env.npm_package_version || '1.0.0',
+        timestamp: new Date().toISOString(),
+        memoryUsage: process.memoryUsage(),
+        uptime: process.uptime(),
         documentation: 'https://github.com/victoralmeidaj16/Food-NutriVerse'
     });
 });

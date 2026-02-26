@@ -1,13 +1,13 @@
-# Food NutriVerse - Visão Geral do Aplicativo
+# Fitswap - Visão Geral do Aplicativo
 
-## 📱 O que é o Food NutriVerse?
+## 📱 O que é o Fitswap?
 
-O **Food NutriVerse** é um aplicativo móvel inovador que utiliza Inteligência Artificial para transformar a jornada de alimentação saudável dos usuários. Diferente de apps de receitas tradicionais, ele atua como um "Nutricionista e Chef de Bolso", criando receitas personalizadas com base no que o usuário tem em casa (despensa) ou transformando desejos "gordos" em versões fitness.
+O **Fitswap** é um aplicativo móvel inovador que utiliza Inteligência Artificial para transformar a jornada de alimentação saudável dos usuários. Diferente de apps de receitas tradicionais, ele atua como um "Nutricionista e Chef de Bolso", criando receitas personalizadas com base no que o usuário tem em casa (despensa) ou transformando desejos "gordos" em versões fitness.
 
 ## 🚀 Funcionalidades Principais
 
 ### 1. IA Chef & "Fitzar" Receita
-*   **Transformação Mágica:** O usuário digita o nome de um prato calórico (ex: "Pizza", "Lasanha") e a IA gera uma versão saudável, ajustada aos objetivos nutricionais do usuário.
+*   **Transformação Mágica:** O usuário digita o nome de um prato calórico (ex: "Pizza", "Lasanha") e a IA gera uma versão saudável, ajustada aos objetivos do usuário (perda de peso, ganho de massa, saúde), respeitando restrições alimentares (vegano, sem glúten, etc.) e alimentos que o usuário não gosta.
 *   **Scanner de Despensa:** Utiliza a câmera para identificar ingredientes reais ou permite entrada manual. A IA então cria uma receita exclusiva utilizando apenas esses itens.
 
 ### 2. Planejamento Semanal Inteligente

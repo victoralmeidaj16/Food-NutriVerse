@@ -1,4 +1,4 @@
-# 📘 Food NutriVerse - Documentação de Produto & Design System
+# 📘 Fitswap - Documentação de Produto & Design System
 
 **Versão:** 1.0.0  
 **Data:** 26 de Novembro de 2025  
@@ -8,7 +8,7 @@
 
 ## 1. Resumo do App
 
-O **Food NutriVerse** é um assistente nutricional inteligente de bolso. Ele utiliza Inteligência Artificial Generativa (Google Gemini) para eliminar a fricção do planejamento alimentar. Ao contrário de apps tradicionais que exigem que o usuário busque receitas, o Food NutriVerse **cria** soluções personalizadas baseadas no contexto imediato do usuário: o que ele tem na geladeira (Scanner de Despensa) ou o que ele está com vontade de comer (Transformação de Desejos).
+O **Fitswap** é um assistente nutricional inteligente de bolso. Ele utiliza Inteligência Artificial Generativa (Google Gemini) para eliminar a fricção do planejamento alimentar. Ao contrário de apps tradicionais que exigem que o usuário busque receitas, o Fitswap **cria** soluções personalizadas baseadas no contexto imediato do usuário: o que ele tem na geladeira (Scanner de Despensa) ou o que ele está com vontade de comer (Transformação de Desejos).
 
 ## 2. Objetivos Principais
 
@@ -172,7 +172,7 @@ Biblioteca: **Lucide React Native**.
 
 ## 9. Considerações Finais
 
-Este documento serve como a **fonte da verdade** para o desenvolvimento do Food NutriVerse. Qualquer nova funcionalidade deve ser validada contra os objetivos principais e seguir as diretrizes de design aqui estabelecidas.
+Este documento serve como a **fonte da verdade** para o desenvolvimento do Fitswap. Qualquer nova funcionalidade deve ser validada contra os objetivos principais e seguir as diretrizes de design aqui estabelecidas.
 
 *   **Para Devs:** Sigam a arquitetura de componentes e serviços. Mantenham a lógica de negócio separada da UI.
 *   **Para Design:** Mantenham a consistência visual. O "Neon Lime" é poderoso, use com moderação para destacar, não para cansar.

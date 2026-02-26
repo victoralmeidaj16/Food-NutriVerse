@@ -68,8 +68,8 @@ export const SourcesScreen: React.FC<SourcesScreenProps> = ({ onBack }) => {
                     </Text>
                     <Text style={styles.introText}>
                         {language === 'en'
-                            ? 'All nutritional and health information provided by Food NutriVerse is based on research and guidelines from globally recognized institutions.'
-                            : 'Todas as informações nutricionais e de saúde fornecidas pelo Food NutriVerse são baseadas em pesquisas e diretrizes de instituições reconhecidas mundialmente.'}
+                            ? 'All nutritional and health information provided by Fitswap is based on research and guidelines from globally recognized institutions.'
+                            : 'Todas as informações nutricionais e de saúde fornecidas pelo Fitswap são baseadas em pesquisas e diretrizes de instituições reconhecidas mundialmente.'}
                     </Text>
                 </View>
 

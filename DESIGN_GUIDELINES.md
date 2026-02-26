@@ -1,8 +1,8 @@
-# Food NutriVerse - Diretrizes de Design e Branding
+# Fitswap - Diretrizes de Design e Branding
 
 ## 🎨 Identidade Visual
 
-O **Food NutriVerse** adota uma estética **moderna, energética e limpa**. A marca combina a vibração do "fitness" com a tecnologia da IA. O design é minimalista, utilizando muito espaço em branco (white space) para dar destaque às imagens dos alimentos e à cor de destaque vibrante.
+O **Fitswap** adota uma estética **moderna, energética e limpa**. A marca combina a vibração do "fitness" com a tecnologia da IA. O design é minimalista, utilizando muito espaço em branco (white space) para dar destaque às imagens dos alimentos e à cor de destaque vibrante.
 
 ### Paleta de Cores
 

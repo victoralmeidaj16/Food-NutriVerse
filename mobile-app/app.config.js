@@ -2,7 +2,7 @@ require('dotenv').config();
 
 module.exports = {
     expo: {
-        name: "Food NutriVerse",
+        name: "Fitswap",
         slug: "mobile-app",
         version: "1.0.2",
         orientation: "portrait",
@@ -45,7 +45,7 @@ module.exports = {
             openaiApiKey: process.env.OPENAI_API_KEY,
             googleApiKey: process.env.GOOGLE_API_KEY
         },
-        description: "Food NutriVerse: Transforme seus ingredientes em receitas fitness deliciosas com IA. Escaneie alimentos, gere planos semanais e listas de compras personalizadas.",
+        description: "Fitswap: Transforme seus ingredientes em receitas fitness deliciosas com IA. Escaneie alimentos, gere planos semanais e listas de compras personalizadas.",
         privacy: "https://victoralmeidaj16.github.io/Food-NutriVerse/privacy-policy.html",
         primaryColor: "#4CAF50"
     }
