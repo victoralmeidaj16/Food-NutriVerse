@@ -55,6 +55,9 @@ export const OnboardingScreen = ({
     const [cookingTime, setCookingTime] = useState<'FAST' | 'ELABORATE'>('FAST');
     const [useMicrowave, setUseMicrowave] = useState(true);
     const [repeatMeals, setRepeatMeals] = useState(true);
+    const [favoriteDish, setFavoriteDish] = useState('');
+    const [favoriteFastFood, setFavoriteFastFood] = useState('');
+    const [favoriteSweet, setFavoriteSweet] = useState('');
 
     // Animation for Result
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -62,7 +65,7 @@ export const OnboardingScreen = ({
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [loadingMessage, setLoadingMessage] = useState('');
 
-    const totalSteps = 9; // 0 to 8 (Paywall is 8)
+    const totalSteps = 10; // 0 to 9 (Paywall is 9)
 
     const handleNext = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -107,6 +110,11 @@ export const OnboardingScreen = ({
                 savedRecipesCount: 0,
                 weeklyPlansGeneratedThisWeek: 0,
                 lastPlanGenerationDate: new Date().toISOString()
+            },
+            tasteProfile: {
+                favoriteDish,
+                favoriteFastFood,
+                favoriteSweet
             }
         };
         onComplete(profile);
@@ -398,13 +406,58 @@ export const OnboardingScreen = ({
             </View>
 
             <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
+                <Text style={styles.primaryButtonText}>{language === 'en' ? 'Continue' : 'Continuar'}</Text>
+            </TouchableOpacity>
+        </ScrollView>
+    );
+
+    const renderTasteProfile = () => (
+        <ScrollView contentContainerStyle={styles.scrollStepContainer} keyboardShouldPersistTaps="handled">
+            <Text style={styles.title}>{language === 'en' ? 'Your Taste Profile' : 'Seu Perfil de Sabor'}</Text>
+            <Text style={styles.subtitle}>{language === 'en' ? 'Help us tailor the recipes to your preferences.' : 'Ajude-nos a adaptar as receitas às suas preferências.'}</Text>
+
+            <View style={styles.inputGroup}>
+                <Text style={styles.label}>{language === 'en' ? 'Favorite Home Cooked Dish' : 'Qual seu prato caseiro favorito?'}</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder={language === 'en' ? 'e.g. Lasagna, Rice and Beans' : 'ex: Lasanha, Arroz e Feijão'}
+                    value={favoriteDish}
+                    onChangeText={setFavoriteDish}
+                />
+            </View>
+
+            <View style={styles.inputGroup}>
+                <Text style={styles.label}>{language === 'en' ? 'Favorite Fast Food' : 'Sua "besteira" favorita (Fast Food)'}</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder={language === 'en' ? 'e.g. Pizza, Burger' : 'ex: Pizza, Hambúrguer'}
+                    value={favoriteFastFood}
+                    onChangeText={setFavoriteFastFood}
+                />
+            </View>
+
+            <View style={styles.inputGroup}>
+                <Text style={styles.label}>{language === 'en' ? 'Favorite Sweet / Dessert' : 'Seu doce favorito'}</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder={language === 'en' ? 'e.g. Chocolate cake, Ice cream' : 'ex: Bolo de chocolate, Sorvete'}
+                    value={favoriteSweet}
+                    onChangeText={setFavoriteSweet}
+                />
+            </View>
+
+            <TouchableOpacity
+                style={[styles.primaryButton, (!favoriteDish || !favoriteFastFood || !favoriteSweet) && styles.buttonDisabled]}
+                onPress={handleNext}
+                disabled={!favoriteDish || !favoriteFastFood || !favoriteSweet}
+            >
                 <Text style={styles.primaryButtonText}>{language === 'en' ? 'Generate my plan' : 'Gerar meu plano'}</Text>
             </TouchableOpacity>
         </ScrollView>
     );
 
     useEffect(() => {
-        if (step === 6) {
+        if (step === 7) {
             // Reset states
             setLoadingProgress(0);
             setShowPlanPreview(false);
@@ -598,13 +651,13 @@ export const OnboardingScreen = ({
         </View>
     );
 
-    if (step === 8) {
+    if (step === 9) {
         return <PaywallScreen onPurchase={handleFinish} onRestore={handleFinish} onClose={handleFinish} />;
     }
 
     return (
         <SafeAreaView style={styles.container}>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
                 {step > 0 && (
                     <View style={styles.headerHeader}>
                         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -612,7 +665,7 @@ export const OnboardingScreen = ({
                         </TouchableOpacity>
                         <View style={styles.progressBarContainer}>
                             <View style={styles.progressBarTrack}>
-                                <View style={[styles.progressBarFill, { width: `${(step / 8) * 100}%` }]} />
+                                <View style={[styles.progressBarFill, { width: `${(step / 9) * 100}%` }]} />
                             </View>
                         </View>
                         <View style={{ width: 40 }} />
@@ -626,8 +679,9 @@ export const OnboardingScreen = ({
                     {step === 3 && renderProfile()}
                     {step === 4 && renderRestrictions()}
                     {step === 5 && renderRoutine()}
-                    {step === 6 && renderResult()}
-                    {step === 7 && renderSocialProof()}
+                    {step === 6 && renderTasteProfile()}
+                    {step === 7 && renderResult()}
+                    {step === 8 && renderSocialProof()}
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>

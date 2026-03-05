@@ -19,10 +19,11 @@ import {
     FileTextIcon, HelpCircleIcon, LockIcon
 } from '../components/Icons';
 import { MOCK_RECIPES } from '../services/mockData';
-import { generateFitnessRecipe, identifyIngredientsFromImage, generateWeeklyPlan, generateShoppingList, SupportedLanguage } from '../services/geminiService';
+import { generateFitnessRecipe, identifyIngredientsFromImage, generateWeeklyPlan, generateShoppingList, SupportedLanguage, generateQuickDecision, analyzeRoutine, analyzeMealImage } from '../services/geminiService';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { LoadingModal } from '../components/LoadingModal';
 import { PlanningWizard } from '../components/PlanningWizard';
+import { RoutineMeal, QuickDecision, MapaAlimentarResult, RoutineDiagnostic } from '../types';
 // DailyTipCard removed
 import { EditProfileModal } from '../components/EditProfileModal';
 import { SubscriptionService } from '../services/subscriptionService';
@@ -96,6 +97,12 @@ export const MainScreen = ({
     const [showPantryPreview, setShowPantryPreview] = useState(false);
     const [pantryImages, setPantryImages] = useState<string[]>([]);
     const [showSourcesScreen, setShowSourcesScreen] = useState(false);
+
+    // Mapa Alimentar & Decision Killer State
+    const [quickDecision, setQuickDecision] = useState<QuickDecision | null>(null);
+    const [mapaMeals, setMapaMeals] = useState<RoutineMeal[]>([]);
+    const [mapaAnalysis, setMapaAnalysis] = useState<MapaAlimentarResult | null>(null);
+    const [isAnalyzingMapa, setIsAnalyzingMapa] = useState(false);
 
     // Enable LayoutAnimation for Android
     useEffect(() => {
@@ -347,6 +354,7 @@ export const MainScreen = ({
                 userProfile?.goal || ('WEIGHT_LOSS' as UserGoal),
                 userProfile?.dietaryRestrictions || [],
                 userProfile?.dislikes || [],
+                userProfile?.tasteProfile,
                 (status, progress) => {
                     setLoadingStatus(status);
                     setLoadingProgress(0.8 + (progress * 0.2)); // 80-100%
@@ -479,6 +487,7 @@ export const MainScreen = ({
                 profile.goal,
                 profile.dietaryRestrictions,
                 profile.dislikes || [],
+                profile.tasteProfile,
                 (status, progress) => {
                     setLoadingStatus(status);
                     setLoadingProgress(progress);
@@ -619,6 +628,7 @@ export const MainScreen = ({
                                 userProfile.goal,
                                 userProfile.dietaryRestrictions,
                                 userProfile.dislikes || [],
+                                userProfile.tasteProfile,
                                 undefined,
                                 language as SupportedLanguage
                             );
@@ -674,6 +684,80 @@ export const MainScreen = ({
         );
     };
 
+    // --- Mapa Alimentar & Quick Decision Handlers ---
+
+    const handleGetQuickDecision = async () => {
+        if (!userProfile) return;
+        setLoading(true);
+        setLoadingMsg(language === 'en' ? "Thinking..." : "Pensando...");
+        try {
+            const decision = await generateQuickDecision(userProfile, language as SupportedLanguage);
+            if (decision) {
+                setQuickDecision(decision);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAddMealToMapa = async (source: 'camera' | 'library') => {
+        const permission = source === 'camera'
+            ? await ImagePicker.requestCameraPermissionsAsync()
+            : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (!permission.granted) {
+            Alert.alert("Permission required");
+            return;
+        }
+
+        const result = source === 'camera'
+            ? await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true })
+            : await ImagePicker.launchImageLibraryAsync({ quality: 0.5, base64: true });
+
+        if (!result.canceled && result.assets[0].base64) {
+            setLoading(true);
+            setLoadingMsg(language === 'en' ? "Analyzing meal..." : "Analisando refeição...");
+            try {
+                const analysis = await analyzeMealImage(result.assets[0].base64, language as SupportedLanguage);
+                if (analysis && analysis.name && analysis.calories && analysis.macros) {
+                    const newMeal: RoutineMeal = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        name: analysis.name,
+                        calories: analysis.calories,
+                        macros: analysis.macros as any,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    };
+                    setMapaMeals(prev => [...prev, newMeal]);
+                }
+            } catch (error) {
+                Alert.alert("Error analyzing image");
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const handleAnalyzeRoutine = async () => {
+        if (mapaMeals.length === 0) return;
+        setIsAnalyzingMapa(true);
+        setLoading(true);
+        setLoadingMsg(language === 'en' ? "Analyzing your day..." : "Analisando seu dia...");
+        try {
+            const result = await analyzeRoutine(mapaMeals, userProfile!, language as SupportedLanguage);
+            if (result) {
+                setMapaAnalysis(result);
+                setActiveTab('MAPA');
+            }
+        } catch (error) {
+            Alert.alert("Error analyzing routine");
+        } finally {
+            setLoading(false);
+            setIsAnalyzingMapa(false);
+        }
+    };
+
     // --- Render Content ---
 
     const renderHome = () => {
@@ -701,8 +785,6 @@ export const MainScreen = ({
                     </TouchableOpacity>
                 </View>
 
-
-
                 {/* Premium CTA */}
                 <TouchableOpacity
                     onPress={() => { changeTab('EXPLORE'); changeExploreMode('TEXT'); }}
@@ -729,6 +811,49 @@ export const MainScreen = ({
                         </View>
                     </LinearGradient>
                 </TouchableOpacity>
+
+                {/* Decision Killer Card */}
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>{language === 'en' ? 'Decision Killer' : 'Matador de Dúvida'}</Text>
+                </View>
+                <View style={[styles.decisionCard, { marginBottom: 32 }]}>
+                    {!quickDecision ? (
+                        <View style={styles.decisionPlaceholder}>
+                            <Text style={styles.decisionText}>
+                                {language === 'en' ? "Don't know what to eat?" : "Sem ideia do que comer?"}
+                            </Text>
+                            <TouchableOpacity style={styles.decisionButton} onPress={handleGetQuickDecision}>
+                                <SparklesIcon size={18} color="black" />
+                                <Text style={styles.decisionButtonText}>{language === 'en' ? "Suggest something" : "Me sugira algo"}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <View style={styles.decisionResult}>
+                            <View style={styles.decisionHeader}>
+                                <Text style={styles.decisionTitle}>{quickDecision.dishName}</Text>
+                                <TouchableOpacity onPress={() => setQuickDecision(null)}>
+                                    <RefreshIcon size={16} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+                            <Text style={styles.decisionReason}>{quickDecision.reason}</Text>
+                            <View style={styles.decisionFooter}>
+                                <View style={styles.decisionMeta}>
+                                    <FlameIcon size={14} color="#6B7280" />
+                                    <Text style={styles.decisionMetaText}>{quickDecision.calories} kcal</Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.decisionAction}
+                                    onPress={() => {
+                                        setDishInput(quickDecision.dishName);
+                                        changeTab('EXPLORE');
+                                    }}
+                                >
+                                    <Text style={styles.decisionActionText}>{language === 'en' ? "Get Recipe" : "Ver Receita"}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+                </View>
 
                 {/* Recipe Pack Card */}
                 <TouchableOpacity
@@ -828,7 +953,7 @@ export const MainScreen = ({
                         </LinearGradient>
                     )}
                 </View>
-            </ScrollView>
+            </ScrollView >
         );
     };
 
@@ -1340,16 +1465,143 @@ export const MainScreen = ({
         );
     };
 
+    const renderMapaAlimentar = () => {
+        return (
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                {/* Hero Section */}
+                <View style={styles.mapaHero}>
+                    <View style={styles.mapaHeroContent}>
+                        <Text style={styles.mapaHeroTitle}>{language === 'en' ? 'Mapa Alimentar' : 'Mapa Alimentar'}</Text>
+                        <Text style={styles.mapaHeroSubtitle}>{language === 'en' ? 'Realistic behavior analysis' : 'Análise comportamental realista'}</Text>
+                    </View>
+                    <View style={styles.mapaHeroIcon}>
+                        <CameraIcon size={32} color="#a6f000" />
+                    </View>
+                </View>
+
+                {/* Input Section */}
+                {!mapaAnalysis ? (
+                    <View style={styles.mapaInputSection}>
+                        <Text style={styles.mapaSectionTitle}>{language === 'en' ? "Today's Meals" : "Refeições de Hoje"}</Text>
+
+                        {mapaMeals.length === 0 ? (
+                            <View style={styles.mapaEmptyState}>
+                                <Text style={styles.mapaEmptyText}>{language === 'en' ? "No meals added yet. Take a photo of what you ate!" : "Nenhuma refeição adicionada. Tire uma foto do que você comeu!"}</Text>
+                            </View>
+                        ) : (
+                            <View style={styles.mapaMealsList}>
+                                {mapaMeals.map((meal) => (
+                                    <View key={meal.id} style={styles.mapaMealItem}>
+                                        <View style={styles.mapaMealInfo}>
+                                            <Text style={styles.mapaMealTime}>{meal.time}</Text>
+                                            <Text style={styles.mapaMealName}>{meal.name}</Text>
+                                        </View>
+                                        <View style={styles.mapaMealVisualMeta}>
+                                            <Text style={styles.mapaMealCal}>{meal.calories} kcal</Text>
+                                            <TouchableOpacity onPress={() => setMapaMeals(prev => prev.filter(m => m.id !== meal.id))}>
+                                                <TrashIcon size={18} color="#EF4444" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+
+                        <View style={styles.mapaActionRow}>
+                            <TouchableOpacity
+                                style={[styles.mapaAddBtn, { backgroundColor: '#111827' }]}
+                                onPress={() => handleAddMealToMapa('camera')}
+                            >
+                                <CameraIcon size={20} color="#a6f000" />
+                                <Text style={[styles.mapaAddBtnText, { color: '#a6f000' }]}>{language === 'en' ? "Photo" : "Foto"}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.mapaAddBtn, { backgroundColor: '#F3F4F6' }]}
+                                onPress={() => handleAddMealToMapa('library')}
+                            >
+                                <PlusIcon size={20} color="#111827" />
+                                <Text style={[styles.mapaAddBtnText, { color: '#111827' }]}>{language === 'en' ? "Gallery" : "Galeria"}</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {mapaMeals.length > 0 && (
+                            <TouchableOpacity
+                                style={styles.mapaAnalyzeBtn}
+                                onPress={handleAnalyzeRoutine}
+                                disabled={isAnalyzingMapa}
+                            >
+                                {isAnalyzingMapa ? (
+                                    <ActivityIndicator color="black" />
+                                ) : (
+                                    <>
+                                        <SparklesIcon size={20} color="black" />
+                                        <Text style={styles.mapaAnalyzeBtnText}>{language === 'en' ? "Analyze Routine" : "Analisar Rotina"}</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                ) : (
+                    <View style={styles.mapaResultOverlay}>
+                        {/* Score Section */}
+                        <View style={styles.mapaScoreCard}>
+                            <View style={styles.mapaScoreCircle}>
+                                <Text style={styles.mapaScoreValue}>{mapaAnalysis.diagnostic.score}%</Text>
+                                <Text style={styles.mapaScoreLabel}>{language === 'en' ? 'Adherence' : 'Aderência'}</Text>
+                            </View>
+                            <View style={styles.mapaScoreInfo}>
+                                <Text style={styles.mapaScoreTitle}>{language === 'en' ? 'Daily Analysis' : 'Análise do Dia'}</Text>
+                                <Text style={styles.mapaScoreDesc}>{mapaAnalysis.diagnostic.summary}</Text>
+                            </View>
+                        </View>
+
+                        {/* Micro-Swaps */}
+                        <Text style={styles.mapaSectionTitle}>{language === 'en' ? 'Smart Micro-swaps' : 'Micro-swaps Inteligentes'}</Text>
+                        {mapaAnalysis.microSwaps.map((swap, idx) => (
+                            <View key={idx} style={styles.mapaSwapCard}>
+                                <View style={styles.mapaSwapCompare}>
+                                    <View style={styles.mapaSwapFrom}>
+                                        <Text style={styles.mapaSwapLabel}>{language === 'en' ? 'Instead of' : 'Em vez de'}</Text>
+                                        <Text style={styles.mapaSwapValue}>{swap.from}</Text>
+                                    </View>
+                                    <ArrowRightIcon size={20} color="#9CA3AF" />
+                                    <View style={styles.mapaSwapTo}>
+                                        <Text style={[styles.mapaSwapLabel, { color: '#059669' }]}>{language === 'en' ? 'Try' : 'Tente'}</Text>
+                                        <Text style={[styles.mapaSwapValue, { color: '#059669' }]}>{swap.to}</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.mapaSwapReason}>
+                                    <Text style={styles.mapaSwapReasonText}>💡 {swap.reason}</Text>
+                                </View>
+                            </View>
+                        ))}
+
+                        <TouchableOpacity
+                            style={styles.mapaResetBtn}
+                            onPress={() => {
+                                setMapaAnalysis(null);
+                                setMapaMeals([]);
+                            }}
+                        >
+                            <Text style={styles.mapaResetBtnText}>{language === 'en' ? 'New Analysis' : 'Nova Análise'}</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </ScrollView>
+        );
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 style={styles.content}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
             >
                 <View style={styles.content}>
                     {activeTab === 'HOME' && renderHome()}
                     {activeTab === 'EXPLORE' && renderExplore()}
+                    {activeTab === 'MAPA' && renderMapaAlimentar()}
                     {activeTab === 'LIBRARY' && renderLibrary()}
                     {activeTab === 'PLANNING' && renderPlanning()}
                     {activeTab === 'PROFILE' && renderProfile()}
@@ -1365,10 +1617,10 @@ export const MainScreen = ({
                     </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => changeTab('LIBRARY')} style={styles.navItem}>
-                    <BookHeartIcon size={24} color={activeTab === 'LIBRARY' ? '#a6f000' : '#9CA3AF'} />
-                    <Text style={[styles.navLabel, activeTab === 'LIBRARY' && styles.navLabelActive]}>
-                        {language === 'en' ? 'Library' : 'Biblioteca'}
+                <TouchableOpacity onPress={() => changeTab('MAPA')} style={styles.navItem}>
+                    <CameraIcon size={24} color={activeTab === 'MAPA' ? '#a6f000' : '#9CA3AF'} />
+                    <Text style={[styles.navLabel, activeTab === 'MAPA' && styles.navLabelActive]}>
+                        {language === 'en' ? 'Map' : 'Mapa'}
                     </Text>
                 </TouchableOpacity>
 
@@ -1382,10 +1634,10 @@ export const MainScreen = ({
                     </Animated.View>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => changeTab('PLANNING')} style={styles.navItem}>
-                    <CalendarIcon size={24} color={activeTab === 'PLANNING' ? '#a6f000' : '#9CA3AF'} />
-                    <Text style={[styles.navLabel, activeTab === 'PLANNING' && styles.navLabelActive]}>
-                        {language === 'en' ? 'Schedule' : 'Agenda'}
+                <TouchableOpacity onPress={() => changeTab('LIBRARY')} style={styles.navItem}>
+                    <BookHeartIcon size={24} color={activeTab === 'LIBRARY' ? '#a6f000' : '#9CA3AF'} />
+                    <Text style={[styles.navLabel, activeTab === 'LIBRARY' && styles.navLabelActive]}>
+                        {language === 'en' ? 'Library' : 'Biblioteca'}
                     </Text>
                 </TouchableOpacity>
 
@@ -2515,5 +2767,406 @@ const styles = StyleSheet.create({
         marginTop: 20,
         marginBottom: 20,
         fontStyle: 'italic',
+    },
+    analysisContainer: {
+        marginTop: 24,
+        gap: 24,
+    },
+    analysisScoreCard: {
+        backgroundColor: '#111827',
+        padding: 24,
+        borderRadius: 24,
+        alignItems: 'center',
+    },
+    analysisScoreLabel: {
+        color: '#9CA3AF',
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    analysisScoreValue: {
+        color: '#a6f000',
+        fontSize: 48,
+        fontWeight: '900',
+    },
+    analysisSection: {
+        gap: 12,
+    },
+    diagnosticCard: {
+        backgroundColor: 'white',
+        padding: 20,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    diagnosticText: {
+        fontSize: 16,
+        color: '#374151',
+        lineHeight: 24,
+    },
+    swapCard: {
+        backgroundColor: 'white',
+        padding: 16,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        gap: 8,
+    },
+    swapRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    swapFrom: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#EF4444',
+        flex: 1,
+    },
+    swapTo: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#10B981',
+        flex: 1,
+    },
+    swapReason: {
+        fontSize: 14,
+        color: '#6B7280',
+        lineHeight: 20,
+    },
+    // Decision Killer
+    decisionCard: {
+        backgroundColor: 'white',
+        borderRadius: 24,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+    },
+    decisionPlaceholder: {
+        alignItems: 'center',
+        gap: 16,
+    },
+    decisionText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#374151',
+    },
+    decisionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#a6f000',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 16,
+        gap: 8,
+    },
+    decisionButtonText: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: 'black',
+    },
+    decisionResult: {
+        gap: 12,
+    },
+    decisionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    decisionTitle: {
+        fontSize: 20,
+        fontWeight: '900',
+        color: '#111827',
+    },
+    decisionReason: {
+        fontSize: 14,
+        color: '#4B5563',
+        lineHeight: 20,
+    },
+    decisionFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 4,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#F3F4F6',
+    },
+    decisionMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    decisionMetaText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#6B7280',
+    },
+    decisionAction: {
+        backgroundColor: '#F3F4F6',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    decisionActionText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    // Mapa Alimentar
+    mapaHero: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#111827',
+        padding: 24,
+        borderRadius: 28,
+        marginBottom: 32,
+    },
+    mapaHeroContent: {
+        flex: 1,
+    },
+    mapaHeroTitle: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: 'white',
+        marginBottom: 4,
+    },
+    mapaHeroSubtitle: {
+        fontSize: 14,
+        color: '#9CA3AF',
+    },
+    mapaHeroIcon: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(166, 240, 0, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    mapaInputSection: {
+        gap: 16,
+    },
+    mapaSectionTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#111827',
+        marginBottom: 8,
+    },
+    mapaEmptyState: {
+        padding: 32,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        alignItems: 'center',
+    },
+    mapaEmptyText: {
+        textAlign: 'center',
+        color: '#6B7280',
+        fontSize: 14,
+        lineHeight: 20,
+    },
+    mapaMealsList: {
+        gap: 12,
+    },
+    mapaMealItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: 'white',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    mapaMealInfo: {
+        flex: 1,
+    },
+    mapaMealTime: {
+        fontSize: 12,
+        color: '#6B7280',
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    mapaMealName: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    mapaMealVisualMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    mapaMealCal: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#4B5563',
+    },
+    mapaActionRow: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 8,
+    },
+    mapaAddBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        borderRadius: 16,
+        gap: 8,
+    },
+    mapaAddBtnText: {
+        fontWeight: '800',
+        fontSize: 15,
+    },
+    mapaAnalyzeBtn: {
+        backgroundColor: '#a6f000',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 18,
+        borderRadius: 20,
+        gap: 10,
+        marginTop: 12,
+        shadowColor: '#a6f000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 15,
+        elevation: 8,
+    },
+    mapaAnalyzeBtnText: {
+        fontWeight: '900',
+        color: 'black',
+        fontSize: 16,
+    },
+    mapaResultOverlay: {
+        gap: 24,
+    },
+    mapaScoreCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        padding: 24,
+        borderRadius: 28,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        gap: 20,
+    },
+    mapaScoreCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#111827',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    mapaScoreValue: {
+        fontSize: 22,
+        fontWeight: '900',
+        color: '#a6f000',
+    },
+    mapaScoreLabel: {
+        fontSize: 10,
+        color: 'white',
+        fontWeight: '700',
+        textTransform: 'uppercase',
+    },
+    mapaScoreInfo: {
+        flex: 1,
+    },
+    mapaScoreTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#111827',
+        marginBottom: 4,
+    },
+    mapaScoreDesc: {
+        fontSize: 14,
+        color: '#4B5563',
+        lineHeight: 20,
+    },
+    mapaSwapCard: {
+        backgroundColor: 'white',
+        borderRadius: 24,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        gap: 16,
+    },
+    mapaSwapCompare: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    mapaSwapFrom: {
+        flex: 1,
+    },
+    mapaSwapTo: {
+        flex: 1,
+        alignItems: 'flex-end',
+    },
+    mapaSwapLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        color: '#6B7280',
+        marginBottom: 4,
+    },
+    mapaSwapValue: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: '#111827',
+    },
+    mapaSwapReason: {
+        backgroundColor: '#F9FAFB',
+        padding: 12,
+        borderRadius: 12,
+        borderLeftWidth: 3,
+        borderLeftColor: '#a6f000',
+    },
+    mapaSwapReasonText: {
+        fontSize: 13,
+        color: '#4B5563',
+        lineHeight: 18,
+        fontWeight: '500',
+    },
+    mapaResetBtn: {
+        alignItems: 'center',
+        padding: 20,
+        marginTop: 8,
+    },
+    mapaResetBtnText: {
+        color: '#6B7280',
+        fontWeight: '700',
+        fontSize: 14,
+        textDecorationLine: 'underline',
+    },
+    primaryButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#a6f000',
+        paddingVertical: 16,
+        borderRadius: 20,
+        gap: 10,
+        marginTop: 20,
+    },
+    primaryButtonText: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: 'black',
+    },
+    buttonDisabled: {
+        opacity: 0.5,
+        backgroundColor: '#D1D5DB',
     },
 });

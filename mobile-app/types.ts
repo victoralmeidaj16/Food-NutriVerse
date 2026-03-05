@@ -59,6 +59,12 @@ export interface Recipe {
     citations?: string[]; // Reference IDs from healthReferences.ts
 }
 
+export interface TasteProfile {
+    favoriteDish: string;
+    favoriteFastFood: string;
+    favoriteSweet: string;
+}
+
 
 export enum SubscriptionPlan {
     FREE = 'FREE',
@@ -110,9 +116,46 @@ export interface UserProfile {
     subscriptionExpiry?: string;
     transactionReceipt?: string; // IAP receipt for validation
     usageStats: UserUsageStats;
+    tasteProfile?: TasteProfile;
 }
 
-export type Tab = 'HOME' | 'EXPLORE' | 'PLANNING' | 'LIBRARY' | 'PROFILE';
+// --- New Features Interfaces ---
+
+export interface QuickDecision {
+    dishName: string;
+    reason: string;
+    calories: number;
+}
+
+export interface RoutineMeal {
+    id: string;
+    name: string;
+    time: string;
+    calories: number;
+    macros: {
+        protein: number;
+        carbs: number;
+        fat: number;
+    };
+}
+
+export interface RoutineDiagnostic {
+    summary: string;
+    score: number;
+}
+
+export interface MicroSwap {
+    from: string;
+    to: string;
+    reason: string;
+}
+
+export interface MapaAlimentarResult {
+    diagnostic: RoutineDiagnostic;
+    microSwaps: MicroSwap[];
+}
+
+export type Tab = 'HOME' | 'EXPLORE' | 'PLANNING' | 'LIBRARY' | 'MAPA' | 'PROFILE';
 
 // --- Planning Feature Types ---
 

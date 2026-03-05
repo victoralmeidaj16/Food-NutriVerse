@@ -1,5 +1,5 @@
 import { randomUUID } from 'expo-crypto';
-import { UserGoal, Recipe, UserProfile, WeeklyPlan, ShoppingList, ShoppingItem } from "../types";
+import { UserGoal, Recipe, UserProfile, WeeklyPlan, ShoppingList, ShoppingItem, QuickDecision, RoutineMeal, MapaAlimentarResult, TasteProfile } from "../types";
 import { generateAndSaveImage, getImageUrl } from './imageService';
 import { BACKEND_URL } from './config';
 import { mapHealthTipToReference } from './healthReferences';
@@ -309,6 +309,7 @@ export const generateFitnessRecipe = async (
     goal: UserGoal,
     restrictions: string[] = [],
     dislikes: string[] = [],
+    tasteProfile?: TasteProfile,
     onProgress?: (status: string, progress: number) => void,
     language: SupportedLanguage = 'pt'
 ): Promise<Recipe | null> => {
@@ -350,13 +351,20 @@ export const generateFitnessRecipe = async (
         }
     }
 
-    // Bilingual prompt
+    // Bilingual prompt content with Taste Profile influence
+    let tasteProfileInstruction = "";
+    if (tasteProfile) {
+        tasteProfileInstruction = language === 'en'
+            ? `\nUser's Taste Profile:\n- Favorite Dish: ${tasteProfile.favoriteDish}\n- Favorite Fast Food: ${tasteProfile.favoriteFastFood}\n- Favorite Sweet: ${tasteProfile.favoriteSweet}\nCrucial: Influence the recipe flavors/textures based on this profile without compromising the goal.`
+            : `\nPerfil de Paladar do usuário:\n- Prato Favorito: ${tasteProfile.favoriteDish}\n- Fast Food Favorito: ${tasteProfile.favoriteFastFood}\n- Doce Favorito: ${tasteProfile.favoriteSweet}\nCrítico: Influencie os sabores/texturas da receita baseado neste perfil sem comprometer o objetivo.`;
+    }
+
     const prompt = language === 'en' ? `
     ${lang.role}
     
     User Goal: ${lang.goals[goal]}.
     Restrictions/Allergies: ${restrictions.join(", ") || lang.noRestrictions}.
-    Dislikes (DO NOT USE): ${dislikes.join(", ") || lang.noRestrictions}.
+    Dislikes (DO NOT USE): ${dislikes.join(", ") || lang.noRestrictions}.${tasteProfileInstruction}
 
     ${coreInstruction}
 
@@ -376,7 +384,7 @@ export const generateFitnessRecipe = async (
     
     Objetivo do Usuário: ${lang.goals[goal]}.
     Restrições/Alergias: ${restrictions.join(", ") || lang.noRestrictions}.
-    Aversões (NÃO USAR): ${dislikes.join(", ") || lang.noRestrictions}.
+    Aversões (NÃO USAR): ${dislikes.join(", ") || lang.noRestrictions}.${tasteProfileInstruction}
 
     ${coreInstruction}
 
@@ -433,6 +441,231 @@ export const generateFitnessRecipe = async (
 
     } catch (error) {
         console.error("Error generating recipe:", error);
+        return null;
+    }
+};
+
+// --- Decision Killer AI ---
+
+export const generateQuickDecision = async (
+    userProfile: UserProfile,
+    language: SupportedLanguage = 'pt'
+): Promise<QuickDecision | null> => {
+    const timeOfDay = new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening';
+    let tasteProfileContext = "";
+    if (userProfile.tasteProfile) {
+        tasteProfileContext = language === 'en'
+            ? `User loves: ${userProfile.tasteProfile.favoriteDish}, ${userProfile.tasteProfile.favoriteFastFood} and ${userProfile.tasteProfile.favoriteSweet}.`
+            : `O usuário adora: ${userProfile.tasteProfile.favoriteDish}, ${userProfile.tasteProfile.favoriteFastFood} e ${userProfile.tasteProfile.favoriteSweet}.`;
+    }
+
+    const prompt = language === 'en' ? `
+        The user is hungry NOW (${timeOfDay}) and needs an instant decision.
+        Goal: ${userProfile.goal}
+        Restrictions: ${userProfile.dietaryRestrictions.join(', ') || 'None'}
+        ${tasteProfileContext}
+
+        Golden Rules:
+        1. ULTRA fast to prepare (under 15 min).
+        2. Extremely common ingredients.
+        3. Simple and appetizing dish name.
+    ` : `
+        O usuário está com fome AGORA (${timeOfDay}) e precisa de uma decisão instantânea.
+        Objetivo: ${userProfile.goal}
+        Restrições: ${userProfile.dietaryRestrictions.join(', ') || 'Nenhuma'}
+        ${tasteProfileContext}
+
+        Regras de Ouro:
+        1. Seja ULTRA rápido para preparar (menos de 15 min).
+        2. Ingredientes extremamente comuns.
+        3. Nome do prato direto e apetitoso.
+    `;
+
+    const decisionSchema: Schema = {
+        type: Type.OBJECT,
+        properties: {
+            dishName: { type: Type.STRING },
+            reason: { type: Type.STRING },
+            calories: { type: Type.NUMBER }
+        },
+        required: ["dishName", "reason", "calories"]
+    };
+
+    try {
+        const response = await retryOperation(() => callBackend('/api/generate-recipe', {
+            model: "gemini-2.0-flash",
+            contents: [{ text: prompt }],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: decisionSchema,
+                temperature: 0.8,
+            }
+        }, undefined, language));
+
+        const text = response.text;
+        if (!text) return null;
+        return JSON.parse(text) as QuickDecision;
+    } catch (error) {
+        console.error("Error generating quick decision:", error);
+        return null;
+    }
+};
+
+// --- Mapa Alimentar (Reality-Based Nutrition Engine) ---
+
+export const analyzeRoutine = async (
+    meals: RoutineMeal[],
+    userProfile: UserProfile,
+    language: SupportedLanguage = 'pt'
+): Promise<MapaAlimentarResult | null> => {
+    const { goal, tasteProfile } = userProfile;
+    let tasteProfileContext = "";
+    if (tasteProfile) {
+        tasteProfileContext = language === 'en'
+            ? `User loves: ${tasteProfile.favoriteDish}, ${tasteProfile.favoriteFastFood} and ${tasteProfile.favoriteSweet}.`
+            : `O usuário adora: ${tasteProfile.favoriteDish}, ${tasteProfile.favoriteFastFood} e ${tasteProfile.favoriteSweet}.`;
+    }
+
+    const routineStr = meals.map(m => `- ${m.time}: ${m.name}`).join('\n');
+
+    const prompt = language === 'en' ? `
+        Analyze the actual food routine reported by the user:
+        
+        CURRENT ROUTINE:
+        ${routineStr}
+
+        USER GOAL: ${goal}
+        ${tasteProfileContext}
+
+        Task: Provide "Diagnosis without Terrorism" and "Micro-swaps":
+        1. INVISIBLE DIAGNOSIS: Evaluate current routine considering Protein, Fiber, Sugar and Hunger Risk.
+        2. ADHERENCE SCORE: Calculate 0-100% score alignment with goal.
+        3. MICRO-SWAPS: For each meal, suggest 2 positive impact swaps close to current habits.
+    ` : `
+        Analise a rotina alimentar real reportada pelo usuário:
+        
+        ROTINA ATUAL:
+        ${routineStr}
+
+        OBJETIVO DO USUÁRIO: ${goal}
+        ${tasteProfileContext}
+
+        Sua tarefa como NutriVerse AI é "Diagnóstico sem Terrorismo" e "Micro-swaps":
+        1. DIAGNÓSTICO INVISÍVEL: Avalie a rotina atual considerando Proteína, Fibras, Açúcar e Risco de Fome Noturna.
+        2. SCORE DE ADERÊNCIA: Calcule a % de quão bem essa rotina se alinha ao objetivo (0-100).
+        3. MICRO-SWAPS: Para cada refeição reportada, sugira 2 "Micro-swaps" próximos ao hábito atual com impacto positivo.
+    `;
+
+    const analyzeSchema: Schema = {
+        type: Type.OBJECT,
+        properties: {
+            diagnostic: {
+                type: Type.OBJECT,
+                properties: {
+                    summary: { type: Type.STRING },
+                    score: { type: Type.NUMBER }
+                },
+                required: ["summary", "score"]
+            },
+            microSwaps: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        from: { type: Type.STRING },
+                        to: { type: Type.STRING },
+                        reason: { type: Type.STRING }
+                    },
+                    required: ["from", "to", "reason"]
+                }
+            }
+        },
+        required: ["diagnostic", "microSwaps"]
+    };
+
+    try {
+        const response = await retryOperation(() => callBackend('/api/generate-recipe', {
+            model: "gemini-2.0-flash",
+            contents: [{ text: prompt }],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: analyzeSchema,
+                temperature: 0.7,
+            }
+        }, undefined, language));
+
+        const text = response.text;
+        if (!text) return null;
+        return JSON.parse(text) as MapaAlimentarResult;
+    } catch (error) {
+        console.error("Error analyzing routine:", error);
+        return null;
+    }
+};
+
+// --- Visual AI para Mapa Alimentar (Atrito Zero) ---
+
+export const analyzeMealImage = async (
+    base64Image: string,
+    language: SupportedLanguage = 'pt'
+): Promise<Partial<RoutineMeal> | null> => {
+    const prompt = language === 'en' ? `
+        Analyze the photo of this meal:
+        1. Short appetizing description (e.g. "Brown rice, beans, grilled chicken and salad").
+        2. Realistic total calories estimate.
+        3. Realistic macronutrients estimate (protein, carbs, fat) in grams.
+    ` : `
+        Analise a foto desta refeição:
+        1. Uma descrição curta e apetitosa do que é a refeição (ex: "Arroz integral, feijão, frango grelhado e salada").
+        2. Uma estimativa realista das calorias totais.
+        3. Uma estimativa realista dos macronutrientes (proteína, carboidrato, gordura) em gramas.
+    `;
+
+    const mealImageSchema: Schema = {
+        type: Type.OBJECT,
+        properties: {
+            dishName: { type: Type.STRING },
+            calories: { type: Type.NUMBER },
+            macros: {
+                type: Type.OBJECT,
+                properties: {
+                    protein: { type: Type.NUMBER },
+                    carbs: { type: Type.NUMBER },
+                    fat: { type: Type.NUMBER }
+                },
+                required: ["protein", "carbs", "fat"]
+            }
+        },
+        required: ["dishName", "calories", "macros"]
+    };
+
+    try {
+        const response = await retryOperation(() => callBackend('/api/generate-recipe', {
+            model: "gemini-2.0-flash",
+            contents: [{
+                parts: [
+                    { inlineData: { data: base64Image, mimeType: "image/jpeg" } },
+                    { text: prompt }
+                ]
+            }],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: mealImageSchema,
+                temperature: 0.4,
+            }
+        }, undefined, language));
+
+        const text = response.text;
+        if (!text) return null;
+
+        const data = JSON.parse(text);
+        return {
+            name: data.dishName,
+            calories: data.calories,
+            macros: data.macros
+        };
+    } catch (error) {
+        console.error("Error analyzing meal image:", error);
         return null;
     }
 };
