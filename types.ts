@@ -44,7 +44,7 @@ export interface Recipe {
   name: string;
   originalName?: string; // Optional, might not exist in Pantry mode
   description: string;
-  imageUrl?: string; 
+  imageUrl?: string;
   prepTime: string;
   difficulty: 'Fácil' | 'Médio' | 'Difícil';
   category: string;
@@ -57,19 +57,68 @@ export interface Recipe {
   createdAt: number;
 }
 
+export interface TasteProfile {
+  favoriteDish: string;
+  favoriteFastFood: string;
+  favoriteSweet: string;
+}
+
 export interface UserProfile {
-  name: string; // Captured implicitly or defaults to "Usuário" if strictly following the 7 screens which doesn't explicitly ask for name in the prompt descriptions provided, but we can keep it or derive it.
+  name: string;
   goal: UserGoal;
   activityLevel: ActivityLevel;
   mealsPerDay: number;
-  mealSlots: string[]; // e.g., 'morning', 'lunch'
+  mealSlots: string[];
   dietaryRestrictions: string[];
-  dislikes: string[]; // Changed to array
+  dislikes: string[];
   usageModes: AppUsageMode[];
   profilePicture?: string;
+  tasteProfile?: TasteProfile;
 }
 
-export type Tab = 'HOME' | 'EXPLORE' | 'PLANNING' | 'LIBRARY' | 'PROFILE';
+// --- New Features Interfaces ---
+
+export interface QuickDecision {
+  mealName: string;
+  prepTime: string;
+  matchScore: number;
+  cost: string;
+}
+
+export interface RoutineMeal {
+  time: string;
+  food: string;
+  imageUrl?: string;
+  estimatedCalories?: number;
+  macros?: {
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+}
+
+export interface RoutineDiagnostic {
+  insights: {
+    protein: string;
+    fiber: string;
+    sugar: string;
+    hungerRisk: string;
+  };
+  adherenceScore: number;
+}
+
+export interface OptimizedMeal {
+  originalFood: string;
+  originalTime: string;
+  microSwaps: { option: string; reason: string }[];
+}
+
+export interface MapaAlimentarResult {
+  diagnostic: RoutineDiagnostic;
+  optimizedRoutine: OptimizedMeal[];
+}
+
+export type Tab = 'HOME' | 'EXPLORE' | 'PLANNING' | 'LIBRARY' | 'MAPA' | 'PROFILE';
 
 // --- Planning Feature Types ---
 

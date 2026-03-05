@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 // ... MainScreen component ...
 
 
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, StyleSheet, Dimensions, ActivityIndicator, Alert, SafeAreaView, Modal, LayoutAnimation, Platform, UIManager, Animated, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, StyleSheet, Dimensions, ActivityIndicator, Alert, SafeAreaView, Modal, LayoutAnimation, Platform, UIManager, Animated, Linking, KeyboardAvoidingView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
@@ -833,7 +833,12 @@ export const MainScreen = ({
     };
 
     const renderExplore = () => (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        >
             <View style={styles.exploreHeader}>
                 <Text style={styles.pageTitle}>{language === 'en' ? 'Explore' : 'Explorar'}</Text>
                 <Text style={styles.pageSubtitle}>
@@ -1337,13 +1342,19 @@ export const MainScreen = ({
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.content}>
-                {activeTab === 'HOME' && renderHome()}
-                {activeTab === 'EXPLORE' && renderExplore()}
-                {activeTab === 'LIBRARY' && renderLibrary()}
-                {activeTab === 'PLANNING' && renderPlanning()}
-                {activeTab === 'PROFILE' && renderProfile()}
-            </View>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.content}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
+                <View style={styles.content}>
+                    {activeTab === 'HOME' && renderHome()}
+                    {activeTab === 'EXPLORE' && renderExplore()}
+                    {activeTab === 'LIBRARY' && renderLibrary()}
+                    {activeTab === 'PLANNING' && renderPlanning()}
+                    {activeTab === 'PROFILE' && renderProfile()}
+                </View>
+            </KeyboardAvoidingView>
 
             {/* Bottom Nav */}
             <View style={styles.bottomNav}>

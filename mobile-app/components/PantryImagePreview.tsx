@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { CameraIcon, PlusIcon, CheckIcon, CloseIcon } from './Icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '../context/LanguageContext';
@@ -71,120 +71,125 @@ export const PantryImagePreview = ({
                     </Text>
                 </View>
 
-                {/* Images Grid */}
-                <ScrollView contentContainerStyle={styles.imagesContainer}>
-                    {images.map((uri, index) => (
-                        <View key={index} style={styles.imageWrapper}>
-                            <Image
-                                source={{ uri }}
-                                style={styles.image}
-                                resizeMode="cover"
-                            />
-                            {/* Delete button */}
-                            <TouchableOpacity
-                                style={styles.deleteImageBtn}
-                                onPress={() => handleRemoveImage(index)}
-                            >
-                                <CloseIcon size={16} color="#FFFFFF" />
-                            </TouchableOpacity>
-                        </View>
-                    ))}
-                </ScrollView>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <ScrollView contentContainerStyle={styles.imagesContainer} keyboardShouldPersistTaps="handled">
+                        {images.map((uri, index) => (
+                            <View key={index} style={styles.imageWrapper}>
+                                <Image
+                                    source={{ uri }}
+                                    style={styles.image}
+                                    resizeMode="cover"
+                                />
+                                {/* Delete button */}
+                                {onRemoveImage && (
+                                    <TouchableOpacity
+                                        onPress={() => handleRemoveImage(index)}
+                                        style={styles.deleteImageBtn}
+                                    >
+                                        <CloseIcon size={16} color="white" />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        ))}
 
-                {/* Manual Ingredients Section */}
-                {showManualInput && (
-                    <View style={styles.manualSection}>
-                        <Text style={styles.manualTitle}>
-                            {language === 'en' ? 'Manual Ingredients' : 'Ingredientes Manuais'}
-                        </Text>
+                        {showManualInput && (
+                            <View style={styles.manualSection}>
+                                <Text style={styles.manualTitle}>
+                                    {language === 'en' ? 'Manual Ingredients' : 'Ingredientes Manuais'}
+                                </Text>
 
-                        {/* Input Row */}
-                        <View style={styles.inputRow}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder={language === 'en' ? 'E.g. Tomato, Onion...' : 'Ex: Tomate, Cebola...'}
-                                value={currentInput}
-                                onChangeText={setCurrentInput}
-                                onSubmitEditing={handleAddManual}
-                                returnKeyType="done"
-                            />
-                            <TouchableOpacity onPress={handleAddManual} style={styles.addBtn}>
-                                <PlusIcon size={20} color="black" />
-                            </TouchableOpacity>
-                        </View>
+                                {/* Input Row */}
+                                <View style={styles.inputRow}>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder={language === 'en' ? 'E.g. Tomato, Onion...' : 'Ex: Tomate, Cebola...'}
+                                        value={currentInput}
+                                        onChangeText={setCurrentInput}
+                                        onSubmitEditing={handleAddManual}
+                                        returnKeyType="done"
+                                    />
+                                    <TouchableOpacity onPress={handleAddManual} style={styles.addBtn}>
+                                        <PlusIcon size={20} color="black" />
+                                    </TouchableOpacity>
+                                </View>
 
-                        {/* Manual Ingredients List */}
-                        {manualIngredients.length > 0 && (
-                            <View style={styles.tagsList}>
-                                {manualIngredients.map((ingredient, index) => (
-                                    <View key={index} style={styles.tag}>
-                                        <Text style={styles.tagText}>{ingredient}</Text>
-                                        <TouchableOpacity
-                                            onPress={() => handleRemoveIngredient(index)}
-                                            style={styles.removeBtn}
-                                        >
-                                            <CloseIcon size={14} color="#EF4444" />
-                                        </TouchableOpacity>
+                                {/* Manual Ingredients List */}
+                                {manualIngredients.length > 0 && (
+                                    <View style={styles.tagsList}>
+                                        {manualIngredients.map((ingredient, index) => (
+                                            <View key={index} style={styles.tag}>
+                                                <Text style={styles.tagText}>{ingredient}</Text>
+                                                <TouchableOpacity
+                                                    onPress={() => handleRemoveIngredient(index)}
+                                                    style={styles.removeBtn}
+                                                >
+                                                    <CloseIcon size={14} color="#EF4444" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        ))}
                                     </View>
-                                ))}
+                                )}
                             </View>
                         )}
-                    </View>
-                )}
 
-                <View style={styles.actions}>
-                    {/* Add More Photos */}
-                    <TouchableOpacity
-                        onPress={onAddMore}
-                        style={styles.actionButton}
-                    >
-                        <View style={styles.iconCircle}>
-                            <CameraIcon size={24} color="#a6f000" />
+                        <View style={styles.actions}>
+                            {/* Add More Photos */}
+                            <TouchableOpacity
+                                onPress={onAddMore}
+                                style={styles.actionButton}
+                            >
+                                <View style={styles.iconCircle}>
+                                    <CameraIcon size={24} color="#a6f000" />
+                                </View>
+                                <Text style={styles.actionText}>
+                                    {language === 'en' ? 'Add More' : 'Adicionar Mais'}
+                                </Text>
+                            </TouchableOpacity>
+
+                            {/* Add Manually */}
+                            <TouchableOpacity
+                                onPress={handleToggleManualInput}
+                                style={[styles.actionButton, showManualInput && styles.actionButtonActive]}
+                            >
+                                <View style={styles.iconCircle}>
+                                    <PlusIcon size={24} color="#a6f000" />
+                                </View>
+                                <Text style={styles.actionText}>
+                                    {showManualInput
+                                        ? (language === 'en' ? 'Hide' : 'Ocultar')
+                                        : (language === 'en' ? 'Add Manual' : 'Adicionar Manual')}
+                                </Text>
+                            </TouchableOpacity>
                         </View>
-                        <Text style={styles.actionText}>
-                            {language === 'en' ? 'Add More' : 'Adicionar Mais'}
-                        </Text>
-                    </TouchableOpacity>
 
-                    {/* Add Manually */}
-                    <TouchableOpacity
-                        onPress={handleToggleManualInput}
-                        style={[styles.actionButton, showManualInput && styles.actionButtonActive]}
-                    >
-                        <View style={styles.iconCircle}>
-                            <PlusIcon size={24} color="#a6f000" />
-                        </View>
-                        <Text style={styles.actionText}>
-                            {showManualInput
-                                ? (language === 'en' ? 'Hide' : 'Ocultar')
-                                : (language === 'en' ? 'Add Manual' : 'Adicionar Manual')}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+                        <TouchableOpacity
+                            onPress={handleAnalyze}
+                            style={styles.analyzeButtonContainer}
+                        >
+                            <LinearGradient
+                                colors={['#a6f000', '#8ACC00']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.analyzeButton}
+                            >
+                                <CheckIcon size={24} color="black" />
+                                <Text style={styles.analyzeText}>
+                                    {language === 'en' ? 'Analyze Ingredients' : 'Analisar Ingredientes'}
+                                </Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
 
-                <TouchableOpacity
-                    onPress={handleAnalyze}
-                    style={styles.analyzeButtonContainer}
-                >
-                    <LinearGradient
-                        colors={['#a6f000', '#8ACC00']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.analyzeButton}
-                    >
-                        <CheckIcon size={24} color="black" />
-                        <Text style={styles.analyzeText}>
-                            {language === 'en' ? 'Analyze Ingredients' : 'Analisar Ingredientes'}
-                        </Text>
-                    </LinearGradient>
-                </TouchableOpacity>
-
-                {/* Cancel */}
-                <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
-                    <Text style={styles.cancelText}>
-                        {language === 'en' ? 'Cancel' : 'Cancelar'}
-                    </Text>
-                </TouchableOpacity>
+                        {/* Cancel */}
+                        <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
+                            <Text style={styles.cancelText}>
+                                {language === 'en' ? 'Cancel' : 'Cancelar'}
+                            </Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </KeyboardAvoidingView>
             </View>
         </Modal>
     );

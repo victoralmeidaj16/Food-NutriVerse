@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { saveUserProfile } from '../services/userService';
@@ -77,74 +77,79 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile, welcomeMessage
 
     return (
         <SafeAreaView style={styles.authContainer}>
-            <View style={styles.authContent}>
-                <View style={styles.logoContainer}>
-                    <Text style={styles.authTitle}>{t('auth.createAccountTitle')}</Text>
-                    <Text style={[styles.authSubtitle, welcomeMessage ? { color: '#65A30D', fontWeight: '700', marginTop: 8 } : {}]}>
-                        {welcomeMessage || t('auth.createAccountSubtitle')}
-                    </Text>
-                </View>
-
-                <View style={styles.form}>
-                    <View style={styles.inputContainer}>
-                        <UserIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder={t('auth.namePlaceholder')}
-                            value={name}
-                            onChangeText={setName}
-                        />
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+            >
+                <View style={styles.authContent}>
+                    <View style={styles.logoContainer}>
+                        <Text style={styles.authTitle}>{t('auth.createAccountTitle')}</Text>
+                        <Text style={[styles.authSubtitle, welcomeMessage ? { color: '#65A30D', fontWeight: '700', marginTop: 8 } : {}]}>
+                            {welcomeMessage || t('auth.createAccountSubtitle')}
+                        </Text>
                     </View>
 
-                    <View style={styles.inputContainer}>
-                        <MailIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder={t('auth.emailPlaceholder')}
-                            value={email}
-                            onChangeText={setEmail}
-                            autoCapitalize="none"
-                            keyboardType="email-address"
-                        />
-                    </View>
+                    <View style={styles.form}>
+                        <View style={styles.inputContainer}>
+                            <UserIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder={t('auth.namePlaceholder')}
+                                value={name}
+                                onChangeText={setName}
+                            />
+                        </View>
 
-                    <View style={styles.inputContainer}>
-                        <LockIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder={t('auth.passwordPlaceholder')}
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry={!showPassword}
-                        />
-                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                            {showPassword ? <EyeOffIcon size={20} color="#9CA3AF" /> : <EyeIcon size={20} color="#9CA3AF" />}
+                        <View style={styles.inputContainer}>
+                            <MailIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder={t('auth.emailPlaceholder')}
+                                value={email}
+                                onChangeText={setEmail}
+                                autoCapitalize="none"
+                                keyboardType="email-address"
+                            />
+                        </View>
+
+                        <View style={styles.inputContainer}>
+                            <LockIcon size={20} color="#9CA3AF" style={styles.inputIcon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder={t('auth.passwordPlaceholder')}
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry={!showPassword}
+                            />
+                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                                {showPassword ? <EyeOffIcon size={20} color="#9CA3AF" /> : <EyeIcon size={20} color="#9CA3AF" />}
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.primaryButton, { backgroundColor: '#a6f000' }]}
+                            onPress={handleSignUp}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="black" />
+                            ) : (
+                                <View style={styles.buttonContent}>
+                                    <Text style={[styles.primaryButtonText, { color: 'black' }]}>{t('auth.createAccount')}</Text>
+                                    <ArrowRightIcon size={20} color="black" />
+                                </View>
+                            )}
                         </TouchableOpacity>
                     </View>
 
-                    <TouchableOpacity
-                        style={[styles.primaryButton, { backgroundColor: '#a6f000' }]}
-                        onPress={handleSignUp}
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <ActivityIndicator color="black" />
-                        ) : (
-                            <View style={styles.buttonContent}>
-                                <Text style={[styles.primaryButtonText, { color: 'black' }]}>{t('auth.createAccount')}</Text>
-                                <ArrowRightIcon size={20} color="black" />
-                            </View>
-                        )}
-                    </TouchableOpacity>
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>{t('auth.alreadyHaveAccount')}</Text>
+                        <TouchableOpacity onPress={onNavigateToLogin}>
+                            <Text style={[styles.linkText, { color: 'black' }]}>{t('auth.loginLink')}</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
-
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>{t('auth.alreadyHaveAccount')}</Text>
-                    <TouchableOpacity onPress={onNavigateToLogin}>
-                        <Text style={[styles.linkText, { color: 'black' }]}>{t('auth.loginLink')}</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };

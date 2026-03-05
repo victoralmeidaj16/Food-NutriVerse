@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { UserProfile, UserGoal, ActivityLevel, RESTRICTION_OPTIONS, getRestrictionOptions } from '../types';
 import { CloseIcon, CheckIcon, CameraIcon, UserIcon, PlusIcon, TrashIcon } from './Icons';
@@ -84,136 +84,140 @@ export const EditProfileModal = ({
             <CloseIcon size={24} color="#1F2937" />
           </TouchableOpacity>
         </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
-        <ScrollView contentContainerStyle={styles.content}>
-
-          <View style={styles.imageSection}>
-            <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
-              {profilePicture ? (
-                <Image source={{ uri: profilePicture }} style={styles.profileImage} />
-              ) : (
-                <View style={styles.placeholderImage}>
-                  <UserIcon size={40} color="#9CA3AF" />
+            <View style={styles.imageSection}>
+              <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
+                {profilePicture ? (
+                  <Image source={{ uri: profilePicture }} style={styles.profileImage} />
+                ) : (
+                  <View style={styles.placeholderImage}>
+                    <UserIcon size={40} color="#9CA3AF" />
+                  </View>
+                )}
+                <View style={styles.cameraBadge}>
+                  <CameraIcon size={16} color="white" />
                 </View>
-              )}
-              <View style={styles.cameraBadge}>
-                <CameraIcon size={16} color="white" />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={pickImage}>
-              <Text style={styles.changePhotoText}>{language === 'en' ? 'Change Photo' : 'Alterar Foto'}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>{language === 'en' ? 'Name' : 'Nome'}</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder={language === 'en' ? 'Your name' : 'Seu nome'}
-            />
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>{language === 'en' ? 'Goal' : 'Objetivo'}</Text>
-            <View style={styles.optionsRow}>
-              {(language === 'en' ? [
-                { label: 'Lose Weight', val: UserGoal.LOSE_WEIGHT },
-                { label: 'Build Muscle', val: UserGoal.GAIN_MUSCLE },
-                { label: 'Maintain', val: UserGoal.MAINTAIN },
-                { label: 'Eat Healthy', val: UserGoal.EAT_HEALTHY }
-              ] : [
-                { label: 'Perder Peso', val: UserGoal.LOSE_WEIGHT },
-                { label: 'Ganhar Massa', val: UserGoal.GAIN_MUSCLE },
-                { label: 'Manter', val: UserGoal.MAINTAIN },
-                { label: 'Saudável', val: UserGoal.EAT_HEALTHY }
-              ]).map(opt => (
-                <TouchableOpacity
-                  key={opt.val}
-                  onPress={() => setGoal(opt.val)}
-                  style={[styles.optionChip, goal === opt.val && styles.optionChipSelected]}
-                >
-                  <Text style={[styles.optionText, goal === opt.val && styles.optionTextSelected]}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>{language === 'en' ? 'Activity Level' : 'Nível de Atividade'}</Text>
-            <View style={styles.optionsRow}>
-              {(language === 'en' ? [
-                { label: 'Low', val: ActivityLevel.LOW },
-                { label: 'Medium', val: ActivityLevel.MEDIUM },
-                { label: 'High', val: ActivityLevel.HIGH }
-              ] : [
-                { label: 'Baixo', val: ActivityLevel.LOW },
-                { label: 'Médio', val: ActivityLevel.MEDIUM },
-                { label: 'Alto', val: ActivityLevel.HIGH }
-              ]).map(opt => (
-                <TouchableOpacity
-                  key={opt.val}
-                  onPress={() => setActivityLevel(opt.val)}
-                  style={[styles.optionChip, activityLevel === opt.val && styles.optionChipSelected]}
-                >
-                  <Text style={[styles.optionText, activityLevel === opt.val && styles.optionTextSelected]}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>{language === 'en' ? 'Dietary Restrictions' : 'Restrições Alimentares'}</Text>
-            <View style={styles.optionsRow}>
-              {getRestrictionOptions(language).map((opt, index) => (
-                <TouchableOpacity
-                  key={opt}
-                  onPress={() => toggleRestriction(RESTRICTION_OPTIONS[index])}
-                  style={[styles.optionChip, restrictions.includes(RESTRICTION_OPTIONS[index]) && styles.optionChipSelected]}
-                >
-                  <Text style={[styles.optionText, restrictions.includes(RESTRICTION_OPTIONS[index]) && styles.optionTextSelected]}>
-                    {opt}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>{language === 'en' ? "What you DON'T like/eat?" : 'O que você NÃO gosta/come?'}</Text>
-            <Text style={styles.helperText}>{language === 'en' ? 'These foods will be avoided in recipes.' : 'Esses alimentos serão evitados nas receitas.'}</Text>
-
-            <View style={styles.addDislikeRow}>
-              <TextInput
-                style={[styles.input, { flex: 1 }]}
-                value={newDislike}
-                onChangeText={setNewDislike}
-                placeholder={language === 'en' ? 'E.g. Onion, Pepper...' : 'Ex: Cebola, Pimentão...'}
-                onSubmitEditing={addDislike}
-              />
-              <TouchableOpacity onPress={addDislike} style={styles.addBtn}>
-                <PlusIcon size={24} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={pickImage}>
+                <Text style={styles.changePhotoText}>{language === 'en' ? 'Change Photo' : 'Alterar Foto'}</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.dislikesList}>
-              {dislikes.map((item, index) => (
-                <View key={index} style={styles.dislikeChip}>
-                  <Text style={styles.dislikeText}>{item}</Text>
-                  <TouchableOpacity onPress={() => removeDislike(item)}>
-                    <TrashIcon size={14} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-              ))}
+            <View style={styles.section}>
+              <Text style={styles.label}>{language === 'en' ? 'Name' : 'Nome'}</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder={language === 'en' ? 'Your name' : 'Seu nome'}
+              />
             </View>
-          </View>
 
-        </ScrollView>
+            <View style={styles.section}>
+              <Text style={styles.label}>{language === 'en' ? 'Goal' : 'Objetivo'}</Text>
+              <View style={styles.optionsRow}>
+                {(language === 'en' ? [
+                  { label: 'Lose Weight', val: UserGoal.LOSE_WEIGHT },
+                  { label: 'Build Muscle', val: UserGoal.GAIN_MUSCLE },
+                  { label: 'Maintain', val: UserGoal.MAINTAIN },
+                  { label: 'Eat Healthy', val: UserGoal.EAT_HEALTHY }
+                ] : [
+                  { label: 'Perder Peso', val: UserGoal.LOSE_WEIGHT },
+                  { label: 'Ganhar Massa', val: UserGoal.GAIN_MUSCLE },
+                  { label: 'Manter', val: UserGoal.MAINTAIN },
+                  { label: 'Saudável', val: UserGoal.EAT_HEALTHY }
+                ]).map(opt => (
+                  <TouchableOpacity
+                    key={opt.val}
+                    onPress={() => setGoal(opt.val)}
+                    style={[styles.optionChip, goal === opt.val && styles.optionChipSelected]}
+                  >
+                    <Text style={[styles.optionText, goal === opt.val && styles.optionTextSelected]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.label}>{language === 'en' ? 'Activity Level' : 'Nível de Atividade'}</Text>
+              <View style={styles.optionsRow}>
+                {(language === 'en' ? [
+                  { label: 'Low', val: ActivityLevel.LOW },
+                  { label: 'Medium', val: ActivityLevel.MEDIUM },
+                  { label: 'High', val: ActivityLevel.HIGH }
+                ] : [
+                  { label: 'Baixo', val: ActivityLevel.LOW },
+                  { label: 'Médio', val: ActivityLevel.MEDIUM },
+                  { label: 'Alto', val: ActivityLevel.HIGH }
+                ]).map(opt => (
+                  <TouchableOpacity
+                    key={opt.val}
+                    onPress={() => setActivityLevel(opt.val)}
+                    style={[styles.optionChip, activityLevel === opt.val && styles.optionChipSelected]}
+                  >
+                    <Text style={[styles.optionText, activityLevel === opt.val && styles.optionTextSelected]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.label}>{language === 'en' ? 'Dietary Restrictions' : 'Restrições Alimentares'}</Text>
+              <View style={styles.optionsRow}>
+                {getRestrictionOptions(language).map((opt, index) => (
+                  <TouchableOpacity
+                    key={opt}
+                    onPress={() => toggleRestriction(RESTRICTION_OPTIONS[index])}
+                    style={[styles.optionChip, restrictions.includes(RESTRICTION_OPTIONS[index]) && styles.optionChipSelected]}
+                  >
+                    <Text style={[styles.optionText, restrictions.includes(RESTRICTION_OPTIONS[index]) && styles.optionTextSelected]}>
+                      {opt}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.label}>{language === 'en' ? "What you DON'T like/eat?" : 'O que você NÃO gosta/come?'}</Text>
+              <Text style={styles.helperText}>{language === 'en' ? 'These foods will be avoided in recipes.' : 'Esses alimentos serão evitados nas receitas.'}</Text>
+
+              <View style={styles.addDislikeRow}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={newDislike}
+                  onChangeText={setNewDislike}
+                  placeholder={language === 'en' ? 'E.g. Onion, Pepper...' : 'Ex: Cebola, Pimentão...'}
+                  onSubmitEditing={addDislike}
+                />
+                <TouchableOpacity onPress={addDislike} style={styles.addBtn}>
+                  <PlusIcon size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.dislikesList}>
+                {dislikes.map((item, index) => (
+                  <View key={index} style={styles.dislikeChip}>
+                    <Text style={styles.dislikeText}>{item}</Text>
+                    <TouchableOpacity onPress={() => removeDislike(item)}>
+                      <TrashIcon size={14} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+          </ScrollView>
+        </KeyboardAvoidingView>
 
         <View style={styles.footer}>
           <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>

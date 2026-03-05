@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Schema, GenerateContentResponse } from "@google/genai";
-import { UserGoal, Recipe, UserProfile, WeeklyPlan, ShoppingList, ShoppingItem } from "../types";
+import { UserGoal, Recipe, UserProfile, WeeklyPlan, ShoppingList, ShoppingItem, TasteProfile, QuickDecision, RoutineMeal, MapaAlimentarResult } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -15,7 +15,7 @@ const retryOperation = async <T>(
   } catch (error: any) {
     // Check for 503 or specific overload messages
     const isOverloaded = error?.status === 503 || error?.code === 503 || error?.message?.includes('overloaded');
-    
+
     if (retries > 0 && isOverloaded) {
       console.warn(`Model overloaded. Retrying in ${delay}ms... (Attempts left: ${retries})`);
       await new Promise((resolve) => setTimeout(resolve, delay));
@@ -46,7 +46,7 @@ export const identifyIngredientsFromImage = async (base64Image: string): Promise
 
     const text = response.text;
     if (!text) return [];
-    
+
     return text.split(',').map(i => i.trim()).filter(i => i.length > 0);
   } catch (error) {
     console.error("Error identifying ingredients:", error);
@@ -55,66 +55,67 @@ export const identifyIngredientsFromImage = async (base64Image: string): Promise
 };
 
 const recipeSchema: Schema = {
-    type: Type.OBJECT,
-    properties: {
-      name: { type: Type.STRING, description: "Nome criativo e apetitoso da versão fitness" },
-      originalName: { type: Type.STRING, description: "Nome do prato original (se aplicável, senão deixe vazio)" },
-      description: { type: Type.STRING, description: "Descrição curta e vendedora do prato (max 150 caracteres)" },
-      prepTime: { type: Type.STRING, description: "Tempo total (ex: 20 min)" },
-      difficulty: { type: Type.STRING, enum: ["Fácil", "Médio", "Difícil"] },
-      category: { type: Type.STRING, enum: ['Café da Manhã', 'Almoço', 'Jantar', 'Lanches', 'Pré-Treino', 'Sobremesa'] },
-      macros: {
+  type: Type.OBJECT,
+  properties: {
+    name: { type: Type.STRING, description: "Nome criativo e apetitoso da versão fitness" },
+    originalName: { type: Type.STRING, description: "Nome do prato original (se aplicável, senão deixe vazio)" },
+    description: { type: Type.STRING, description: "Descrição curta e vendedora do prato (max 150 caracteres)" },
+    prepTime: { type: Type.STRING, description: "Tempo total (ex: 20 min)" },
+    difficulty: { type: Type.STRING, enum: ["Fácil", "Médio", "Difícil"] },
+    category: { type: Type.STRING, enum: ['Café da Manhã', 'Almoço', 'Jantar', 'Lanches', 'Pré-Treino', 'Sobremesa'] },
+    macros: {
+      type: Type.OBJECT,
+      properties: {
+        calories: { type: Type.NUMBER },
+        protein: { type: Type.NUMBER },
+        carbs: { type: Type.NUMBER },
+        fats: { type: Type.NUMBER },
+      },
+      required: ["calories", "protein", "carbs", "fats"],
+    },
+    ingredients: {
+      type: Type.ARRAY,
+      items: {
         type: Type.OBJECT,
         properties: {
-          calories: { type: Type.NUMBER },
-          protein: { type: Type.NUMBER },
-          carbs: { type: Type.NUMBER },
-          fats: { type: Type.NUMBER },
+          name: { type: Type.STRING, description: "Nome do ingrediente" },
+          quantity: { type: Type.STRING, description: "Quantidade (ex: 200g, 1 xícara, 2 unidades)" },
+          icon: { type: Type.STRING, description: "Um único emoji representando este ingrediente" }
         },
-        required: ["calories", "protein", "carbs", "fats"],
+        required: ["name", "quantity", "icon"]
       },
-      ingredients: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-             name: { type: Type.STRING, description: "Nome do ingrediente" },
-             quantity: { type: Type.STRING, description: "Quantidade (ex: 200g, 1 xícara, 2 unidades)" },
-             icon: { type: Type.STRING, description: "Um único emoji representando este ingrediente" }
-          },
-          required: ["name", "quantity", "icon"]
-        },
-        description: "Lista estruturada de ingredientes",
-      },
-      substitutions: {
-        type: Type.ARRAY,
-        description: "Lista de trocas inteligentes realizadas",
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            original: { type: Type.STRING, description: "Ingrediente calórico/original" },
-            replacement: { type: Type.STRING, description: "Ingrediente fitness escolhido" },
-            reason: { type: Type.STRING, description: "Benefício nutricional da troca (ex: Menos índice glicêmico)" },
-          }
-        }
-      },
-      instructions: {
-        type: Type.ARRAY,
-        items: { type: Type.STRING },
-        description: "Passo a passo numerado, claro e direto",
-      },
-      healthTips: { type: Type.STRING, description: "Por que essa versão ajuda no objetivo do usuário?" },
-      tags: { type: Type.ARRAY, items: { type: Type.STRING }, description: "3-4 tags curtas (ex: High Protein, Keto)" },
+      description: "Lista estruturada de ingredientes",
     },
-    required: ["name", "description", "prepTime", "difficulty", "category", "macros", "ingredients", "instructions", "substitutions", "healthTips", "tags"],
+    substitutions: {
+      type: Type.ARRAY,
+      description: "Lista de trocas inteligentes realizadas",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          original: { type: Type.STRING, description: "Ingrediente calórico/original" },
+          replacement: { type: Type.STRING, description: "Ingrediente fitness escolhido" },
+          reason: { type: Type.STRING, description: "Benefício nutricional da troca (ex: Menos índice glicêmico)" },
+        }
+      }
+    },
+    instructions: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description: "Passo a passo numerado, claro e direto",
+    },
+    healthTips: { type: Type.STRING, description: "Por que essa versão ajuda no objetivo do usuário?" },
+    tags: { type: Type.ARRAY, items: { type: Type.STRING }, description: "3-4 tags curtas (ex: High Protein, Keto)" },
+  },
+  required: ["name", "description", "prepTime", "difficulty", "category", "macros", "ingredients", "instructions", "substitutions", "healthTips", "tags"],
 };
 
 export const generateFitnessRecipe = async (
   input: string | string[], // Can be a dish name (string) or ingredients list (string[])
   goal: UserGoal,
-  restrictions: string[] = []
+  restrictions: string[] = [],
+  tasteProfile?: TasteProfile
 ): Promise<Recipe | null> => {
-  
+
   const goalPromptMap = {
     [UserGoal.LOSE_WEIGHT]: "foco em déficit calórico, alta saciedade e baixo carboidrato simples",
     [UserGoal.GAIN_MUSCLE]: "foco em superávit limpo, alta proteína e carboidratos complexos para energia",
@@ -123,7 +124,7 @@ export const generateFitnessRecipe = async (
   };
 
   const isPantryMode = Array.isArray(input);
-  
+
   let coreInstruction = "";
   if (isPantryMode) {
     coreInstruction = `
@@ -139,11 +140,21 @@ export const generateFitnessRecipe = async (
     `;
   }
 
+  let tasteProfileInstruction = "";
+  if (tasteProfile) {
+    tasteProfileInstruction = `O usuário possui o seguinte Taste Profile (Perfil de Paladar):
+      - Prato Favorito: ${tasteProfile.favoriteDish}
+      - Fast Food Favorito: ${tasteProfile.favoriteFastFood}
+      - Doce Favorito: ${tasteProfile.favoriteSweet}
+      CRÍTICO: A receita gerada deve respeitar ou ser influenciada por esse paladar sempre que possível, trazendo elementos de tempero, textura ou ingredientes que rementam aos favoritos, sem comprometer o objetivo.`;
+  }
+
   const prompt = `
     Atue como o Chef NutriVerse, especialista em nutrição esportiva e gastronomia funcional.
     
     Objetivo do Usuário: ${goalPromptMap[goal]}.
     Restrições/Alergias: ${restrictions.join(", ") || "Nenhuma"}.
+    ${tasteProfileInstruction}
 
     ${coreInstruction}
 
@@ -173,7 +184,7 @@ export const generateFitnessRecipe = async (
     if (!text) throw new Error("Empty response from Gemini");
 
     const data = JSON.parse(text);
-    
+
     return {
       ...data,
       id: crypto.randomUUID(),
@@ -187,19 +198,180 @@ export const generateFitnessRecipe = async (
   }
 };
 
+// --- Decision Killer AI ---
+
+export const generateQuickDecision = async (
+  timeOfDay: string,
+  userProfile: UserProfile
+): Promise<QuickDecision | null> => {
+
+  let tasteProfileContext = "";
+  if (userProfile.tasteProfile) {
+    tasteProfileContext = `O usuário adora: ${userProfile.tasteProfile.favoriteDish}, ${userProfile.tasteProfile.favoriteFastFood} e ${userProfile.tasteProfile.favoriteSweet}.`;
+  }
+
+  const prompt = `
+        O usuário está com fome AGORA (${timeOfDay}) e precisa de uma decisão instantânea.
+        Objetivo: ${userProfile.goal}
+        Restrições: ${userProfile.dietaryRestrictions.join(', ') || 'Nenhuma'}
+        ${tasteProfileContext}
+
+        Regras de Ouro:
+        1. Seja ULTRA rápido para preparar (menos de 15 min).
+        2. Ingredientes extremamente comuns.
+        3. Nome do prato direto e apetitoso.
+        
+        Gere uma resposta JSON.
+    `;
+
+  const decisionSchema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      mealName: { type: Type.STRING, description: "Nome curto e direto (ex: Omelete de Queijo e Pão Integral)" },
+      prepTime: { type: Type.STRING, description: "Tempo estimado (ex: 7 min)" },
+      matchScore: { type: Type.NUMBER, description: "Nível de compatibilidade com o objetivo e gosto (1 a 100)" },
+      cost: { type: Type.STRING, description: "Custo estimado baixo (ex: R$ 4,50)" }
+    },
+    required: ["mealName", "prepTime", "matchScore", "cost"]
+  };
+
+  try {
+    const response = await retryOperation<GenerateContentResponse>(() => ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: decisionSchema,
+        temperature: 0.8,
+      }
+    }));
+
+    const text = response.text;
+    if (!text) return null;
+    return JSON.parse(text) as QuickDecision;
+  } catch (error) {
+    console.error("Error generating quick decision:", error);
+    return null;
+  }
+};
+
+// --- Mapa Alimentar (Reality-Based Nutrition Engine) ---
+
+export const analyzeRoutine = async (
+  meals: RoutineMeal[],
+  goal: string,
+  tasteProfile?: TasteProfile
+): Promise<MapaAlimentarResult | null> => {
+
+  let tasteProfileContext = "";
+  if (tasteProfile) {
+    tasteProfileContext = `
+        O usuário (Taste Profile) adora:
+        - Prato: ${tasteProfile.favoriteDish}
+        - Fast Food: ${tasteProfile.favoriteFastFood}
+        - Doce: ${tasteProfile.favoriteSweet}
+        `;
+  }
+
+  const routineStr = meals.map(m => `- ${m.time}: ${m.food}`).join('\n');
+
+  const prompt = `
+        Analise a rotina alimentar real reportada pelo usuário:
+        
+        ROTINA ATUAL:
+        ${routineStr}
+
+        OBJETIVO DO USUÁRIO: ${goal}
+        ${tasteProfileContext}
+
+        Sua tarefa como NutriVerse AI é "Diagnóstico sem Terrorismo" e "Micro-swaps":
+        
+        1. DIAGNÓSTICO INVISÍVEL: Avalie a rotina atual considerando Proteína, Fibras, Açúcar e Risco de Fome Noturna (textos curtos e diretos).
+        2. SCORE DE ADERÊNCIA: Calcule a % de quão bem essa rotina se alinha ao objetivo (0-100).
+        3. MICRO-SWAPS (A Mágica): Para cada refeição reportada, sugira 2 "Micro-swaps" (opções de troca). As opções devem ser o mais próximas possível do hábito atual, mas com impacto positivo no objetivo. Ex: se ele come bolacha às 15h, não sugira "salada de peito de peru". Sugira "bolacha + iogurte protéico" ou "banana + pasta de amendoim".
+
+        Gere uma resposta JSON estrita.
+    `;
+
+  const analyzeSchema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      diagnostic: {
+        type: Type.OBJECT,
+        properties: {
+          insights: {
+            type: Type.OBJECT,
+            properties: {
+              protein: { type: Type.STRING, description: "Ex: Baixa ingestão na manhã" },
+              fiber: { type: Type.STRING, description: "Ex: Quase nula" },
+              sugar: { type: Type.STRING, description: "Ex: Alto pico à tarde" },
+              hungerRisk: { type: Type.STRING, description: "Ex: Alto, devido ao baixo volume nos lanches" }
+            },
+            required: ["protein", "fiber", "sugar", "hungerRisk"]
+          },
+          adherenceScore: { type: Type.NUMBER, description: "Score de 0 a 100" }
+        },
+        required: ["insights", "adherenceScore"]
+      },
+      optimizedRoutine: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            originalFood: { type: Type.STRING },
+            originalTime: { type: Type.STRING },
+            microSwaps: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  option: { type: Type.STRING, description: "A sugestão prática" },
+                  reason: { type: Type.STRING, description: "Por que essa troca ajuda (curto)" }
+                },
+                required: ["option", "reason"]
+              }
+            }
+          },
+          required: ["originalFood", "originalTime", "microSwaps"]
+        }
+      }
+    },
+    required: ["diagnostic", "optimizedRoutine"]
+  };
+
+  try {
+    const response = await retryOperation<GenerateContentResponse>(() => ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: analyzeSchema,
+        temperature: 0.7,
+      }
+    }));
+
+    const text = response.text;
+    if (!text) return null;
+    return JSON.parse(text) as MapaAlimentarResult;
+  } catch (error) {
+    console.error("Error analyzing routine:", error);
+    return null;
+  }
+};
+
 // --- Weekly Planning Services ---
 
 export const generateWeeklyPlan = async (
-    userProfile: UserProfile,
-    preference: string, // "Cheap", "Fast", "Varied", etc.
-    mealsCount: number = 3,
-    allowRepeats: boolean = false
+  userProfile: UserProfile,
+  preference: string, // "Cheap", "Fast", "Varied", etc.
+  mealsCount: number = 3,
+  allowRepeats: boolean = false
 ): Promise<WeeklyPlan | null> => {
-    const repeatInstruction = allowRepeats 
-        ? "O usuário PREFERE repetir refeições para praticidade (ex: jantar de segunda vira almoço de terça). Repita pratos estrategicamente." 
-        : "O usuário prefere variedade máxima. Evite repetir o mesmo prato.";
+  const repeatInstruction = allowRepeats
+    ? "O usuário PREFERE repetir refeições para praticidade (ex: jantar de segunda vira almoço de terça). Repita pratos estrategicamente."
+    : "O usuário prefere variedade máxima. Evite repetir o mesmo prato.";
 
-    const prompt = `
+  const prompt = `
       Crie um plano alimentar semanal (Segunda a Domingo) para um usuário com o seguinte perfil:
       Objetivo: ${userProfile.goal}
       Refeições por dia: ${mealsCount} (Gere exatamente essa quantidade de slots por dia)
@@ -212,86 +384,86 @@ export const generateWeeklyPlan = async (
       Gere uma receita simplificada mas completa para cada refeição de cada dia.
     `;
 
-    const planSchema: Schema = {
-        type: Type.OBJECT,
-        properties: {
-            days: {
-                type: Type.ARRAY,
-                items: {
-                    type: Type.OBJECT,
-                    properties: {
-                        dayName: { type: Type.STRING, enum: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"] },
-                        meals: {
-                            type: Type.ARRAY,
-                            items: {
-                                type: Type.OBJECT,
-                                properties: {
-                                    timeSlot: { type: Type.STRING, enum: ["Café da Manhã", "Almoço", "Lanche", "Jantar", "Ceia"] },
-                                    recipe: recipeSchema // Reusing the full recipe schema
-                                },
-                                required: ["timeSlot", "recipe"]
-                            }
-                        }
-                    },
-                    required: ["dayName", "meals"]
-                }
+  const planSchema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      days: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            dayName: { type: Type.STRING, enum: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"] },
+            meals: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  timeSlot: { type: Type.STRING, enum: ["Café da Manhã", "Almoço", "Lanche", "Jantar", "Ceia"] },
+                  recipe: recipeSchema // Reusing the full recipe schema
+                },
+                required: ["timeSlot", "recipe"]
+              }
             }
-        },
-        required: ["days"]
-    };
+          },
+          required: ["dayName", "meals"]
+        }
+      }
+    },
+    required: ["days"]
+  };
 
-    try {
-        const response = await retryOperation<GenerateContentResponse>(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: planSchema,
-                temperature: 0.7,
-            }
-        }));
+  try {
+    const response = await retryOperation<GenerateContentResponse>(() => ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: planSchema,
+        temperature: 0.7,
+      }
+    }));
 
-        const text = response.text;
-        if (!text) throw new Error("Empty response");
+    const text = response.text;
+    if (!text) throw new Error("Empty response");
 
-        const data = JSON.parse(text);
-        
-        // Post-process to add IDs and Images
-        const days = data.days.map((day: any) => ({
-            ...day,
-            meals: day.meals.map((meal: any) => ({
-                id: crypto.randomUUID(),
-                timeSlot: meal.timeSlot,
-                recipe: {
-                    ...meal.recipe,
-                    id: crypto.randomUUID(),
-                    createdAt: Date.now(),
-                    imageUrl: `https://picsum.photos/seed/${encodeURIComponent(meal.recipe.name)}/600/400`
-                }
-            }))
-        }));
+    const data = JSON.parse(text);
 
-        return {
-            id: crypto.randomUUID(),
-            startDate: Date.now(),
-            days
-        } as WeeklyPlan;
+    // Post-process to add IDs and Images
+    const days = data.days.map((day: any) => ({
+      ...day,
+      meals: day.meals.map((meal: any) => ({
+        id: crypto.randomUUID(),
+        timeSlot: meal.timeSlot,
+        recipe: {
+          ...meal.recipe,
+          id: crypto.randomUUID(),
+          createdAt: Date.now(),
+          imageUrl: `https://picsum.photos/seed/${encodeURIComponent(meal.recipe.name)}/600/400`
+        }
+      }))
+    }));
 
-    } catch (error) {
-        console.error("Error generating weekly plan:", error);
-        return null;
-    }
+    return {
+      id: crypto.randomUUID(),
+      startDate: Date.now(),
+      days
+    } as WeeklyPlan;
+
+  } catch (error) {
+    console.error("Error generating weekly plan:", error);
+    return null;
+  }
 };
 
 export const generateShoppingList = async (plan: WeeklyPlan): Promise<ShoppingList | null> => {
-    // Extract all ingredients into a flat string list for the prompt
-    const allIngredients = plan.days.flatMap(d => 
-        d.meals.flatMap(m => 
-            m.recipe.ingredients.map(i => `${i.quantity} ${i.name}`)
-        )
-    ).join('; ');
+  // Extract all ingredients into a flat string list for the prompt
+  const allIngredients = plan.days.flatMap(d =>
+    d.meals.flatMap(m =>
+      m.recipe.ingredients.map(i => `${i.quantity} ${i.name}`)
+    )
+  ).join('; ');
 
-    const prompt = `
+  const prompt = `
         Analise esta lista crua de ingredientes de todas as refeições de uma semana:
         "${allIngredients}"
 
@@ -303,46 +475,116 @@ export const generateShoppingList = async (plan: WeeklyPlan): Promise<ShoppingLi
         Gere um JSON.
     `;
 
-    const listSchema: Schema = {
+  const listSchema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      items: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            quantity: { type: Type.STRING },
+            category: { type: Type.STRING, enum: ['Hortifruti', 'Proteínas', 'Laticínios', 'Mercearia', 'Outros'] }
+          },
+          required: ["name", "quantity", "category"]
+        }
+      }
+    },
+    required: ["items"]
+  };
+
+  try {
+    const response = await retryOperation<GenerateContentResponse>(() => ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: listSchema
+      }
+    }));
+
+    const text = response.text;
+    if (!text) return null;
+
+    const data = JSON.parse(text);
+
+    return {
+      items: data.items.map((i: any) => ({ ...i, id: crypto.randomUUID(), checked: false }))
+    } as ShoppingList;
+
+  } catch (error) {
+    console.error("Error generating shopping list", error);
+    return null;
+  }
+}
+
+// --- Visual AI para Mapa Alimentar (Atrito Zero) ---
+
+export const analyzeMealImage = async (base64Image: string): Promise<Partial<RoutineMeal> | null> => {
+  const prompt = `
+    Você é um nutricionista especialista trabalhando no aplicativo NutriVerse.
+    O usuário acabou de tirar uma foto da sua refeição e quer registrá-la rapidamente no seu 'Mapa Alimentar'.
+    
+    Analise a imagem e forneça:
+    1. Uma descrição curta e apetitosa do que é a refeição (ex: "Arroz integral, feijão, peito de frango grelhado e salada de tomate").
+    2. Uma estimativa realista das calorias totais.
+    3. Uma estimativa realista dos macronutrientes (proteína, carboidrato, gordura) em gramas.
+    
+    Responda ESTRITAMENTE em formato JSON.
+  `;
+
+  const mealImageSchema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      foodName: { type: Type.STRING, description: "Descrição do prato" },
+      calories: { type: Type.NUMBER, description: "Calorias estimadas" },
+      macros: {
         type: Type.OBJECT,
         properties: {
-            items: {
-                type: Type.ARRAY,
-                items: {
-                    type: Type.OBJECT,
-                    properties: {
-                        name: { type: Type.STRING },
-                        quantity: { type: Type.STRING },
-                        category: { type: Type.STRING, enum: ['Hortifruti', 'Proteínas', 'Laticínios', 'Mercearia', 'Outros'] }
-                    },
-                    required: ["name", "quantity", "category"]
-                }
-            }
+          protein: { type: Type.NUMBER },
+          carbs: { type: Type.NUMBER },
+          fat: { type: Type.NUMBER }
         },
-        required: ["items"]
+        required: ["protein", "carbs", "fat"]
+      }
+    },
+    required: ["foodName", "calories", "macros"]
+  };
+
+  try {
+    const response = await retryOperation<GenerateContentResponse>(() => ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          inlineData: {
+            data: base64Image,
+            mimeType: "image/jpeg",
+          },
+        },
+        prompt
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: mealImageSchema,
+        temperature: 0.4, // Lower temperature for more objective estimation
+      }
+    }));
+
+    const text = response.text;
+    if (!text) return null;
+
+    const data = JSON.parse(text);
+
+    return {
+      food: data.foodName,
+      estimatedCalories: data.calories,
+      macros: data.macros
     };
 
-    try {
-        const response = await retryOperation<GenerateContentResponse>(() => ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: listSchema
-            }
-        }));
+  } catch (error) {
+    console.error("Error analyzing meal image:", error);
+    return null;
+  }
+};
 
-        const text = response.text;
-        if(!text) return null;
-        
-        const data = JSON.parse(text);
-        
-        return {
-            items: data.items.map((i: any) => ({ ...i, id: crypto.randomUUID(), checked: false }))
-        } as ShoppingList;
-
-    } catch (error) {
-        console.error("Error generating shopping list", error);
-        return null;
-    }
-}

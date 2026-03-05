@@ -17,7 +17,7 @@ module.exports = {
         ios: {
             supportsTablet: true,
             bundleIdentifier: "com.victoralmeidaj16.foodnutriverse",
-            buildNumber: "15",
+            buildNumber: "16",
             infoPlist: {
                 NSCameraUsageDescription: "Precisamos de acesso à câmera para você escanear ingredientes e gerar receitas personalizadas.",
                 NSPhotoLibraryUsageDescription: "Precisamos de acesso à galeria para você escolher fotos de ingredientes para análise.",
@@ -30,7 +30,7 @@ module.exports = {
                 backgroundColor: "#ffffff"
             },
             package: "com.victoralmeidaj16.foodnutriverse",
-            versionCode: 15,
+            versionCode: 16,
             edgeToEdgeEnabled: true,
             predictiveBackGestureEnabled: false
         },
