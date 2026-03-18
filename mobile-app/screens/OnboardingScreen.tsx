@@ -64,6 +64,12 @@ export const OnboardingScreen = ({
     const [showPlanPreview, setShowPlanPreview] = useState(false);
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [loadingMessage, setLoadingMessage] = useState('');
+    const profileScrollRef = useRef<ScrollView>(null);
+    const profileFieldPositions = useRef<Record<'height' | 'weight' | 'age', number>>({
+        height: 0,
+        weight: 0,
+        age: 0,
+    });
 
     const totalSteps = 9; // 0 to 8
 
@@ -126,6 +132,13 @@ export const OnboardingScreen = ({
         } else {
             setter([...list, item]);
         }
+    };
+
+    const scrollProfileFieldIntoView = (field: 'height' | 'weight' | 'age') => {
+        requestAnimationFrame(() => {
+            const targetY = Math.max(profileFieldPositions.current[field] - 100, 0);
+            profileScrollRef.current?.scrollTo({ y: targetY, animated: true });
+        });
     };
 
     // --- Steps Rendering ---
@@ -220,11 +233,22 @@ export const OnboardingScreen = ({
         ];
 
         return (
-            <ScrollView contentContainerStyle={styles.scrollStepContainer} keyboardShouldPersistTaps="handled">
+            <ScrollView
+                ref={profileScrollRef}
+                contentContainerStyle={[styles.scrollStepContainer, styles.keyboardAwareScrollContent]}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="interactive"
+                showsVerticalScrollIndicator={false}
+            >
                 <Text style={styles.title}>{language === 'en' ? 'Your Nutritional Profile' : 'Seu Perfil Nutricional'}</Text>
                 <Text style={styles.subtitle}>{language === 'en' ? 'To calculate your ideal calories.' : 'Para calcularmos suas calorias exatas.'}</Text>
 
-                <View style={styles.inputGroup}>
+                <View
+                    style={styles.inputGroup}
+                    onLayout={({ nativeEvent }) => {
+                        profileFieldPositions.current.height = nativeEvent.layout.y;
+                    }}
+                >
                     <Text style={styles.label}>{language === 'en' ? 'Height (cm)' : 'Altura (cm)'}</Text>
                     <TextInput
                         style={styles.input}
@@ -232,9 +256,15 @@ export const OnboardingScreen = ({
                         placeholder="175"
                         value={height}
                         onChangeText={setHeight}
+                        onFocus={() => scrollProfileFieldIntoView('height')}
                     />
                 </View>
-                <View style={styles.inputGroup}>
+                <View
+                    style={styles.inputGroup}
+                    onLayout={({ nativeEvent }) => {
+                        profileFieldPositions.current.weight = nativeEvent.layout.y;
+                    }}
+                >
                     <Text style={styles.label}>{language === 'en' ? 'Weight (kg)' : 'Peso (kg)'}</Text>
                     <TextInput
                         style={styles.input}
@@ -242,9 +272,15 @@ export const OnboardingScreen = ({
                         placeholder="70"
                         value={weight}
                         onChangeText={setWeight}
+                        onFocus={() => scrollProfileFieldIntoView('weight')}
                     />
                 </View>
-                <View style={styles.inputGroup}>
+                <View
+                    style={styles.inputGroup}
+                    onLayout={({ nativeEvent }) => {
+                        profileFieldPositions.current.age = nativeEvent.layout.y;
+                    }}
+                >
                     <Text style={styles.label}>{language === 'en' ? 'Age' : 'Idade'}</Text>
                     <TextInput
                         style={styles.input}
@@ -252,6 +288,7 @@ export const OnboardingScreen = ({
                         placeholder="25"
                         value={age}
                         onChangeText={setAge}
+                        onFocus={() => scrollProfileFieldIntoView('age')}
                     />
                 </View>
 
@@ -658,7 +695,11 @@ export const OnboardingScreen = ({
 
     return (
         <SafeAreaView style={styles.container}>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 36 : 0}
+                style={{ flex: 1 }}
+            >
                 {step > 0 && (
                     <View style={styles.headerHeader}>
                         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -711,6 +752,9 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         paddingTop: 20,
         paddingBottom: 40,
+    },
+    keyboardAwareScrollContent: {
+        paddingBottom: 180,
     },
     heroImagePlaceholder: {
         width: 120,

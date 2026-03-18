@@ -377,6 +377,20 @@ export default function App() {
         }
 
         const loadedProfile = await loadUserSpecificData(currentUser.uid);
+        const isFreshSignup = !!pendingProfile;
+
+        if (isFreshSignup) {
+          if (loadedProfile) {
+            setUserProfile(loadedProfile);
+            setUser({ name: loadedProfile.name });
+          }
+          setPendingProfile(null);
+          setSignupMessage('');
+          setCurrentScreen('PAYWALL');
+          setIsLoading(false);
+          return;
+        }
+
         const effectiveProfile = await reconcileAppleSubscription(currentUser.uid, loadedProfile);
         setPendingProfile(null);
         setSignupMessage('');
