@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import { CloseIcon, CheckIcon, CalendarIcon } from './Icons';
 import { WeeklyPlan } from '../types';
+import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../context/LanguageContext';
 
 interface AddToPlanModalProps {
@@ -17,6 +18,7 @@ export const AddToPlanModal = ({ visible, onClose, onConfirm, plan }: AddToPlanM
     const { language } = useLanguage();
 
     const handleConfirm = () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         if (selectedDay !== null && selectedSlot !== null) {
             onConfirm(selectedDay, selectedSlot);
             onClose();
@@ -42,6 +44,7 @@ export const AddToPlanModal = ({ visible, onClose, onConfirm, plan }: AddToPlanM
                                     key={index}
                                     style={[styles.optionBtn, selectedDay === index && styles.optionBtnSelected]}
                                     onPress={() => {
+                                        Haptics.selectionAsync();
                                         setSelectedDay(index);
                                         setSelectedSlot(null); // Reset slot when day changes
                                     }}
@@ -61,7 +64,7 @@ export const AddToPlanModal = ({ visible, onClose, onConfirm, plan }: AddToPlanM
                                         <TouchableOpacity
                                             key={index}
                                             style={[styles.slotBtn, selectedSlot === index && styles.slotBtnSelected]}
-                                            onPress={() => setSelectedSlot(index)}
+                                            onPress={() => { Haptics.selectionAsync(); setSelectedSlot(index); }}
                                         >
                                             <Text style={[styles.slotText, selectedSlot === index && styles.slotTextSelected]}>
                                                 {meal.timeSlot}

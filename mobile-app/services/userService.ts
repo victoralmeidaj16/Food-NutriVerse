@@ -1,4 +1,4 @@
-import { doc, setDoc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, deleteField } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import { UserProfile, SubscriptionPlan } from '../types';
 
@@ -46,7 +46,18 @@ export const getUserProfile = async (uid: string): Promise<UserProfile | null> =
 export const updateUserProfile = async (uid: string, updates: Partial<UserProfile>) => {
     try {
         const docRef = doc(db, 'users', uid);
-        await updateDoc(docRef, updates);
+        const sanitizedUpdates = Object.fromEntries(
+            Object.entries(updates).map(([key, value]) => [
+                key,
+                value === undefined ? deleteField() : value
+            ])
+        );
+
+        if (Object.keys(sanitizedUpdates).length === 0) {
+            return;
+        }
+
+        await updateDoc(docRef, sanitizedUpdates);
     } catch (error) {
         console.error("Error updating user profile:", error);
         throw error;

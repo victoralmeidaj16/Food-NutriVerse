@@ -25,7 +25,25 @@ export interface PurchaseResult {
     success: boolean;
     productId?: string;
     transactionReceipt?: string;
+    transactionId?: string;
+    originalTransactionId?: string;
     error?: string;
+}
+
+export interface SubscriptionStatusResult {
+    isActive: boolean;
+    productId?: string;
+    expiryDate?: number;
+    transactionReceipt?: string;
+    transactionId?: string;
+    originalTransactionId?: string;
+    verificationState: 'verified_active' | 'verified_inactive' | 'unknown';
+}
+
+interface PendingPurchase {
+    productId: string;
+    resolve: (result: PurchaseResult) => void;
+    timeoutId: ReturnType<typeof setTimeout>;
 }
 
 // Mock products for development
@@ -52,6 +70,8 @@ class IAPService {
     private isInitialized = false;
     private products: any[] = [];
     private useMockMode = false;
+    private listenerRegistered = false;
+    private pendingPurchase: PendingPurchase | null = null;
 
     /**
      * Initialize IAP connection
@@ -59,6 +79,10 @@ class IAPService {
      */
     async initialize(): Promise<boolean> {
         try {
+            if (this.isInitialized) {
+                return true;
+            }
+
             // Detect environment
             const isExpoGo = Constants.appOwnership === 'expo' || !InAppPurchases;
             const isDevelopment = __DEV__;
@@ -87,7 +111,10 @@ class IAPService {
             await this.loadProducts();
 
             // Set up purchase listener
-            this.setupPurchaseListener();
+            if (!this.listenerRegistered) {
+                this.setupPurchaseListener();
+                this.listenerRegistered = true;
+            }
 
             return true;
         } catch (error) {
@@ -149,7 +176,9 @@ class IAPService {
                     resolve({
                         success: true,
                         productId,
-                        transactionReceipt: `MOCK_RECEIPT_${Date.now()}_${productId}`
+                        transactionReceipt: `MOCK_RECEIPT_${Date.now()}_${productId}`,
+                        transactionId: `MOCK_TRANSACTION_${Date.now()}_${productId}`,
+                        originalTransactionId: `MOCK_ORIGINAL_${productId}`
                     });
                 }, 1500); // Simulate network delay
             });
@@ -158,15 +187,38 @@ class IAPService {
         try {
             console.log('💳 IAP: Starting REAL purchase for', productId);
 
-            // Start the purchase
-            await InAppPurchases.purchaseItemAsync(productId);
+            if (this.pendingPurchase) {
+                return {
+                    success: false,
+                    error: 'Já existe uma compra em andamento'
+                };
+            }
 
-            // The actual result will come through the listener
-            // Return pending status
-            return {
-                success: true,
-                productId: productId
-            };
+            return await new Promise<PurchaseResult>(async (resolve) => {
+                const timeoutId = setTimeout(() => {
+                    if (this.pendingPurchase?.productId === productId) {
+                        this.resolvePendingPurchase({
+                            success: false,
+                            error: 'A confirmação da compra demorou mais que o esperado'
+                        });
+                    }
+                }, 60000);
+
+                this.pendingPurchase = {
+                    productId,
+                    resolve,
+                    timeoutId
+                };
+
+                try {
+                    await InAppPurchases.purchaseItemAsync(productId);
+                } catch (error: any) {
+                    this.resolvePendingPurchase({
+                        success: false,
+                        error: error?.message || 'Erro ao processar compra'
+                    });
+                }
+            });
 
         } catch (error: any) {
             console.error('IAP: Purchase failed', error);
@@ -209,27 +261,22 @@ class IAPService {
 
         try {
             console.log('💳 IAP: Restoring REAL purchases');
+            const status = await this.checkSubscriptionStatus();
 
-            const { results } = await InAppPurchases.getPurchaseHistoryAsync();
-
-            if (!results || results.length === 0) {
+            if (status.verificationState === 'verified_active' && status.productId) {
                 return {
-                    success: false,
-                    error: 'Nenhuma compra anterior encontrada'
+                    success: true,
+                    productId: status.productId,
+                    transactionReceipt: status.transactionReceipt,
+                    transactionId: status.transactionId,
+                    originalTransactionId: status.originalTransactionId
                 };
             }
 
-            // Find the most recent valid subscription
-            const validPurchases = results
-                .filter((p: any) => p.acknowledged)
-                .sort((a: any, b: any) => b.purchaseTime - a.purchaseTime);
-
-            if (validPurchases.length > 0) {
-                const latestPurchase = validPurchases[0];
+            if (status.verificationState === 'unknown') {
                 return {
-                    success: true,
-                    productId: latestPurchase.productId,
-                    transactionReceipt: latestPurchase.transactionReceipt
+                    success: false,
+                    error: 'Não foi possível validar a assinatura agora'
                 };
             }
 
@@ -255,18 +302,50 @@ class IAPService {
             console.log('IAP: Purchase update', { responseCode, errorCode });
 
             if (responseCode === InAppPurchases.IAPResponseCode.OK && results) {
-                for (const purchase of results) {
-                    console.log('IAP: Purchase successful', purchase.productId);
-
-                    // Finish the transaction
-                    this.finishTransaction(purchase);
-                }
+                void this.handleSuccessfulPurchases(results);
             } else if (responseCode === InAppPurchases.IAPResponseCode.USER_CANCELED) {
                 console.log('IAP: User canceled purchase');
+                this.resolvePendingPurchase({
+                    success: false,
+                    error: 'Compra cancelada pelo usuário'
+                });
             } else if (responseCode === InAppPurchases.IAPResponseCode.ERROR) {
                 console.error('IAP: Purchase error', errorCode);
+                this.resolvePendingPurchase({
+                    success: false,
+                    error: errorCode || 'Erro ao processar compra'
+                });
             }
         });
+    }
+
+    private async handleSuccessfulPurchases(results: IAPTypes.InAppPurchase[]): Promise<void> {
+        for (const purchase of results) {
+            console.log('IAP: Purchase successful', purchase.productId);
+
+            await this.finishTransaction(purchase);
+
+            if (this.pendingPurchase?.productId === purchase.productId) {
+                this.resolvePendingPurchase({
+                    success: true,
+                    productId: purchase.productId,
+                    transactionReceipt: purchase.transactionReceipt,
+                    transactionId: purchase.orderId,
+                    originalTransactionId: purchase.originalOrderId || purchase.orderId
+                });
+            }
+        }
+    }
+
+    private resolvePendingPurchase(result: PurchaseResult): void {
+        if (!this.pendingPurchase) {
+            return;
+        }
+
+        clearTimeout(this.pendingPurchase.timeoutId);
+        const { resolve } = this.pendingPurchase;
+        this.pendingPurchase = null;
+        resolve(result);
     }
 
     /**
@@ -285,11 +364,7 @@ class IAPService {
      * Check if user has active subscription
      * This should be called on app startup and after purchases
      */
-    async checkSubscriptionStatus(): Promise<{
-        isActive: boolean;
-        productId?: string;
-        expiryDate?: number;
-    }> {
+    async checkSubscriptionStatus(): Promise<SubscriptionStatusResult> {
         if (this.useMockMode) {
             // In mock mode, we currently don't persist state, so we always return inactive 
             // unless we want to simulate a pro user for testing.
@@ -302,7 +377,7 @@ class IAPService {
                 expiryDate: Date.now() + 1000000000
             };
             */
-            return { isActive: false };
+            return { isActive: false, verificationState: 'verified_inactive' };
         }
 
         try {
@@ -310,7 +385,7 @@ class IAPService {
             const { results } = await InAppPurchases.getPurchaseHistoryAsync();
 
             if (!results || results.length === 0) {
-                return { isActive: false };
+                return { isActive: false, verificationState: 'verified_inactive' };
             }
 
             // Sort purchases by time (newest first) to check the most recent renewal/purchase
@@ -347,17 +422,21 @@ class IAPService {
                     return {
                         isActive: true,
                         productId: purchase.productId,
-                        expiryDate: expirationTime
+                        expiryDate: expirationTime,
+                        transactionReceipt: purchase.transactionReceipt,
+                        transactionId: purchase.orderId,
+                        originalTransactionId: purchase.originalOrderId || purchase.orderId,
+                        verificationState: 'verified_active'
                     };
                 }
             }
 
             // No active subscription found
-            return { isActive: false };
+            return { isActive: false, verificationState: 'verified_inactive' };
 
         } catch (error) {
             console.error('IAP: Failed to check subscription status', error);
-            return { isActive: false };
+            return { isActive: false, verificationState: 'unknown' };
         }
     }
 
@@ -386,6 +465,7 @@ class IAPService {
         if (this.isInitialized && !this.useMockMode) {
             await InAppPurchases.disconnectAsync();
             this.isInitialized = false;
+            this.listenerRegistered = false;
             console.log('IAP: Disconnected from App Store');
         }
     }

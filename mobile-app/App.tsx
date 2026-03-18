@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, StatusBar, ActivityIndicator } from 'react-native';
+import { AppState, AppStateStatus, StyleSheet, View, StatusBar, ActivityIndicator } from 'react-native';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './services/firebaseConfig';
 import { getUserProfile, saveUserProfile, updateUserProfile } from './services/userService';
@@ -11,25 +11,219 @@ import { RecipePackScreen } from './screens/RecipePackScreen';
 import { MainScreen } from './screens/MainScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { SignUpScreen } from './screens/SignUpScreen';
-import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan, Recipe, WeeklyPlan } from './types';
+import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan, Recipe, WeeklyPlan, UserList } from './types';
 import { storageService } from './services/storage';
 import { LanguageProvider } from './context/LanguageContext';
-import { iapService } from './services/iapService';
+import { iapService, PRODUCT_IDS, PurchaseResult } from './services/iapService';
+import { validateSubscriptionWithBackend } from './services/subscriptionValidationService';
 
 // --- Types ---
 type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL' | 'PAYWALL' | 'RECIPE_PACK';
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('ONBOARDING');
+  const [currentScreen, setCurrentScreen] = useState<Screen>('LOGIN');
   const [user, setUser] = useState<{ name: string } | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [savedRecipes, setSavedRecipes] = useState<Set<string>>(new Set());
+  const [fullSavedRecipes, setFullSavedRecipes] = useState<Recipe[]>([]);
+  const [userLists, setUserLists] = useState<UserList[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [generatedRecipes, setGeneratedRecipes] = useState<Recipe[]>([]);
   const [pendingProfile, setPendingProfile] = useState<UserProfile | null>(null);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
   const [signupMessage, setSignupMessage] = useState<string>('');
+
+  const getPlanFromProductId = (productId?: string): SubscriptionPlan => {
+    if (productId === PRODUCT_IDS.MONTHLY) return SubscriptionPlan.MONTHLY;
+    if (productId === PRODUCT_IDS.YEARLY) return SubscriptionPlan.YEARLY;
+    return SubscriptionPlan.FREE;
+  };
+
+  const getExpiryFromPlan = (plan: SubscriptionPlan, timestamp = Date.now()): string | undefined => {
+    const expiryDate = new Date(timestamp);
+
+    if (plan === SubscriptionPlan.MONTHLY) {
+      expiryDate.setMonth(expiryDate.getMonth() + 1);
+      return expiryDate.toISOString();
+    }
+
+    if (plan === SubscriptionPlan.YEARLY) {
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+      return expiryDate.toISOString();
+    }
+
+    return undefined;
+  };
+
+  const applySubscriptionToProfile = (
+    profile: UserProfile,
+    productId?: string,
+    transactionReceipt?: string,
+    expiryTimestamp?: number,
+    transactionId?: string,
+    originalTransactionId?: string
+  ): UserProfile => {
+    const plan = getPlanFromProductId(productId);
+    if (plan === SubscriptionPlan.FREE) {
+      return profile;
+    }
+
+    return {
+      ...profile,
+      plan,
+      isPro: true,
+      subscriptionExpiry: expiryTimestamp
+        ? new Date(expiryTimestamp).toISOString()
+        : getExpiryFromPlan(plan),
+      transactionReceipt: transactionReceipt || profile.transactionReceipt,
+      subscriptionTransactionId: transactionId || profile.subscriptionTransactionId,
+      subscriptionOriginalTransactionId: originalTransactionId || profile.subscriptionOriginalTransactionId
+    };
+  };
+
+  const removeSubscriptionFromProfile = (profile: UserProfile): UserProfile => ({
+    ...profile,
+    plan: SubscriptionPlan.FREE,
+    isPro: false,
+    subscriptionExpiry: undefined,
+    transactionReceipt: undefined,
+    subscriptionTransactionId: undefined,
+    subscriptionOriginalTransactionId: undefined
+  });
+
+  const reconcileAppleSubscription = async (uid: string, profile: UserProfile | null): Promise<UserProfile | null> => {
+    try {
+      await iapService.initialize();
+      const localStatus = await iapService.checkSubscriptionStatus();
+
+      const baseProfile = profile || {
+        name: 'Usuário',
+        goal: UserGoal.LOSE_WEIGHT,
+        activityLevel: ActivityLevel.MEDIUM,
+        mealsPerDay: 3,
+        mealSlots: ['Café', 'Almoço', 'Jantar'],
+        dietaryRestrictions: [],
+        dislikes: [],
+        usageModes: [AppUsageMode.FIT_SWAP],
+        plan: SubscriptionPlan.FREE,
+        isPro: false,
+        usageStats: {
+          recipesGeneratedToday: 0,
+          lastGenerationDate: new Date().toISOString(),
+          desiresTransformedToday: 0,
+          lastDesireDate: new Date().toISOString(),
+          pantryScansThisWeek: 0,
+          lastScanDate: new Date().toISOString(),
+          savedRecipesCount: 0,
+          weeklyPlansGeneratedThisWeek: 0,
+          lastPlanGenerationDate: new Date().toISOString()
+        }
+      };
+
+      const applyAndPersistResolvedSubscription = async (
+        productId: string,
+        transactionReceipt?: string,
+        expiryDate?: number,
+        transactionId?: string,
+        originalTransactionId?: string
+      ): Promise<UserProfile> => {
+        const resolvedProfile = applySubscriptionToProfile(
+          baseProfile,
+          productId,
+          transactionReceipt,
+          expiryDate,
+          transactionId,
+          originalTransactionId
+        );
+        const needsUpdate =
+          !profile?.isPro ||
+          profile.plan !== resolvedProfile.plan ||
+          profile.subscriptionExpiry !== resolvedProfile.subscriptionExpiry ||
+          profile.transactionReceipt !== resolvedProfile.transactionReceipt ||
+          profile.subscriptionTransactionId !== resolvedProfile.subscriptionTransactionId ||
+          profile.subscriptionOriginalTransactionId !== resolvedProfile.subscriptionOriginalTransactionId;
+
+        if (needsUpdate) {
+          await updateUserProfile(uid, {
+            isPro: resolvedProfile.isPro,
+            plan: resolvedProfile.plan,
+            subscriptionExpiry: resolvedProfile.subscriptionExpiry,
+            transactionReceipt: resolvedProfile.transactionReceipt,
+            subscriptionTransactionId: resolvedProfile.subscriptionTransactionId,
+            subscriptionOriginalTransactionId: resolvedProfile.subscriptionOriginalTransactionId
+          });
+          await storageService.saveProfile(resolvedProfile);
+          setUserProfile(resolvedProfile);
+          setUser({ name: resolvedProfile.name });
+        }
+
+        return resolvedProfile;
+      };
+
+      const validation = await validateSubscriptionWithBackend({
+        transactionId: profile?.subscriptionTransactionId || localStatus.transactionId,
+        originalTransactionId: profile?.subscriptionOriginalTransactionId || localStatus.originalTransactionId
+      });
+
+      if (!validation.ok) {
+        console.warn('Subscription validation skipped:', validation.error);
+        if (localStatus.isActive && localStatus.productId) {
+          return await applyAndPersistResolvedSubscription(
+            localStatus.productId,
+            localStatus.transactionReceipt,
+            localStatus.expiryDate,
+            localStatus.transactionId,
+            localStatus.originalTransactionId
+          );
+        }
+
+        return profile || baseProfile;
+      }
+
+      if (!validation.isActive || !validation.productId) {
+        if (localStatus.isActive && localStatus.productId) {
+          return await applyAndPersistResolvedSubscription(
+            localStatus.productId,
+            localStatus.transactionReceipt,
+            localStatus.expiryDate,
+            localStatus.transactionId,
+            localStatus.originalTransactionId
+          );
+        }
+
+        if (!profile?.isPro) {
+          return baseProfile;
+        }
+
+        const downgradedProfile = removeSubscriptionFromProfile(baseProfile);
+        await updateUserProfile(uid, {
+          isPro: false,
+          plan: SubscriptionPlan.FREE,
+          subscriptionExpiry: undefined,
+          transactionReceipt: undefined,
+          subscriptionTransactionId: undefined,
+          subscriptionOriginalTransactionId: undefined
+        });
+        await storageService.saveProfile(downgradedProfile);
+        setUserProfile(downgradedProfile);
+        setUser({ name: downgradedProfile.name });
+        return downgradedProfile;
+      }
+
+      return await applyAndPersistResolvedSubscription(
+        validation.productId,
+        baseProfile.transactionReceipt,
+        validation.expiryDate,
+        validation.transactionId,
+        validation.originalTransactionId
+      );
+    } catch (error) {
+      console.error('Error reconciling Apple subscription:', error);
+      return profile;
+    }
+  };
 
   const loadUserProfile = async (uid: string) => {
     try {
@@ -96,12 +290,54 @@ export default function App() {
         }
       }
 
-      const saved = await storageService.loadSavedRecipes();
-      setSavedRecipes(new Set(saved));
-
       const plan = await storageService.loadWeeklyPlan();
-      if (plan) setWeeklyPlan(plan);
-      else setWeeklyPlan(null);
+
+      // Sync from Firestore if available
+      if (profile) {
+        if (profile.recipeHistory) {
+          setGeneratedRecipes(profile.recipeHistory);
+          await storageService.saveHistory(profile.recipeHistory);
+        } else {
+          const history = await storageService.loadHistory();
+          setGeneratedRecipes(history);
+        }
+
+        if (profile.savedRecipes) {
+          setSavedRecipes(new Set(profile.savedRecipes));
+          await storageService.saveSavedRecipes(profile.savedRecipes);
+        } else {
+          const saved = await storageService.loadSavedRecipes();
+          setSavedRecipes(new Set(saved));
+        }
+
+        if (profile.userLists) {
+          setUserLists(profile.userLists);
+          await storageService.saveUserLists(profile.userLists);
+        } else {
+          const lists = await storageService.loadUserLists();
+          setUserLists(lists);
+        }
+
+        if (profile.weeklyPlan) {
+          setWeeklyPlan(profile.weeklyPlan);
+          await storageService.saveWeeklyPlan(profile.weeklyPlan);
+        } else if (plan) {
+          setWeeklyPlan(plan);
+        }
+      } else {
+        // Fallback to local storage if no profile in Firestore
+        const history = await storageService.loadHistory();
+        setGeneratedRecipes(history);
+        const saved = await storageService.loadSavedRecipes();
+        setSavedRecipes(new Set(saved));
+        const lists = await storageService.loadUserLists();
+        setUserLists(lists);
+        if (plan) setWeeklyPlan(plan);
+        else setWeeklyPlan(null);
+      }
+
+      const fullSaved = await storageService.loadFullSavedRecipes();
+      setFullSavedRecipes(fullSaved);
 
       return finalProfile;
 
@@ -113,6 +349,8 @@ export default function App() {
 
   // Monitor Auth State
   useEffect(() => {
+    void iapService.initialize();
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setFirebaseUser(currentUser);
       if (currentUser) {
@@ -139,7 +377,9 @@ export default function App() {
         }
 
         const loadedProfile = await loadUserSpecificData(currentUser.uid);
-        if (loadedProfile?.isPro) {
+        const effectiveProfile = await reconcileAppleSubscription(currentUser.uid, loadedProfile);
+
+        if (effectiveProfile?.isPro) {
           setCurrentScreen('MAIN');
         } else {
           // Check if we are already in the main flow or just logged in
@@ -159,6 +399,8 @@ export default function App() {
         setUser(null);
         setUserProfile(null);
         setSavedRecipes(new Set());
+        setFullSavedRecipes([]);
+        setUserLists([]);
         setWeeklyPlan(null); // Clear weekly plan on logout
         // Initial screen is now ONBOARDING
         // currentScreen will be managed by components mostly, 
@@ -171,6 +413,18 @@ export default function App() {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (nextState === 'active' && firebaseUser) {
+        void reconcileAppleSubscription(firebaseUser.uid, userProfile);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [firebaseUser, userProfile]);
+
   // ... (keep initIAP) ...
 
   // ... (keep wakeUpServer) ...
@@ -178,6 +432,7 @@ export default function App() {
 
   const handleOnboardingComplete = (profile: UserProfile) => {
     setPendingProfile(profile);
+    setSignupMessage('');
     // User finished onboarding. Show Paywall BEFORE Sign Up.
     setCurrentScreen('PAYWALL');
   };
@@ -187,22 +442,44 @@ export default function App() {
   };
 
   const handleSaveRecipe = async (recipe: Recipe) => {
-    const newSaved = new Set(savedRecipes);
-    if (newSaved.has(recipe.id)) {
-      newSaved.delete(recipe.id);
+    const newSavedIds = new Set(savedRecipes);
+    let newFullRecipes = [...fullSavedRecipes];
+
+    if (newSavedIds.has(recipe.id)) {
+      newSavedIds.delete(recipe.id);
+      newFullRecipes = newFullRecipes.filter(r => r.id !== recipe.id);
     } else {
-      newSaved.add(recipe.id);
+      newSavedIds.add(recipe.id);
+      // Only add if not already there
+      if (!newFullRecipes.find(r => r.id === recipe.id)) {
+        newFullRecipes.push(recipe);
+      }
     }
-    setSavedRecipes(newSaved);
-    await storageService.saveSavedRecipes(Array.from(newSaved));
+
+    setSavedRecipes(newSavedIds);
+    setFullSavedRecipes(newFullRecipes);
+
+    await storageService.saveSavedRecipes(Array.from(newSavedIds));
+    await storageService.saveFullSavedRecipes(newFullRecipes);
 
     if (userProfile && firebaseUser) {
-      const updatedProfile = { ...userProfile };
-      setUserProfile(updatedProfile);
-      // savedRecipes is no longer part of UserProfile, so we don't save it here.
-      // It should be handled via SubscriptionService or a separate collection if needed.
-      // For now, we just update the local state to reflect the UI change (if any).
-      await updateUserProfile(firebaseUser.uid, {});
+      await updateUserProfile(firebaseUser.uid, { savedRecipes: Array.from(newSavedIds) });
+    }
+  };
+
+  const handleUpdateHistory = async (recipes: Recipe[]) => {
+    setGeneratedRecipes(recipes);
+    await storageService.saveHistory(recipes);
+    if (firebaseUser) {
+      await updateUserProfile(firebaseUser.uid, { recipeHistory: recipes });
+    }
+  };
+
+  const handleUpdateLists = async (lists: UserList[]) => {
+    setUserLists(lists);
+    await storageService.saveUserLists(lists);
+    if (firebaseUser) {
+      await updateUserProfile(firebaseUser.uid, { userLists: lists });
     }
   };
 
@@ -235,6 +512,9 @@ export default function App() {
 
     setWeeklyPlan(newPlan);
     await storageService.saveWeeklyPlan(newPlan);
+    if (firebaseUser) {
+      await updateUserProfile(firebaseUser.uid, { weeklyPlan: newPlan });
+    }
   };
 
   const renderScreen = () => {
@@ -242,22 +522,105 @@ export default function App() {
       case 'ONBOARDING':
         return <OnboardingScreen onComplete={handleOnboardingComplete} onLogin={() => setCurrentScreen('LOGIN')} />;
       case 'LOGIN':
-        return <LoginScreen onNavigateToSignUp={() => setCurrentScreen('ONBOARDING')} />; // Or back to Paywall? Standard flow usually Login -> Main or Paywall
+        return (
+          <LoginScreen
+            onNavigateToSignUp={() => setCurrentScreen('ONBOARDING')}
+            onLogin={async () => {
+              if (auth.currentUser) {
+                const loadedProfile = await loadUserSpecificData(auth.currentUser.uid);
+                const effectiveProfile = await reconcileAppleSubscription(auth.currentUser.uid, loadedProfile);
+                if (effectiveProfile?.isPro || auth.currentUser.email === '123indiozinhos@gmail.com') {
+                  setCurrentScreen('MAIN');
+                } else {
+                  setCurrentScreen('PAYWALL');
+                }
+              }
+            }}
+          />
+        );
       case 'SIGNUP':
         return <SignUpScreen onNavigateToLogin={() => setCurrentScreen('LOGIN')} initialProfile={pendingProfile} welcomeMessage={signupMessage} />;
       case 'PAYWALL':
         return (
           <PaywallScreen
-            onPurchase={() => {
-              // User bought the plan. Now let them create an account.
+            onPurchase={async (purchaseResult: PurchaseResult) => {
+              const subscribedProfile = applySubscriptionToProfile(
+                pendingProfile || userProfile || {
+                  name: 'Usuário',
+                  goal: UserGoal.LOSE_WEIGHT,
+                  activityLevel: ActivityLevel.MEDIUM,
+                  mealsPerDay: 3,
+                  mealSlots: ['Café', 'Almoço', 'Jantar'],
+                  dietaryRestrictions: [],
+                  dislikes: [],
+                  usageModes: [AppUsageMode.FIT_SWAP],
+                  plan: SubscriptionPlan.FREE,
+                  isPro: false,
+                  usageStats: {
+                    recipesGeneratedToday: 0,
+                    lastGenerationDate: new Date().toISOString(),
+                    desiresTransformedToday: 0,
+                    lastDesireDate: new Date().toISOString(),
+                    pantryScansThisWeek: 0,
+                    lastScanDate: new Date().toISOString(),
+                    savedRecipesCount: 0,
+                    weeklyPlansGeneratedThisWeek: 0,
+                    lastPlanGenerationDate: new Date().toISOString()
+                  }
+                },
+                purchaseResult.productId,
+                purchaseResult.transactionReceipt,
+                undefined,
+                purchaseResult.transactionId,
+                purchaseResult.originalTransactionId
+              );
+
+              setPendingProfile(subscribedProfile);
+
+              if (firebaseUser) {
+                setUserProfile(subscribedProfile);
+                await updateUserProfile(firebaseUser.uid, {
+                  isPro: subscribedProfile.isPro,
+                  plan: subscribedProfile.plan,
+                  subscriptionExpiry: subscribedProfile.subscriptionExpiry,
+                  transactionReceipt: subscribedProfile.transactionReceipt,
+                  subscriptionTransactionId: subscribedProfile.subscriptionTransactionId,
+                  subscriptionOriginalTransactionId: subscribedProfile.subscriptionOriginalTransactionId
+                });
+                await storageService.saveProfile(subscribedProfile);
+                const verifiedProfile = await reconcileAppleSubscription(firebaseUser.uid, subscribedProfile);
+                setCurrentScreen(verifiedProfile?.isPro ? 'MAIN' : 'PAYWALL');
+                return;
+              }
+
               setSignupMessage('Plano ativado! Finalize seu cadastro:');
               setCurrentScreen('SIGNUP');
             }}
-            onRestore={() => {
-              // If restore is successful, we probably want them to login too? 
-              // Or if they restored, they might not have an account yet if it's device based?
-              // Usually restore implies an existing account.
-              // Let's send them to Login to link/restore account data.
+            onRestore={async (purchaseResult: PurchaseResult) => {
+              if (firebaseUser && userProfile) {
+                const restoredProfile = applySubscriptionToProfile(
+                  userProfile,
+                  purchaseResult.productId,
+                  purchaseResult.transactionReceipt,
+                  undefined,
+                  purchaseResult.transactionId,
+                  purchaseResult.originalTransactionId
+                );
+                setUserProfile(restoredProfile);
+                await updateUserProfile(firebaseUser.uid, {
+                  isPro: restoredProfile.isPro,
+                  plan: restoredProfile.plan,
+                  subscriptionExpiry: restoredProfile.subscriptionExpiry,
+                  transactionReceipt: restoredProfile.transactionReceipt,
+                  subscriptionTransactionId: restoredProfile.subscriptionTransactionId,
+                  subscriptionOriginalTransactionId: restoredProfile.subscriptionOriginalTransactionId
+                });
+                await storageService.saveProfile(restoredProfile);
+                const verifiedProfile = await reconcileAppleSubscription(firebaseUser.uid, restoredProfile);
+                setCurrentScreen(verifiedProfile?.isPro ? 'MAIN' : 'PAYWALL');
+                return;
+              }
+
               setCurrentScreen('LOGIN');
             }}
             onClose={() => {
@@ -271,6 +634,7 @@ export default function App() {
             }}
           />
         );
+      case 'RECIPE_PACK':
         return (
           <RecipePackScreen
             goal={userProfile?.goal || UserGoal.LOSE_WEIGHT}
@@ -286,12 +650,23 @@ export default function App() {
             onRecipeClick={handleRecipeClick}
             onLogout={handleLogout}
             savedRecipes={savedRecipes}
+            fullSavedRecipes={fullSavedRecipes}
+            userLists={userLists}
+            onUpdateLists={handleUpdateLists}
             onToggleSave={handleSaveRecipe}
             onUpdateProfile={handleUpdateProfile}
+            onUpdateHistory={handleUpdateHistory}
+            generatedRecipes={generatedRecipes}
             onShowPaywall={() => setCurrentScreen('PAYWALL')}
             onOpenRecipePack={() => setCurrentScreen('RECIPE_PACK')}
             weeklyPlan={weeklyPlan}
-            setWeeklyPlan={setWeeklyPlan}
+            setWeeklyPlan={async (plan) => {
+              setWeeklyPlan(plan);
+              await storageService.saveWeeklyPlan(plan);
+              if (firebaseUser) {
+                await updateUserProfile(firebaseUser.uid, { weeklyPlan: plan || undefined });
+              }
+            }}
           />
         );
       default:
@@ -309,6 +684,8 @@ export default function App() {
             onClose={() => setSelectedRecipe(null)}
             onSave={handleSaveRecipe}
             isSaved={savedRecipes.has(selectedRecipe.id)}
+            userLists={userLists}
+            onUpdateLists={handleUpdateLists}
             userDislikes={userProfile?.dislikes || []}
             weeklyPlan={weeklyPlan}
             onAddToPlan={handleAddToPlan}

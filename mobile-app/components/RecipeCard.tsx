@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, Platform } from 'react-native';
 import { Recipe } from '../types';
 import { TimerIcon, FlameIcon, BookHeartIcon } from './Icons';
+import { Animated } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -24,6 +25,19 @@ export const RecipeCard = ({
         recipe.ingredients.some(ing => ing.name.toLowerCase().includes(dislike.toLowerCase()))
     );
 
+    const saveScale = React.useRef(new Animated.Value(1)).current;
+
+    const handleSave = () => {
+        if (!onSave) return;
+
+        Animated.sequence([
+            Animated.spring(saveScale, { toValue: 1.3, useNativeDriver: true, tension: 70, friction: 5 }),
+            Animated.spring(saveScale, { toValue: 1, useNativeDriver: true, tension: 70, friction: 5 })
+        ]).start();
+
+        onSave(recipe);
+    };
+
     return (
         <TouchableOpacity
             onPress={onPress}
@@ -43,8 +57,14 @@ export const RecipeCard = ({
                         <Text style={[styles.categoryText, compact && styles.categoryTextCompact]}>{recipe.category}</Text>
                     </View>
                     {onSave && (
-                        <TouchableOpacity onPress={() => onSave(recipe)} style={[styles.saveBadge, compact && styles.saveBadgeCompact]}>
-                            <BookHeartIcon size={compact ? 12 : 16} color={isSaved ? "#a6f000" : "white"} fill={isSaved ? "#a6f000" : "none"} />
+                        <TouchableOpacity
+                            onPress={handleSave}
+                            activeOpacity={0.7}
+                            style={[styles.saveBadge, compact && styles.saveBadgeCompact]}
+                        >
+                            <Animated.View style={{ transform: [{ scale: saveScale }] }}>
+                                <BookHeartIcon size={compact ? 12 : 16} color={isSaved ? "#a6f000" : "white"} fill={isSaved ? "#a6f000" : "none"} />
+                            </Animated.View>
                         </TouchableOpacity>
                     )}
                 </View>

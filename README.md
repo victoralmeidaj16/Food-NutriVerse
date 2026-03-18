@@ -48,3 +48,18 @@ View your app in AI Studio: https://ai.studio/apps/drive/1UbufQ0qu05wyr-ewIMajan
     ```
 3. Run the app:
    `npm run dev`
+
+## Apple Subscription Validation
+
+O backend agora suporta validação de assinatura via App Store Server API no endpoint `/api/apple/validate-subscription`.
+Também existe o endpoint `/api/apple/notifications` para receber App Store Server Notifications V2.
+
+Variáveis de ambiente necessárias no backend:
+
+- `APPLE_ISSUER_ID`
+- `APPLE_KEY_ID`
+- `APPLE_BUNDLE_ID`
+- `APPLE_APP_ID`
+- `APPLE_PRIVATE_KEY`
+- `APPLE_ROOT_CA_PEMS`
+- `APPLE_SERVER_ENVIRONMENT` (`production` ou `sandbox`)

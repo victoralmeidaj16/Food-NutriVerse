@@ -12,4 +12,18 @@ services:
         value: production
       - key: GOOGLE_API_KEY
         sync: false  # Will need to be set manually in Render dashboard
+      - key: APPLE_ISSUER_ID
+        sync: false
+      - key: APPLE_KEY_ID
+        sync: false
+      - key: APPLE_BUNDLE_ID
+        sync: false
+      - key: APPLE_APP_ID
+        sync: false
+      - key: APPLE_PRIVATE_KEY
+        sync: false
+      - key: APPLE_ROOT_CA_PEMS
+        sync: false
+      - key: APPLE_SERVER_ENVIRONMENT
+        value: production
     healthCheckPath: /health

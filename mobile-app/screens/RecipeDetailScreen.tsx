@@ -7,6 +7,7 @@ import { ArrowRightIcon, BookHeartIcon, TimerIcon, FlameIcon, ExchangeIcon, Ligh
 import { AddToPlanModal } from '../components/AddToPlanModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getReferencesByIds } from '../services/healthReferences';
+import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../context/LanguageContext';
 
 const { width, height } = Dimensions.get('window');
@@ -18,7 +19,9 @@ export const RecipeDetailScreen = ({
     isSaved,
     userDislikes = [],
     weeklyPlan = null,
-    onAddToPlan
+    onAddToPlan,
+    userLists = [],
+    onUpdateLists
 }: {
     recipe: Recipe;
     onClose: () => void;
@@ -27,6 +30,8 @@ export const RecipeDetailScreen = ({
     userDislikes?: string[];
     weeklyPlan?: WeeklyPlan | null;
     onAddToPlan?: (recipe: Recipe, dayIndex: number, slotIndex: number) => void;
+    userLists?: UserList[];
+    onUpdateLists?: (lists: UserList[]) => void;
 }) => {
     const { t, language } = useLanguage();
     const [cookingMode, setCookingMode] = useState(false);
@@ -34,25 +39,18 @@ export const RecipeDetailScreen = ({
 
     // Save to List State
     const [showSaveModal, setShowSaveModal] = useState(false);
-    const [userLists, setUserLists] = useState<UserList[]>([]);
     const [newListName, setNewListName] = useState('');
     const [isCreatingList, setIsCreatingList] = useState(false);
     const scaleAnim = React.useRef(new Animated.Value(1)).current;
-
-    useEffect(() => {
-        loadLists();
-    }, []);
-
-    const loadLists = async () => {
-        const lists = await storageService.loadUserLists();
-        setUserLists(lists);
-    };
+    const startCookingScale = React.useRef(new Animated.Value(1)).current;
 
     const handleSavePress = () => {
-        // Animate Heart
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        // Animate Heart with Bounce (Spring)
+        scaleAnim.setValue(1);
         Animated.sequence([
-            Animated.timing(scaleAnim, { toValue: 1.2, duration: 100, useNativeDriver: true }),
-            Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true })
+            Animated.spring(scaleAnim, { toValue: 1.4, useNativeDriver: true, tension: 70, friction: 5 }),
+            Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 70, friction: 5 })
         ]).start();
 
         if (!isSaved) {
@@ -77,8 +75,7 @@ export const RecipeDetailScreen = ({
         };
 
         const updatedLists = [...userLists, newList];
-        setUserLists(updatedLists);
-        await storageService.saveUserLists(updatedLists);
+        onUpdateLists?.(updatedLists);
 
         // Ensure it is in the global library, but don't toggle it off if it's already there!
         if (!isSaved) {
@@ -100,8 +97,7 @@ export const RecipeDetailScreen = ({
             return list;
         });
 
-        setUserLists(updatedLists);
-        await storageService.saveUserLists(updatedLists);
+        onUpdateLists?.(updatedLists);
 
         if (!isSaved) {
             onSave(recipe); // Ensure it's marked as saved globally, without toggling off
@@ -140,7 +136,7 @@ export const RecipeDetailScreen = ({
                         </TouchableOpacity>
 
                         {onAddToPlan && weeklyPlan && (
-                            <TouchableOpacity onPress={() => setShowAddToPlan(true)} style={styles.iconBtn}>
+                            <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowAddToPlan(true); }} style={styles.iconBtn}>
                                 <CalendarIcon size={24} color="white" />
                             </TouchableOpacity>
                         )}
@@ -323,14 +319,19 @@ export const RecipeDetailScreen = ({
 
                     {/* Cooking Mode Entry Point */}
                     <View style={styles.cookingModeEntry}>
-                        <TouchableOpacity
-                            onPress={() => setCookingMode(true)}
-                            style={styles.startCookingBtn}
-                        >
-                            <ChefHatIcon size={24} color="black" />
-                            <Text style={styles.startCookingText}>{language === 'en' ? 'Cooking Mode' : 'Modo Cozinhar'}</Text>
-                            <ArrowRightIcon size={24} color="black" />
-                        </TouchableOpacity>
+                        <Animated.View style={{ transform: [{ scale: startCookingScale }] }}>
+                            <TouchableOpacity
+                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setCookingMode(true); }}
+                                onPressIn={() => Animated.spring(startCookingScale, { toValue: 0.95, useNativeDriver: true }).start()}
+                                onPressOut={() => Animated.spring(startCookingScale, { toValue: 1, useNativeDriver: true }).start()}
+                                activeOpacity={0.8}
+                                style={styles.startCookingBtn}
+                            >
+                                <ChefHatIcon size={24} color="black" />
+                                <Text style={styles.startCookingText}>{language === 'en' ? 'Cooking Mode' : 'Modo Cozinhar'}</Text>
+                                <ArrowRightIcon size={24} color="black" />
+                            </TouchableOpacity>
+                        </Animated.View>
                     </View>
 
                 </View>
@@ -350,6 +351,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
     const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
 
     const toggleIngredient = (index: number) => {
+        Haptics.selectionAsync();
         const newSet = new Set(checkedIngredients);
         if (newSet.has(index)) {
             newSet.delete(index);
@@ -360,6 +362,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
     };
 
     const selectAll = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         const allIndices = recipe.ingredients.map((_, i) => i);
         setCheckedIngredients(new Set(allIndices));
     };
@@ -436,7 +439,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                onPress={() => setStep(1)}
+                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setStep(1); }}
                                 style={[styles.nextBtn, checkedIngredients.size === 0 && styles.nextBtnDisabled]}
                                 disabled={checkedIngredients.size === 0}
                             >
@@ -456,7 +459,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
 
                         <View style={styles.navButtons}>
                             <TouchableOpacity
-                                onPress={() => setStep(step - 1)}
+                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setStep(step - 1); }}
                                 style={styles.prevBtn}
                             >
                                 <Text style={styles.prevBtnText}>{language === 'en' ? 'Previous' : 'Anterior'}</Text>
@@ -464,7 +467,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
 
                             {step < totalSteps ? (
                                 <TouchableOpacity
-                                    onPress={() => setStep(step + 1)}
+                                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setStep(step + 1); }}
                                     style={styles.nextBtn}
                                 >
                                     <Text style={styles.nextBtnText}>{language === 'en' ? 'Next Step' : 'Próximo Passo'}</Text>
@@ -472,7 +475,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
                                 </TouchableOpacity>
                             ) : (
                                 <TouchableOpacity
-                                    onPress={() => setStep(step + 1)} // Go to completion page
+                                    onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); setStep(step + 1); }} // Go to completion page
                                     style={[styles.nextBtn, { backgroundColor: '#15803d' }]}
                                 >
                                     <Text style={[styles.nextBtnText, { color: 'white' }]}>{language === 'en' ? 'Complete' : 'Concluir'}</Text>

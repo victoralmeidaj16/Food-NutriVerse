@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { MailIcon, LockIcon, EyeIcon, EyeOffIcon, ArrowRightIcon } from '../components/Icons';
 import { useLanguage } from '../context/LanguageContext';
 
-export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => void }) => {
+export const LoginScreen = ({ onNavigateToSignUp, onLogin }: { onNavigateToSignUp: () => void, onLogin?: () => void }) => {
     const { t } = useLanguage();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -21,7 +21,9 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
         setLoading(true);
         try {
             await signInWithEmailAndPassword(auth, email.trim(), password);
-            // Auth state listener in App.tsx will handle navigation
+            if (onLogin) onLogin();
+            // Auth state listener in App.tsx will ALSO handle navigation, 
+            // but calling onLogin guarantees navigation if already signed in.
         } catch (error: any) {
             console.error(error);
             let msg = t('errors.generic');
@@ -61,9 +63,7 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
             >
                 <View style={styles.authContent}>
                     <View style={styles.logoContainer}>
-                        <View style={styles.logoCircle}>
-                            <Text style={styles.logoText}>N</Text>
-                        </View>
+                        <Image source={require('../assets/icon.png')} style={styles.logoImage} />
                         <Text style={styles.authTitle}>{t('auth.welcomeBack')}</Text>
                         <Text style={styles.authSubtitle}>{t('auth.loginSubtitle')}</Text>
                     </View>
@@ -116,10 +116,7 @@ export const LoginScreen = ({ onNavigateToSignUp }: { onNavigateToSignUp: () => 
                     </View>
 
                     <View style={styles.footer}>
-                        <Text style={styles.footerText}>{t('auth.noAccount')}</Text>
-                        <TouchableOpacity onPress={onNavigateToSignUp}>
-                            <Text style={styles.linkText}>{t('auth.createAccount')}</Text>
-                        </TouchableOpacity>
+
                     </View>
                 </View>
             </KeyboardAvoidingView>
@@ -141,21 +138,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 40,
     },
-    logoCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#a6f000',
-        alignItems: 'center',
-        justifyContent: 'center',
+    logoImage: {
+        width: 100,
+        height: 100,
+        borderRadius: 24,
         marginBottom: 24,
-        borderWidth: 3,
-        borderColor: 'rgba(166, 240, 0, 0.2)',
-    },
-    logoText: {
-        fontSize: 32,
-        fontWeight: '800',
-        color: 'white',
     },
     authTitle: {
         fontSize: 28,

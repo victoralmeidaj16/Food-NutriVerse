@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Animated, Alert, ActivityIndicator, Linking } from 'react-native';
 import { CheckIcon, SparklesIcon, LockIcon } from '../components/Icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { iapService, PRODUCT_IDS } from '../services/iapService';
+import * as Haptics from 'expo-haptics';
+import { iapService, PRODUCT_IDS, PurchaseResult } from '../services/iapService';
 import { useLanguage } from '../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
-export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onPurchase: () => void, onRestore: () => void, onClose: () => void, onLogin?: () => void }) => {
+export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onPurchase: (result: PurchaseResult) => void | Promise<void>, onRestore: (result: PurchaseResult) => void | Promise<void>, onClose: () => void, onLogin?: () => void }) => {
     const { t, language } = useLanguage();
     const [selectedPlan, setSelectedPlan] = useState<'YEARLY' | 'MONTHLY'>('YEARLY');
     // const closeButtonOpacity = useRef(new Animated.Value(0)).current; // Removed
@@ -82,14 +83,14 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
     }, []);
 
     const handlePurchase = async (productId: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setLoading(true);
 
         try {
             const result = await iapService.purchaseProduct(productId);
 
             if (result.success) {
-                // Immediate redirect
-                onPurchase();
+                await onPurchase(result);
             } else if (result.error && !result.error.includes('cancelada') && !result.error.includes('cancelled')) {
                 Alert.alert(t('common.error'), result.error);
             }
@@ -102,6 +103,7 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
     };
 
     const handleRestore = async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setLoading(true);
 
         try {
@@ -114,7 +116,9 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
                     [
                         {
                             text: t('common.ok'),
-                            onPress: () => onRestore()
+                            onPress: () => {
+                                void onRestore(result);
+                            }
                         }
                     ]
                 );

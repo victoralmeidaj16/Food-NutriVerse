@@ -63,6 +63,8 @@ export interface TasteProfile {
     favoriteDish: string;
     favoriteFastFood: string;
     favoriteSweet: string;
+    favoriteFoods?: string[];      // Free list of foods the user loves
+    usualEatingHabits?: string;    // Short description of typical eating habits
 }
 
 
@@ -115,8 +117,15 @@ export interface UserProfile {
     isPro: boolean;
     subscriptionExpiry?: string;
     transactionReceipt?: string; // IAP receipt for validation
+    subscriptionTransactionId?: string;
+    subscriptionOriginalTransactionId?: string;
     usageStats: UserUsageStats;
     tasteProfile?: TasteProfile;
+    // Persistence Sync
+    savedRecipes?: string[];
+    recipeHistory?: Recipe[];
+    userLists?: UserList[];
+    weeklyPlan?: WeeklyPlan;
 }
 
 // --- New Features Interfaces ---

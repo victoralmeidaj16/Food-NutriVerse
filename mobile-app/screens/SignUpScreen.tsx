@@ -56,6 +56,7 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile, welcomeMessage
             const newProfile: UserProfile = {
                 ...baseProfile,
                 name: name, // Use the name from input
+                email: email.trim(),
             };
 
             // Ensure no undefined values

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { UserProfile, UserGoal, ActivityLevel, RESTRICTION_OPTIONS, getRestrictionOptions } from '../types';
-import { CloseIcon, CheckIcon, CameraIcon, UserIcon, PlusIcon, TrashIcon } from './Icons';
+import { CloseIcon, CheckIcon, CameraIcon, UserIcon, PlusIcon, TrashIcon, SparklesIcon } from './Icons';
+import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../context/LanguageContext';
 
 export const EditProfileModal = ({
@@ -21,23 +22,32 @@ export const EditProfileModal = ({
   const [dislikes, setDislikes] = useState<string[]>(profile.dislikes || []);
   const [newDislike, setNewDislike] = useState('');
   const [profilePicture, setProfilePicture] = useState<string | undefined>(profile.profilePicture);
+
+  // Meu Gosto / Taste Profile fields
+  const [favoriteDish, setFavoriteDish] = useState(profile.tasteProfile?.favoriteDish || '');
+  const [favoriteFastFood, setFavoriteFastFood] = useState(profile.tasteProfile?.favoriteFastFood || '');
+  const [favoriteSweet, setFavoriteSweet] = useState(profile.tasteProfile?.favoriteSweet || '');
+  const [favoriteFoods, setFavoriteFoods] = useState<string[]>(profile.tasteProfile?.favoriteFoods || []);
+  const [newFavoriteFood, setNewFavoriteFood] = useState('');
+  const [usualEatingHabits, setUsualEatingHabits] = useState(profile.tasteProfile?.usualEatingHabits || '');
+
   const { t, language } = useLanguage();
 
   const pickImage = async () => {
-    // No permissions request is necessary for launching the image library
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5,
     });
-
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!result.canceled) {
       setProfilePicture(result.assets[0].uri);
     }
   };
 
   const toggleRestriction = (res: string) => {
+    Haptics.selectionAsync();
     if (restrictions.includes(res)) {
       setRestrictions(prev => prev.filter(r => r !== res));
     } else {
@@ -46,6 +56,7 @@ export const EditProfileModal = ({
   };
 
   const addDislike = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (newDislike.trim()) {
       if (!dislikes.includes(newDislike.trim())) {
         setDislikes(prev => [...prev, newDislike.trim()]);
@@ -55,14 +66,32 @@ export const EditProfileModal = ({
   };
 
   const removeDislike = (item: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setDislikes(prev => prev.filter(i => i !== item));
   };
 
+  const addFavoriteFood = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (newFavoriteFood.trim() && !favoriteFoods.includes(newFavoriteFood.trim())) {
+      setFavoriteFoods(prev => [...prev, newFavoriteFood.trim()]);
+      setNewFavoriteFood('');
+    }
+  };
+
+  const removeFavoriteFood = (item: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setFavoriteFoods(prev => prev.filter(i => i !== item));
+  };
+
   const handleSave = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (!name.trim()) {
       Alert.alert(t('common.error'), language === 'en' ? "Name cannot be empty." : "O nome não pode ficar vazio.");
       return;
     }
+
+    const hasTasteData = favoriteDish.trim() || favoriteFastFood.trim() || favoriteSweet.trim() || favoriteFoods.length > 0 || usualEatingHabits.trim();
+
     onSave({
       ...profile,
       name,
@@ -70,7 +99,14 @@ export const EditProfileModal = ({
       activityLevel,
       dietaryRestrictions: restrictions,
       dislikes,
-      profilePicture
+      profilePicture,
+      tasteProfile: hasTasteData ? {
+        favoriteDish: favoriteDish.trim(),
+        favoriteFastFood: favoriteFastFood.trim(),
+        favoriteSweet: favoriteSweet.trim(),
+        favoriteFoods: favoriteFoods,
+        usualEatingHabits: usualEatingHabits.trim(),
+      } : profile.tasteProfile,
     });
     onClose();
   };
@@ -134,7 +170,7 @@ export const EditProfileModal = ({
                 ]).map(opt => (
                   <TouchableOpacity
                     key={opt.val}
-                    onPress={() => setGoal(opt.val)}
+                    onPress={() => { Haptics.selectionAsync(); setGoal(opt.val); }}
                     style={[styles.optionChip, goal === opt.val && styles.optionChipSelected]}
                   >
                     <Text style={[styles.optionText, goal === opt.val && styles.optionTextSelected]}>
@@ -159,7 +195,7 @@ export const EditProfileModal = ({
                 ]).map(opt => (
                   <TouchableOpacity
                     key={opt.val}
-                    onPress={() => setActivityLevel(opt.val)}
+                    onPress={() => { Haptics.selectionAsync(); setActivityLevel(opt.val); }}
                     style={[styles.optionChip, activityLevel === opt.val && styles.optionChipSelected]}
                   >
                     <Text style={[styles.optionText, activityLevel === opt.val && styles.optionTextSelected]}>
@@ -190,7 +226,6 @@ export const EditProfileModal = ({
             <View style={styles.section}>
               <Text style={styles.label}>{language === 'en' ? "What you DON'T like/eat?" : 'O que você NÃO gosta/come?'}</Text>
               <Text style={styles.helperText}>{language === 'en' ? 'These foods will be avoided in recipes.' : 'Esses alimentos serão evitados nas receitas.'}</Text>
-
               <View style={styles.addDislikeRow}>
                 <TextInput
                   style={[styles.input, { flex: 1 }]}
@@ -203,7 +238,6 @@ export const EditProfileModal = ({
                   <PlusIcon size={24} color="white" />
                 </TouchableOpacity>
               </View>
-
               <View style={styles.dislikesList}>
                 {dislikes.map((item, index) => (
                   <View key={index} style={styles.dislikeChip}>
@@ -213,6 +247,107 @@ export const EditProfileModal = ({
                     </TouchableOpacity>
                   </View>
                 ))}
+              </View>
+            </View>
+
+            {/* ——— MEU GOSTO ——— */}
+            <View style={styles.tasteSection}>
+              <View style={styles.tasteSectionHeader}>
+                <SparklesIcon size={18} color="#a6f000" />
+                <Text style={styles.tasteSectionTitle}>
+                  {language === 'en' ? 'My Taste Profile' : 'Meu Gosto'}
+                </Text>
+              </View>
+              <Text style={styles.tasteSectionDesc}>
+                {language === 'en'
+                  ? 'Help the AI suggest dishes that match your taste, habits, and preferences.'
+                  : 'Ajude a IA a sugerir pratos que combinam com seu gosto, hábitos e preferências.'}
+              </Text>
+
+              {/* Favorite foods free list */}
+              <View style={styles.tasteField}>
+                <Text style={styles.tasteLabel}>
+                  {language === 'en' ? '❤️ Foods you love' : '❤️ Comidas que você ama'}
+                </Text>
+                <Text style={styles.helperText}>
+                  {language === 'en' ? 'Add any dishes or ingredients you enjoy.' : 'Adicione pratos ou ingredientes que você curte.'}
+                </Text>
+                <View style={styles.addDislikeRow}>
+                  <TextInput
+                    style={[styles.input, { flex: 1 }]}
+                    value={newFavoriteFood}
+                    onChangeText={setNewFavoriteFood}
+                    placeholder={language === 'en' ? 'E.g. Frango, Açaí, Sushi...' : 'Ex: Frango, Açaí, Sushi...'}
+                    onSubmitEditing={addFavoriteFood}
+                  />
+                  <TouchableOpacity onPress={addFavoriteFood} style={styles.addBtnGreen}>
+                    <PlusIcon size={24} color="black" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.dislikesList}>
+                  {favoriteFoods.map((item, index) => (
+                    <View key={index} style={styles.favoriteFoodChip}>
+                      <Text style={styles.favoriteFoodText}>{item}</Text>
+                      <TouchableOpacity onPress={() => removeFavoriteFood(item)}>
+                        <TrashIcon size={14} color="#15803d" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* Usual eating habits */}
+              <View style={styles.tasteField}>
+                <Text style={styles.tasteLabel}>
+                  {language === 'en' ? '🍽️ Typical eating habits' : '🍽️ Como você costuma comer'}
+                </Text>
+                <TextInput
+                  style={[styles.input, { minHeight: 80, textAlignVertical: 'top', paddingTop: 14 }]}
+                  value={usualEatingHabits}
+                  onChangeText={setUsualEatingHabits}
+                  placeholder={language === 'en'
+                    ? 'E.g. I eat a lot of rice and beans, I love grilled food, I rarely eat breakfast...'
+                    : 'Ex: Como muito arroz e feijão, adoro grelhados, raramente como no café da manhã...'}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              {/* Classic taste fields */}
+              <View style={styles.tasteField}>
+                <Text style={styles.tasteLabel}>
+                  {language === 'en' ? '🍛 Favorite dish' : '🍛 Prato favorito'}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={favoriteDish}
+                  onChangeText={setFavoriteDish}
+                  placeholder={language === 'en' ? 'E.g. Lasagna, Feijoada...' : 'Ex: Lasanha, Feijoada...'}
+                />
+              </View>
+
+              <View style={styles.tasteField}>
+                <Text style={styles.tasteLabel}>
+                  {language === 'en' ? '🍔 Favorite fast food' : '🍔 Fast food favorito'}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={favoriteFastFood}
+                  onChangeText={setFavoriteFastFood}
+                  placeholder={language === 'en' ? 'E.g. Burger, Pizza...' : 'Ex: Hambúrguer, Pizza...'}
+                />
+              </View>
+
+              <View style={styles.tasteField}>
+                <Text style={styles.tasteLabel}>
+                  {language === 'en' ? '🍫 Favorite sweet' : '🍫 Doce favorito'}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={favoriteSweet}
+                  onChangeText={setFavoriteSweet}
+                  placeholder={language === 'en' ? 'E.g. Chocolate, Brigadeiro...' : 'Ex: Chocolate, Brigadeiro...'}
+                />
               </View>
             </View>
 
@@ -396,6 +531,64 @@ const styles = StyleSheet.create({
   dislikeText: {
     color: '#EF4444',
     fontWeight: '600',
+    fontSize: 14,
+  },
+  // ——— Meu Gosto styles ———
+  tasteSection: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    gap: 16,
+  },
+  tasteSectionHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+  },
+  tasteSectionTitle: {
+    fontSize: 17,
+    fontWeight: '800' as const,
+    color: '#15803d',
+  },
+  tasteSectionDesc: {
+    fontSize: 13,
+    color: '#4B7A5C',
+    lineHeight: 19,
+    marginTop: -8,
+  },
+  tasteField: {
+    gap: 8,
+  },
+  tasteLabel: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#1F2937',
+  },
+  addBtnGreen: {
+    width: 56,
+    height: 56,
+    backgroundColor: '#a6f000',
+    borderRadius: 16,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  favoriteFoodChip: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    paddingLeft: 16,
+    paddingRight: 12,
+    paddingVertical: 8,
+    backgroundColor: '#DCFCE7',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  favoriteFoodText: {
+    color: '#15803d',
+    fontWeight: '600' as const,
     fontSize: 14,
   },
 });

@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
 import { deleteUser } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
-import { UserProfile, Recipe, Tab, WeeklyPlan, ShoppingList, UserGoal, RECIPE_CATEGORIES } from '../types';
+import { UserProfile, Recipe, Tab, WeeklyPlan, ShoppingList, UserGoal, RECIPE_CATEGORIES, UserList } from '../types';
 import { RecipeCard } from '../components/RecipeCard';
 import {
     HomeIcon, SearchIcon, CalendarIcon, UserIcon, CameraIcon,
@@ -45,7 +45,12 @@ export const MainScreen = ({
     userProfile,
     onRecipeClick,
     onLogout,
+    generatedRecipes,
+    onUpdateHistory,
     savedRecipes,
+    fullSavedRecipes,
+    userLists,
+    onUpdateLists,
     onToggleSave,
     onUpdateProfile,
     onShowPaywall,
@@ -57,13 +62,18 @@ export const MainScreen = ({
     userProfile: UserProfile | null,
     onRecipeClick: (r: Recipe) => void,
     onLogout: () => void,
+    generatedRecipes: Recipe[],
+    onUpdateHistory: (recipes: Recipe[]) => void,
     savedRecipes: Set<string>,
+    fullSavedRecipes: Recipe[],
+    userLists?: UserList[],
+    onUpdateLists?: (lists: UserList[]) => void,
     onToggleSave: (r: Recipe) => void,
     onUpdateProfile: (p: UserProfile) => void,
     onShowPaywall: () => void,
     onOpenRecipePack: () => void,
     weeklyPlan: WeeklyPlan | null,
-    setWeeklyPlan: (plan: WeeklyPlan | null) => void
+    setWeeklyPlan: (plan: WeeklyPlan | null) => void | Promise<void>
 }) => {
     const [activeTab, setActiveTab] = useState<Tab>('HOME');
     const fabScale = useRef(new Animated.Value(1)).current;
@@ -71,13 +81,13 @@ export const MainScreen = ({
     const fabRipple = useRef(new Animated.Value(0)).current;
     const [exploreMode, setExploreMode] = useState<'TEXT' | 'PANTRY'>('TEXT');
     const [dishInput, setDishInput] = useState('');
+    const [desireImages, setDesireImages] = useState<string[]>([]); // Up to 2 URIs for Desejo mode
     const [pantryIngredients, setPantryIngredients] = useState<string[]>([]);
     const [manualIngredient, setManualIngredient] = useState('');
     const [loading, setLoading] = useState(false);
     const [loadingMsg, setLoadingMsg] = useState('');
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [loadingStatus, setLoadingStatus] = useState('');
-    const [generatedRecipes, setGeneratedRecipes] = useState<Recipe[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
     // Planning State
@@ -103,6 +113,57 @@ export const MainScreen = ({
     const [mapaMeals, setMapaMeals] = useState<RoutineMeal[]>([]);
     const [mapaAnalysis, setMapaAnalysis] = useState<MapaAlimentarResult | null>(null);
     const [isAnalyzingMapa, setIsAnalyzingMapa] = useState(false);
+    const [dailyLoop, setDailyLoop] = useState({ morning: false, lunch: false, evening: false });
+
+    // --- Animation Refs ---
+    const bgScale = useRef(new Animated.Value(1)).current;
+    const bgOpacity = useRef(new Animated.Value(1)).current;
+    const tabAnim = useRef(new Animated.Value(1)).current;
+
+    // Helper for micro-animations
+    const createButtonScale = () => new Animated.Value(1);
+    const animateButtonPress = (val: Animated.Value) => {
+        Animated.spring(val, {
+            toValue: 0.95,
+            useNativeDriver: true,
+            speed: 50,
+            bounciness: 4
+        }).start();
+    };
+    const animateButtonRelease = (val: Animated.Value) => {
+        Animated.spring(val, {
+            toValue: 1,
+            useNativeDriver: true,
+            speed: 50,
+            bounciness: 4
+        }).start();
+    };
+
+    const searchBtnScale = useRef(new Animated.Value(1)).current;
+    const generateBtnScale = useRef(new Animated.Value(1)).current;
+    const decisionBtnScale = useRef(new Animated.Value(1)).current;
+    const ctaScale = useRef(new Animated.Value(1)).current;
+    const sendBtnScale = useRef(new Animated.Value(1)).current;
+
+    // Background Animation Effect
+    useEffect(() => {
+        const isModalActive = showPlanningWizard || showEditProfile || showShoppingList || showPantryPreview || copyMealModalVisible || !!mapaAnalysis;
+
+        Animated.parallel([
+            Animated.spring(bgScale, {
+                toValue: isModalActive ? 0.94 : 1,
+                tension: 50,
+                friction: 8,
+                useNativeDriver: true,
+            }),
+            Animated.timing(bgOpacity, {
+                toValue: isModalActive ? 0.7 : 1,
+                duration: 300,
+                useNativeDriver: true,
+            })
+        ]).start();
+    }, [showPlanningWizard, showEditProfile, showShoppingList, showPantryPreview, copyMealModalVisible, mapaAnalysis]);
+
 
     // Enable LayoutAnimation for Android
     useEffect(() => {
@@ -120,17 +181,11 @@ export const MainScreen = ({
         UIManager.setLayoutAnimationEnabledExperimental(true);
     }
 
-    // Load Planning Data & History
+    // Load Planning Data & History (Plan is loaded in App.tsx)
     useEffect(() => {
         const loadData = async () => {
-            // Plan is loaded in App.tsx
             const list = await storageService.loadShoppingList();
             if (list) setShoppingList(list);
-
-            const history = await storageService.loadHistory();
-            if (history.length > 0) {
-                setGeneratedRecipes(history);
-            }
         };
         loadData();
     }, []);
@@ -138,9 +193,20 @@ export const MainScreen = ({
     // --- Handlers ---
 
     const changeTab = (tab: Tab) => {
+        if (activeTab === tab) return;
+
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
+        // Reset and trigger spring animation for content
+        tabAnim.setValue(0.95);
         setActiveTab(tab);
+
+        Animated.spring(tabAnim, {
+            toValue: 1,
+            tension: 60,
+            friction: 7,
+            useNativeDriver: true,
+        }).start();
     };
 
     const changeExploreMode = (mode: 'TEXT' | 'PANTRY') => {
@@ -238,6 +304,39 @@ export const MainScreen = ({
             // onUpdateProfile(updatedProfile);
         }
     };
+
+    const pickDesireImage = async (source: 'camera' | 'gallery') => {
+        if (desireImages.length >= 2) {
+            Alert.alert(language === 'en' ? 'Limit reached' : 'Limite atingido', language === 'en' ? 'You can attach up to 2 images.' : 'Você pode anexar até 2 imagens.');
+            return;
+        }
+
+        let result;
+        if (source === 'camera') {
+            const perm = await ImagePicker.requestCameraPermissionsAsync();
+            if (!perm.granted) {
+                Alert.alert(t('permissions.required'), t('permissions.cameraAccess'));
+                return;
+            }
+            result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [4, 3], quality: 0.5 });
+        } else {
+            const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!perm.granted) {
+                Alert.alert(t('permissions.required'), t('permissions.galleryAccess'));
+                return;
+            }
+            result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [4, 3], quality: 0.5 });
+        }
+
+        if (!result.canceled && result.assets[0].uri) {
+            setDesireImages(prev => [...prev, result!.assets[0].uri]);
+        }
+    };
+
+    const removeDesireImage = (index: number) => {
+        setDesireImages(prev => prev.filter((_, i) => i !== index));
+    };
+
     const handleTakePhoto = async () => {
         if (!userProfile) return;
 
@@ -364,7 +463,7 @@ export const MainScreen = ({
 
             if (recipe) {
                 console.log('🍽️ Recipe generated:', recipe.name);
-                setGeneratedRecipes([recipe]);
+                onUpdateHistory([recipe, ...generatedRecipes].slice(0, 100));
                 setActiveTab('EXPLORE');
                 // Auto-open the recipe details
                 setLoading(false);
@@ -423,8 +522,10 @@ export const MainScreen = ({
 
         Alert.alert(t('common.success'), t('messages.recipeSaved'));
     };
-    const handleGenerateRecipe = async () => {
-        console.log('🔥 handleGenerateRecipe called!', { userProfile: !!userProfile, exploreMode, dishInput });
+    const handleGenerateRecipe = async (overrideInput?: string | any) => {
+        // overrideInput may be an event object if called directly from onPress without an arrow function, so we check if it's a string
+        const explicitInput = typeof overrideInput === 'string' ? overrideInput : undefined;
+        console.log('🔥 handleGenerateRecipe called!', { userProfile: !!userProfile, exploreMode, dishInput, explicitInput });
 
         // Create a default profile if missing (for Expo Go development)
         const profile: UserProfile = userProfile || {
@@ -462,26 +563,42 @@ export const MainScreen = ({
         console.log('✅ Subscription check passed');
 
         // The original logic for input validation and setting loading message
-        const input = exploreMode === 'TEXT' ? dishInput : pantryIngredients;
+        const input = explicitInput || (exploreMode === 'TEXT' ? dishInput : pantryIngredients);
         console.log('📝 Input:', input);
 
-        if (exploreMode === 'TEXT' && !dishInput.trim()) {
-            Alert.alert(t('common.oops'), t('messages.enterDishName'));
+        if (exploreMode === 'TEXT' && !explicitInput && !dishInput.trim() && desireImages.length === 0) {
+            Alert.alert(t('common.oops'), language === 'en' ? 'Type a dish name or attach an image.' : 'Digite o nome do prato ou anexe uma imagem.');
             return;
         }
-        if (exploreMode === 'PANTRY' && pantryIngredients.length === 0) {
+        if (exploreMode === 'PANTRY' && !explicitInput && pantryIngredients.length === 0) {
             Alert.alert(t('common.oops'), t('messages.addIngredientsFirst'));
             return;
         }
 
         console.log('✅ Validation passed, starting generation...');
-        setLoadingMsg(exploreMode === 'TEXT' ? t('loading.generatingRecipe') : t('explore.creatingRecipe'));
+        setLoadingMsg(exploreMode === 'TEXT' || explicitInput ? t('loading.generatingRecipe') : t('explore.creatingRecipe'));
         setLoadingStatus(t('loading.connectingAI'));
         setLoadingProgress(0);
         setLoading(true);
 
         try {
             console.log('🚀 Calling generateFitnessRecipe...');
+
+            // Convert local URIs to base64 for image-aware requests
+            let base64Images: string[] = [];
+            if (exploreMode === 'TEXT' && desireImages.length > 0) {
+                for (const uri of desireImages) {
+                    const response = await fetch(uri);
+                    const blob = await response.blob();
+                    const base64 = await new Promise<string>((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+                        reader.readAsDataURL(blob);
+                    });
+                    base64Images.push(base64);
+                }
+            }
+
             const result = await generateFitnessRecipe(
                 input,
                 profile.goal,
@@ -492,27 +609,26 @@ export const MainScreen = ({
                     setLoadingStatus(status);
                     setLoadingProgress(progress);
                 },
-                language as SupportedLanguage
+                language as SupportedLanguage,
+                base64Images.length > 0 ? base64Images : undefined
             );
             if (result) {
-                setGeneratedRecipes(prev => {
-                    const newList = [result, ...prev].slice(0, 100); // Keep last 100 recipes in history
-                    storageService.saveHistory(newList);
-                    return newList;
-                });
+                const newList = [result, ...generatedRecipes].slice(0, 100); // Keep last 100 recipes in history
+                onUpdateHistory(newList);
 
                 // Automatically save to user's library
                 onToggleSave(result);
 
                 onRecipeClick(result); // Open immediately
                 setDishInput('');
+                setDesireImages([]);
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } else {
                 Alert.alert(t('common.error'), t('errors.recipeGenerationFailed'));
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error('❌ Recipe generation error:', e);
-            Alert.alert(t('common.error'), t('errors.aiConnectionFailed'));
+            Alert.alert(t('common.error'), e?.message || t('errors.aiConnectionFailed'));
         } finally {
             setLoading(false);
         }
@@ -537,7 +653,6 @@ export const MainScreen = ({
             const plan = await generateWeeklyPlan(userProfile, preference, mealsCount, allowRepeats, language as SupportedLanguage);
             if (plan) {
                 setWeeklyPlan(plan);
-                storageService.saveWeeklyPlan(plan); // Save
 
                 // Increment usage removed
                 // const updatedProfile = SubscriptionService.incrementWeeklyPlanCount(userProfile);
@@ -546,9 +661,9 @@ export const MainScreen = ({
             } else {
                 Alert.alert(t('common.error'), t('errors.planGenerationFailed'));
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            Alert.alert(t('common.error'), t('errors.planGenerationFailed'));
+            Alert.alert(t('common.error'), e?.message || t('errors.planGenerationFailed'));
         } finally {
             setLoading(false);
         }
@@ -565,8 +680,9 @@ export const MainScreen = ({
                 storageService.saveShoppingList(list); // Save
                 setShowShoppingList(true);
             }
-        } catch (e) {
-            Alert.alert(t('common.error'), t('errors.generic'));
+        } catch (e: any) {
+            console.error(e);
+            Alert.alert(t('common.error'), e?.message || t('errors.generic'));
         } finally {
             setLoading(false);
         }
@@ -601,7 +717,6 @@ export const MainScreen = ({
         };
 
         setWeeklyPlan(newPlan);
-        await storageService.saveWeeklyPlan(newPlan);
 
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(t('common.success'), t('messages.mealCopied'));
@@ -637,14 +752,13 @@ export const MainScreen = ({
                                 const newPlan = { ...weeklyPlan };
                                 newPlan.days[dayIndex].meals[mealIndex].recipe = newRecipe;
                                 setWeeklyPlan(newPlan);
-                                await storageService.saveWeeklyPlan(newPlan);
                                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                             } else {
                                 Alert.alert(t('common.error'), t('errors.regenerateFailed'));
                             }
-                        } catch (error) {
+                        } catch (error: any) {
                             console.error(error);
-                            Alert.alert(t('common.error'), t('errors.regenerateFailed'));
+                            Alert.alert(t('common.error'), error?.message || t('errors.regenerateFailed'));
                         } finally {
                             setRegeneratingMeal(null);
                         }
@@ -695,8 +809,9 @@ export const MainScreen = ({
             if (decision) {
                 setQuickDecision(decision);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
+            Alert.alert(t('common.error'), error?.message || t('errors.generic'));
         } finally {
             setLoading(false);
         }
@@ -731,8 +846,9 @@ export const MainScreen = ({
                     };
                     setMapaMeals(prev => [...prev, newMeal]);
                 }
-            } catch (error) {
-                Alert.alert("Error analyzing image");
+            } catch (error: any) {
+                console.error(error);
+                Alert.alert(t('common.error'), error?.message || "Error analyzing image");
             } finally {
                 setLoading(false);
             }
@@ -750,8 +866,9 @@ export const MainScreen = ({
                 setMapaAnalysis(result);
                 setActiveTab('MAPA');
             }
-        } catch (error) {
-            Alert.alert("Error analyzing routine");
+        } catch (error: any) {
+            console.error(error);
+            Alert.alert(t('common.error'), error?.message || "Error analyzing routine");
         } finally {
             setLoading(false);
             setIsAnalyzingMapa(false);
@@ -778,87 +895,149 @@ export const MainScreen = ({
                         <Text style={styles.subGreeting}>{userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Foco: Perder Peso' : 'Foco: Saúde'}</Text>
                     </View>
                     <TouchableOpacity onPress={() => changeTab('PROFILE')} style={styles.avatarContainer}>
-                        <View style={styles.avatarPlaceholder}>
-                            <UserIcon size={20} color="#6B7280" />
-                        </View>
+                        {userProfile?.profilePicture ? (
+                            <Image source={{ uri: userProfile.profilePicture }} style={styles.avatarImage} />
+                        ) : (
+                            <View style={styles.avatarPlaceholder}>
+                                <UserIcon size={20} color="#6B7280" />
+                            </View>
+                        )}
                         <View style={styles.notificationDot} />
                     </TouchableOpacity>
                 </View>
 
-                {/* Premium CTA */}
-                <TouchableOpacity
-                    onPress={() => { changeTab('EXPLORE'); changeExploreMode('TEXT'); }}
-                    activeOpacity={0.95}
-                    style={styles.ctaWrapper}
-                >
-                    <LinearGradient
-                        colors={['#111827', '#374151']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.ctaGradient}
-                    >
-                        <View style={styles.ctaContent}>
-                            <View style={styles.ctaIconBox}>
-                                <SparklesIcon size={24} color="#a6f000" />
-                            </View>
-                            <View style={styles.ctaTextContainer}>
-                                <Text style={styles.ctaTitle}>{t('home.fitMyRecipe')}</Text>
-                                <Text style={styles.ctaDesc}>{t('home.fitMyRecipeDesc')}</Text>
-                            </View>
-                        </View>
-                        <View style={styles.ctaArrow}>
-                            <ArrowRightIcon size={20} color="#a6f000" />
-                        </View>
-                    </LinearGradient>
-                </TouchableOpacity>
 
                 {/* Decision Killer Card */}
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>{language === 'en' ? 'Decision Killer' : 'Matador de Dúvida'}</Text>
+                    <Text style={styles.sectionTitle}>{t('home.decisionKiller')}</Text>
                 </View>
-                <View style={[styles.decisionCard, { marginBottom: 32 }]}>
+                <LinearGradient
+                    colors={['#111827', '#1F2937']}
+                    style={[styles.decisionCard, { marginBottom: 16, padding: 16, borderRadius: 24 }]}
+                >
+                    {/* Taste Profile mini display */}
+                    {userProfile?.tasteProfile?.favoriteFoods?.length || userProfile?.tasteProfile?.favoriteDish ? (
+                        <View style={styles.tasteMiniRow}>
+                            <SparklesIcon size={12} color="#a6f000" />
+                            <Text style={[styles.tasteMiniLabel, { color: '#9CA3AF' }]}>
+                                {language === 'en' ? 'Based on your taste:' : 'Baseado no seu gosto:'}
+                            </Text>
+                            {[
+                                ...(userProfile?.tasteProfile?.favoriteFoods || []).slice(0, 3),
+                                ...(userProfile?.tasteProfile?.favoriteDish ? [userProfile.tasteProfile.favoriteDish] : []),
+                            ].slice(0, 3).map((food, i) => (
+                                <View key={i} style={[styles.tasteMiniChip, { backgroundColor: 'rgba(166, 240, 0, 0.1)' }]}>
+                                    <Text style={[styles.tasteMiniChipText, { color: '#a6f000' }]}>{food}</Text>
+                                </View>
+                            ))}
+                            <TouchableOpacity onPress={() => setShowEditProfile(true)}>
+                                <Text style={styles.tasteEditLink}>✏️</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <TouchableOpacity style={styles.tasteSetupRow} onPress={() => setShowEditProfile(true)}>
+                            <SparklesIcon size={14} color="#a6f000" />
+                            <Text style={[styles.tasteSetupText, { color: '#a6f000', fontWeight: 'bold' }]}>
+                                {language === 'en' ? 'Set your taste → better suggestions' : 'Configure seu gosto → sugestões melhores'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+
                     {!quickDecision ? (
                         <View style={styles.decisionPlaceholder}>
-                            <Text style={styles.decisionText}>
-                                {language === 'en' ? "Don't know what to eat?" : "Sem ideia do que comer?"}
+                            <Text style={[styles.decisionText, { color: 'white', textAlign: 'center', marginBottom: 16, fontSize: 16 }]}>
+                                {t('home.decisionKillerDesc')}
                             </Text>
-                            <TouchableOpacity style={styles.decisionButton} onPress={handleGetQuickDecision}>
-                                <SparklesIcon size={18} color="black" />
-                                <Text style={styles.decisionButtonText}>{language === 'en' ? "Suggest something" : "Me sugira algo"}</Text>
-                            </TouchableOpacity>
+                            <Animated.View style={{ transform: [{ scale: decisionBtnScale }], width: '100%' }}>
+                                <TouchableOpacity
+                                    style={[styles.decisionButton, { justifyContent: 'center', opacity: (userProfile?.tasteProfile?.favoriteFoods?.length || userProfile?.tasteProfile?.favoriteDish) ? 1 : 0.5 }]}
+                                    activeOpacity={0.8}
+                                    onPressIn={() => animateButtonPress(decisionBtnScale)}
+                                    onPressOut={() => animateButtonRelease(decisionBtnScale)}
+                                    onPress={() => {
+                                        if (userProfile?.tasteProfile?.favoriteFoods?.length || userProfile?.tasteProfile?.favoriteDish) {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                            handleGetQuickDecision();
+                                        } else {
+                                            Alert.alert('Gosto não configurado', 'Por favor, configure seu gosto primeiro para sugestões imbatíveis.');
+                                        }
+                                    }}
+                                >
+                                    <SparklesIcon size={18} color="black" />
+                                    <Text style={styles.decisionButtonText}>{t('home.suggestSomething')}</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
                         </View>
                     ) : (
                         <View style={styles.decisionResult}>
                             <View style={styles.decisionHeader}>
-                                <Text style={styles.decisionTitle}>{quickDecision.dishName}</Text>
+                                <Text style={[styles.decisionTitle, { color: 'white' }]}>{quickDecision.dishName}</Text>
                                 <TouchableOpacity onPress={() => setQuickDecision(null)}>
-                                    <RefreshIcon size={16} color="#6B7280" />
+                                    <RefreshIcon size={16} color="#9CA3AF" />
                                 </TouchableOpacity>
                             </View>
-                            <Text style={styles.decisionReason}>{quickDecision.reason}</Text>
-                            <View style={styles.decisionFooter}>
+                            <Text style={[styles.decisionReason, { color: '#D1D5DB' }]}>{quickDecision.reason}</Text>
+                            <View style={[styles.decisionFooter, { borderTopColor: 'rgba(255, 255, 255, 0.1)' }]}>
                                 <View style={styles.decisionMeta}>
-                                    <FlameIcon size={14} color="#6B7280" />
-                                    <Text style={styles.decisionMetaText}>{quickDecision.calories} kcal</Text>
+                                    <FlameIcon size={14} color="#9CA3AF" />
+                                    <Text style={[styles.decisionMetaText, { color: '#9CA3AF' }]}>{quickDecision.calories} kcal</Text>
                                 </View>
                                 <TouchableOpacity
-                                    style={styles.decisionAction}
+                                    style={[styles.decisionAction, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}
                                     onPress={() => {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                         setDishInput(quickDecision.dishName);
                                         changeTab('EXPLORE');
+                                        changeExploreMode('TEXT');
+                                        setTimeout(() => {
+                                            handleGenerateRecipe(quickDecision.dishName);
+                                        }, 400); // Wait for transition
                                     }}
                                 >
-                                    <Text style={styles.decisionActionText}>{language === 'en' ? "Get Recipe" : "Ver Receita"}</Text>
+                                    <Text style={[styles.decisionActionText, { color: 'white' }]}>{t('home.getRecipe')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
                     )}
-                </View>
+                </LinearGradient>
+
+
+
+                {/* Premium CTA */}
+                <Animated.View style={{ transform: [{ scale: ctaScale }] }}>
+                    <TouchableOpacity
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); changeTab('EXPLORE'); changeExploreMode('TEXT'); }}
+                        onPressIn={() => animateButtonPress(ctaScale)}
+                        onPressOut={() => animateButtonRelease(ctaScale)}
+                        activeOpacity={0.9}
+                        style={styles.ctaWrapper}
+                    >
+                        <LinearGradient
+                            colors={['#111827', '#374151']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.ctaGradient}
+                        >
+                            <View style={styles.ctaContent}>
+                                <View style={styles.ctaIconBox}>
+                                    <SparklesIcon size={24} color="#a6f000" />
+                                </View>
+                                <View style={styles.ctaTextContainer}>
+                                    <Text style={styles.ctaTitle}>{t('home.fitMyRecipe')}</Text>
+                                    <Text style={styles.ctaDesc}>{t('home.fitMyRecipeDesc')}</Text>
+                                </View>
+                            </View>
+                            <View style={styles.ctaArrow}>
+                                <ArrowRightIcon size={20} color="#a6f000" />
+                            </View>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </Animated.View>
 
                 {/* Recipe Pack Card */}
                 <TouchableOpacity
                     style={styles.packCard}
-                    onPress={onOpenRecipePack}
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onOpenRecipePack(); }}
                 >
                     <Image
                         source={
@@ -907,7 +1086,7 @@ export const MainScreen = ({
                         return (
                             <TouchableOpacity
                                 key={cat.id}
-                                onPress={() => setSelectedCategory(isSelected ? null : cat.id)}
+                                onPress={() => { Haptics.selectionAsync(); setSelectedCategory(isSelected ? null : cat.id); }}
                                 style={[styles.categoryCard, isSelected && styles.categoryCardSelected]}
                             >
                                 <Text style={styles.categoryIcon}>{cat.icon}</Text>
@@ -962,7 +1141,6 @@ export const MainScreen = ({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         >
             <View style={styles.exploreHeader}>
                 <Text style={styles.pageTitle}>{language === 'en' ? 'Explore' : 'Explorar'}</Text>
@@ -1004,25 +1182,82 @@ export const MainScreen = ({
                         </View>
                         <Text style={styles.magicDesc}>
                             {language === 'en'
-                                ? 'Type the name of any "unhealthy" dish and the AI will create a healthy and delicious version for you.'
-                                : 'Digite o nome de qualquer prato "gordo" e a IA criará uma versão saudável e deliciosa para você.'}
+                                ? 'Type the name or attach a photo of the dish — the AI will create a healthy version for you.'
+                                : 'Digite o nome ou anexe uma foto do prato — a IA cria a versão saudável para você.'}
                         </Text>
 
-                        <View style={styles.inputWrapper}>
+                        {/* Image Previews */}
+                        {desireImages.length > 0 && (
+                            <View style={styles.desireImagesRow}>
+                                {desireImages.map((uri, idx) => (
+                                    <View key={idx} style={styles.desireImageWrapper}>
+                                        <Image source={{ uri }} style={styles.desireImageThumb} />
+                                        <TouchableOpacity
+                                            style={styles.desireImageRemove}
+                                            onPress={() => removeDesireImage(idx)}
+                                        >
+                                            <Text style={styles.desireImageRemoveText}>✕</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                                {desireImages.length < 2 && (
+                                    <TouchableOpacity
+                                        style={styles.desireImageAdd}
+                                        onPress={() => pickDesireImage('gallery')}
+                                    >
+                                        <Text style={styles.desireImageAddIcon}>＋</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
+
+                        {/* Image Attachment Buttons (shown when no images yet) */}
+                        {desireImages.length === 0 && (
+                            <View style={styles.desireAttachRow}>
+                                <TouchableOpacity
+                                    style={styles.desireAttachBtn}
+                                    onPress={() => pickDesireImage('camera')}
+                                >
+                                    <CameraIcon size={16} color="#a6f000" />
+                                    <Text style={styles.desireAttachText}>
+                                        {language === 'en' ? 'Camera' : 'Câmera'}
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.desireAttachBtn}
+                                    onPress={() => pickDesireImage('gallery')}
+                                >
+                                    <Text style={{ fontSize: 16 }}>🖼️</Text>
+                                    <Text style={styles.desireAttachText}>
+                                        {language === 'en' ? 'Gallery' : 'Galeria'}
+                                    </Text>
+                                </TouchableOpacity>
+                                <Text style={styles.desireAttachHint}>
+                                    {language === 'en' ? 'Up to 2 images' : 'Até 2 imagens'}
+                                </Text>
+                            </View>
+                        )}
+
+                        {/* Text Input + Send Button row */}
+                        <View style={styles.inputRow}>
                             <TextInput
-                                style={styles.textInput}
+                                style={styles.textInputFlex}
                                 placeholder={language === 'en' ? 'E.g. Pizza, Lasagna, Brownie...' : 'Ex: Pizza, Lasanha, Brigadeiro...'}
                                 value={dishInput}
                                 onChangeText={setDishInput}
                                 placeholderTextColor="#9CA3AF"
                             />
-                            <TouchableOpacity
-                                onPress={handleGenerateRecipe}
-                                disabled={!dishInput.trim()}
-                                style={[styles.sendButton, !dishInput.trim() && styles.sendButtonDisabled]}
-                            >
-                                <ArrowRightIcon size={24} color={dishInput.trim() ? "#a6f000" : "#9CA3AF"} />
-                            </TouchableOpacity>
+                            <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
+                                <TouchableOpacity
+                                    onPress={handleGenerateRecipe}
+                                    onPressIn={() => animateButtonPress(sendBtnScale)}
+                                    onPressOut={() => animateButtonRelease(sendBtnScale)}
+                                    disabled={!dishInput.trim() && desireImages.length === 0}
+                                    style={[styles.sendBtnFixed, (!dishInput.trim() && desireImages.length === 0) && styles.sendButtonDisabled]}
+                                >
+                                    <ArrowRightIcon size={22} color={(dishInput.trim() || desireImages.length > 0) ? "#111827" : "#9CA3AF"} />
+                                </TouchableOpacity>
+                            </Animated.View>
                         </View>
                     </View>
 
@@ -1098,10 +1333,18 @@ export const MainScreen = ({
                                     </View>
                                 ))}
                             </View>
-                            <TouchableOpacity onPress={handleGenerateRecipe} style={styles.generateBtn}>
-                                <ChefHatIcon size={20} color="black" />
-                                <Text style={styles.generateBtnText}>Criar Receita Agora</Text>
-                            </TouchableOpacity>
+                            <Animated.View style={{ transform: [{ scale: generateBtnScale }], width: '100%' }}>
+                                <TouchableOpacity
+                                    onPress={handleGenerateRecipe}
+                                    activeOpacity={0.8}
+                                    onPressIn={() => animateButtonPress(generateBtnScale)}
+                                    onPressOut={() => animateButtonRelease(generateBtnScale)}
+                                    style={styles.generateBtn}
+                                >
+                                    <ChefHatIcon size={20} color="black" />
+                                    <Text style={styles.generateBtnText}>Criar Receita Agora</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
                         </View>
                     )}
                 </View>
@@ -1120,7 +1363,6 @@ export const MainScreen = ({
                     style: "destructive",
                     onPress: async () => {
                         setWeeklyPlan(null);
-                        await storageService.saveWeeklyPlan(null);
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     }
                 }
@@ -1174,12 +1416,7 @@ export const MainScreen = ({
                             ))}
                         </ScrollView>
 
-                        {/* Loading Modal */}
-                        <LoadingModal
-                            visible={loading}
-                            progress={loadingProgress}
-                            status={loadingStatus || loadingMsg}
-                        />
+                        {/* Loading Modal removed from here, now global at the root */}
 
                         {/* Modals */}
                         {/* Meals List */}
@@ -1287,7 +1524,8 @@ export const MainScreen = ({
     );
 
     const renderLibrary = () => {
-        const savedList = [...MOCK_RECIPES, ...generatedRecipes].filter(r => savedRecipes.has(r.id));
+        // No longer need complex filter, we use the persistent fullSavedRecipes
+
 
         return (
             <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -1301,15 +1539,44 @@ export const MainScreen = ({
                         <Text style={styles.statLabel}>{language === 'en' ? 'Saved' : 'Salvas'}</Text>
                     </View>
                     <View style={styles.statBox}>
-                        <Text style={styles.statValue}>{generatedRecipes.length}</Text>
-                        <Text style={styles.statLabel}>{language === 'en' ? 'Created' : 'Criadas'}</Text>
+                        <Text style={styles.statValue}>{userLists?.length || 0}</Text>
+                        <Text style={styles.statLabel}>{language === 'en' ? 'Lists' : 'Listas'}</Text>
                     </View>
                 </View>
 
-                <Text style={styles.sectionTitle}>{language === 'en' ? 'Saved Recipes' : 'Receitas Salvas'}</Text>
-                {savedList.length > 0 ? (
+                {/* My Lists Section */}
+                <Text style={styles.sectionTitle}>{language === 'en' ? 'My Lists' : 'Minhas Listas'}</Text>
+                {userLists && userLists.length > 0 ? (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+                        {userLists.map(list => (
+                            <TouchableOpacity
+                                key={list.id}
+                                style={styles.listCardCompact}
+                                onPress={() => {
+                                    // Open a list view (could be a simple filter or a new modal)
+                                    // For now, let's keep it simple and filter the main list?
+                                    // Or just show them they exist.
+                                    Alert.alert(list.name, `${list.recipeIds.length} ${language === 'en' ? 'recipes' : 'receitas'}`);
+                                }}
+                            >
+                                <View style={styles.listIconBox}>
+                                    <FileTextIcon size={20} color="#a6f000" />
+                                </View>
+                                <Text style={styles.listCardName} numberOfLines={1}>{list.name}</Text>
+                                <Text style={styles.listCardCount}>{list.recipeIds.length} {language === 'en' ? 'items' : 'itens'}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                ) : (
+                    <View style={styles.emptySmall}>
+                        <Text style={styles.emptySmallText}>{language === 'en' ? 'No lists yet' : 'Nenhuma lista criada'}</Text>
+                    </View>
+                )}
+
+                <Text style={[styles.sectionTitle, { marginTop: 24 }]}>{language === 'en' ? 'Saved Recipes' : 'Receitas Salvas'}</Text>
+                {fullSavedRecipes.length > 0 ? (
                     <View style={styles.recipesList}>
-                        {savedList.map(recipe => (
+                        {fullSavedRecipes.map(recipe => (
                             <RecipeCard
                                 key={recipe.id}
                                 recipe={recipe}
@@ -1329,11 +1596,11 @@ export const MainScreen = ({
                 )}
 
                 <View style={[styles.sectionHeader, { marginTop: 32 }]}>
-                    <Text style={styles.sectionTitle}>Histórico</Text>
+                    <Text style={styles.sectionTitle}>Histórico Recente</Text>
                 </View>
                 <View style={styles.historyList}>
-                    {generatedRecipes.length > 0 ? (
-                        generatedRecipes.map(recipe => (
+                    {generatedRecipes.filter((r: Recipe) => !savedRecipes.has(r.id)).length > 0 ? (
+                        generatedRecipes.filter((r: Recipe) => !savedRecipes.has(r.id)).map((recipe: Recipe) => (
                             <RecipeCard
                                 key={recipe.id}
                                 recipe={recipe}
@@ -1342,7 +1609,7 @@ export const MainScreen = ({
                             />
                         ))
                     ) : (
-                        <Text style={styles.emptyHistoryText}>Nenhuma receita gerada ainda.</Text>
+                        <Text style={styles.emptyHistoryText}>Nenhum histórico disponível além das salvas.</Text>
                     )}
                 </View>
             </ScrollView>
@@ -1471,8 +1738,8 @@ export const MainScreen = ({
                 {/* Hero Section */}
                 <View style={styles.mapaHero}>
                     <View style={styles.mapaHeroContent}>
-                        <Text style={styles.mapaHeroTitle}>{language === 'en' ? 'Mapa Alimentar' : 'Mapa Alimentar'}</Text>
-                        <Text style={styles.mapaHeroSubtitle}>{language === 'en' ? 'Realistic behavior analysis' : 'Análise comportamental realista'}</Text>
+                        <Text style={styles.mapaHeroTitle}>{t('mapa.title')}</Text>
+                        <Text style={styles.mapaHeroSubtitle}>{t('mapa.subtitle')}</Text>
                     </View>
                     <View style={styles.mapaHeroIcon}>
                         <CameraIcon size={32} color="#a6f000" />
@@ -1482,11 +1749,11 @@ export const MainScreen = ({
                 {/* Input Section */}
                 {!mapaAnalysis ? (
                     <View style={styles.mapaInputSection}>
-                        <Text style={styles.mapaSectionTitle}>{language === 'en' ? "Today's Meals" : "Refeições de Hoje"}</Text>
+                        <Text style={styles.mapaSectionTitle}>{t('mapa.todayMeals')}</Text>
 
                         {mapaMeals.length === 0 ? (
                             <View style={styles.mapaEmptyState}>
-                                <Text style={styles.mapaEmptyText}>{language === 'en' ? "No meals added yet. Take a photo of what you ate!" : "Nenhuma refeição adicionada. Tire uma foto do que você comeu!"}</Text>
+                                <Text style={styles.mapaEmptyText}>{t('mapa.emptyMeals')}</Text>
                             </View>
                         ) : (
                             <View style={styles.mapaMealsList}>
@@ -1497,7 +1764,7 @@ export const MainScreen = ({
                                             <Text style={styles.mapaMealName}>{meal.name}</Text>
                                         </View>
                                         <View style={styles.mapaMealVisualMeta}>
-                                            <Text style={styles.mapaMealCal}>{meal.calories} kcal</Text>
+                                            <Text style={styles.mapaMealCal}>{meal.calories} {t('mapa.calories')}</Text>
                                             <TouchableOpacity onPress={() => setMapaMeals(prev => prev.filter(m => m.id !== meal.id))}>
                                                 <TrashIcon size={18} color="#EF4444" />
                                             </TouchableOpacity>
@@ -1510,17 +1777,17 @@ export const MainScreen = ({
                         <View style={styles.mapaActionRow}>
                             <TouchableOpacity
                                 style={[styles.mapaAddBtn, { backgroundColor: '#111827' }]}
-                                onPress={() => handleAddMealToMapa('camera')}
+                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleAddMealToMapa('camera'); }}
                             >
                                 <CameraIcon size={20} color="#a6f000" />
-                                <Text style={[styles.mapaAddBtnText, { color: '#a6f000' }]}>{language === 'en' ? "Photo" : "Foto"}</Text>
+                                <Text style={[styles.mapaAddBtnText, { color: '#a6f000' }]}>{t('mapa.photo')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.mapaAddBtn, { backgroundColor: '#F3F4F6' }]}
-                                onPress={() => handleAddMealToMapa('library')}
+                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleAddMealToMapa('library'); }}
                             >
                                 <PlusIcon size={20} color="#111827" />
-                                <Text style={[styles.mapaAddBtnText, { color: '#111827' }]}>{language === 'en' ? "Gallery" : "Galeria"}</Text>
+                                <Text style={[styles.mapaAddBtnText, { color: '#111827' }]}>{t('mapa.gallery')}</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -1535,7 +1802,7 @@ export const MainScreen = ({
                                 ) : (
                                     <>
                                         <SparklesIcon size={20} color="black" />
-                                        <Text style={styles.mapaAnalyzeBtnText}>{language === 'en' ? "Analyze Routine" : "Analisar Rotina"}</Text>
+                                        <Text style={styles.mapaAnalyzeBtnText}>{t('mapa.analyzeRoutine')}</Text>
                                     </>
                                 )}
                             </TouchableOpacity>
@@ -1547,26 +1814,26 @@ export const MainScreen = ({
                         <View style={styles.mapaScoreCard}>
                             <View style={styles.mapaScoreCircle}>
                                 <Text style={styles.mapaScoreValue}>{mapaAnalysis.diagnostic.score}%</Text>
-                                <Text style={styles.mapaScoreLabel}>{language === 'en' ? 'Adherence' : 'Aderência'}</Text>
+                                <Text style={styles.mapaScoreLabel}>{t('mapa.adherence')}</Text>
                             </View>
                             <View style={styles.mapaScoreInfo}>
-                                <Text style={styles.mapaScoreTitle}>{language === 'en' ? 'Daily Analysis' : 'Análise do Dia'}</Text>
+                                <Text style={styles.mapaScoreTitle}>{t('mapa.analysisDay')}</Text>
                                 <Text style={styles.mapaScoreDesc}>{mapaAnalysis.diagnostic.summary}</Text>
                             </View>
                         </View>
 
                         {/* Micro-Swaps */}
-                        <Text style={styles.mapaSectionTitle}>{language === 'en' ? 'Smart Micro-swaps' : 'Micro-swaps Inteligentes'}</Text>
+                        <Text style={styles.mapaSectionTitle}>{t('mapa.microSwaps')}</Text>
                         {mapaAnalysis.microSwaps.map((swap, idx) => (
                             <View key={idx} style={styles.mapaSwapCard}>
                                 <View style={styles.mapaSwapCompare}>
                                     <View style={styles.mapaSwapFrom}>
-                                        <Text style={styles.mapaSwapLabel}>{language === 'en' ? 'Instead of' : 'Em vez de'}</Text>
+                                        <Text style={styles.mapaSwapLabel}>{t('mapa.insteadOf')}</Text>
                                         <Text style={styles.mapaSwapValue}>{swap.from}</Text>
                                     </View>
                                     <ArrowRightIcon size={20} color="#9CA3AF" />
                                     <View style={styles.mapaSwapTo}>
-                                        <Text style={[styles.mapaSwapLabel, { color: '#059669' }]}>{language === 'en' ? 'Try' : 'Tente'}</Text>
+                                        <Text style={[styles.mapaSwapLabel, { color: '#059669' }]}>{t('mapa.tryInstead')}</Text>
                                         <Text style={[styles.mapaSwapValue, { color: '#059669' }]}>{swap.to}</Text>
                                     </View>
                                 </View>
@@ -1579,6 +1846,7 @@ export const MainScreen = ({
                         <TouchableOpacity
                             style={styles.mapaResetBtn}
                             onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 setMapaAnalysis(null);
                                 setMapaMeals([]);
                             }}
@@ -1594,18 +1862,31 @@ export const MainScreen = ({
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                style={styles.content}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.container}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
             >
-                <View style={styles.content}>
-                    {activeTab === 'HOME' && renderHome()}
-                    {activeTab === 'EXPLORE' && renderExplore()}
-                    {activeTab === 'MAPA' && renderMapaAlimentar()}
-                    {activeTab === 'LIBRARY' && renderLibrary()}
-                    {activeTab === 'PLANNING' && renderPlanning()}
-                    {activeTab === 'PROFILE' && renderProfile()}
-                </View>
+                <Animated.View style={[
+                    styles.content,
+                    {
+                        transform: [{ scale: bgScale }],
+                        opacity: bgOpacity,
+                        borderRadius: bgScale.interpolate({
+                            inputRange: [0.94, 1],
+                            outputRange: [32, 0]
+                        }),
+                        overflow: 'hidden'
+                    }
+                ]}>
+                    <Animated.View style={{ flex: 1, opacity: tabAnim, transform: [{ scale: tabAnim }] }}>
+                        {activeTab === 'HOME' && renderHome()}
+                        {activeTab === 'EXPLORE' && renderExplore()}
+                        {activeTab === 'MAPA' && renderMapaAlimentar()}
+                        {activeTab === 'LIBRARY' && renderLibrary()}
+                        {activeTab === 'PLANNING' && renderPlanning()}
+                        {activeTab === 'PROFILE' && renderProfile()}
+                    </Animated.View>
+                </Animated.View>
             </KeyboardAvoidingView>
 
             {/* Bottom Nav */}
@@ -1620,7 +1901,7 @@ export const MainScreen = ({
                 <TouchableOpacity onPress={() => changeTab('MAPA')} style={styles.navItem}>
                     <CameraIcon size={24} color={activeTab === 'MAPA' ? '#a6f000' : '#9CA3AF'} />
                     <Text style={[styles.navLabel, activeTab === 'MAPA' && styles.navLabelActive]}>
-                        {language === 'en' ? 'Map' : 'Mapa'}
+                        {t('mapa.title')}
                     </Text>
                 </TouchableOpacity>
 
@@ -1649,7 +1930,12 @@ export const MainScreen = ({
                 </TouchableOpacity>
             </View>
 
-            {loading && <LoadingOverlay message={loadingMsg} />}
+            {/* Global Loading Modal */}
+            <LoadingModal
+                visible={loading}
+                progress={loadingProgress}
+                status={loadingStatus || loadingMsg}
+            />
             {showPlanningWizard && (
                 <PlanningWizard
                     onClose={() => setShowPlanningWizard(false)}
@@ -2015,11 +2301,117 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     magicDesc: {
-        fontSize: 16, // Increased font size
+        fontSize: 15,
         color: '#9CA3AF',
-        marginBottom: 32, // Increased margin
-        lineHeight: 24, // Increased line height
+        marginBottom: 20,
+        lineHeight: 22,
         textAlign: 'center',
+    },
+    // Image attachment row
+    desireImagesRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 16,
+        alignItems: 'center',
+    },
+    desireImageWrapper: {
+        position: 'relative',
+        width: 80,
+        height: 80,
+        borderRadius: 12,
+        overflow: 'visible',
+    },
+    desireImageThumb: {
+        width: 80,
+        height: 80,
+        borderRadius: 12,
+    },
+    desireImageRemove: {
+        position: 'absolute',
+        top: -8,
+        right: -8,
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: '#EF4444',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    desireImageRemoveText: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    desireImageAdd: {
+        width: 80,
+        height: 80,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: 'rgba(166,240,0,0.4)',
+        borderStyle: 'dashed',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    desireImageAddIcon: {
+        fontSize: 28,
+        color: '#a6f000',
+    },
+    desireAttachRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 16,
+    },
+    desireAttachBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(166,240,0,0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(166,240,0,0.3)',
+        borderRadius: 20,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+    },
+    desireAttachText: {
+        color: '#a6f000',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    desireAttachHint: {
+        color: '#6B7280',
+        fontSize: 12,
+        marginLeft: 'auto' as any,
+    },
+    // Input row with send button (flex, not absolute)
+    inputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    textInputFlex: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 24,
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+        fontSize: 16,
+        color: '#1F2937',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    sendBtnFixed: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: '#a6f000',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#a6f000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.35,
+        shadowRadius: 8,
+        elevation: 5,
     },
     inputWrapper: {
         flexDirection: 'row',
@@ -2784,77 +3176,24 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: 8,
     },
-    analysisScoreValue: {
-        color: '#a6f000',
-        fontSize: 48,
-        fontWeight: '900',
-    },
-    analysisSection: {
-        gap: 12,
-    },
-    diagnosticCard: {
-        backgroundColor: 'white',
-        padding: 20,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-    },
-    diagnosticText: {
-        fontSize: 16,
-        color: '#374151',
-        lineHeight: 24,
-    },
-    swapCard: {
-        backgroundColor: 'white',
-        padding: 16,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        gap: 8,
-    },
-    swapRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    swapFrom: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#EF4444',
-        flex: 1,
-    },
-    swapTo: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#10B981',
-        flex: 1,
-    },
-    swapReason: {
-        fontSize: 14,
-        color: '#6B7280',
-        lineHeight: 20,
-    },
     // Decision Killer
     decisionCard: {
-        backgroundColor: 'white',
-        borderRadius: 24,
-        padding: 20,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
+        shadowColor: 'rgba(0,0,0,0.3)',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 10,
     },
     decisionPlaceholder: {
         alignItems: 'center',
-        gap: 16,
+        paddingVertical: 10,
     },
     decisionText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#374151',
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        marginBottom: 24,
+        lineHeight: 26,
     },
     decisionButton: {
         flexDirection: 'row',
@@ -2998,6 +3337,60 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         color: '#111827',
+    },
+    // Library Styles
+    horizontalScroll: {
+        paddingRight: 24,
+        gap: 12,
+        paddingBottom: 8,
+    },
+    listCardCompact: {
+        width: 140,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    listIconBox: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: '#111827',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+    listCardName: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: '#111827',
+        marginBottom: 2,
+    },
+    listCardCount: {
+        fontSize: 11,
+        color: '#6B7280',
+        fontWeight: '600',
+        textTransform: 'uppercase',
+    },
+    emptySmall: {
+        backgroundColor: '#F9FAFB',
+        padding: 24,
+        borderRadius: 20,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderStyle: 'dashed',
+    },
+    emptySmallText: {
+        color: '#9CA3AF',
+        fontSize: 13,
+        fontWeight: '600',
     },
     mapaMealVisualMeta: {
         flexDirection: 'row',
@@ -3169,4 +3562,121 @@ const styles = StyleSheet.create({
         opacity: 0.5,
         backgroundColor: '#D1D5DB',
     },
+    // Habits Styles
+    habitsSection: {
+        backgroundColor: 'white',
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    habitsHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    habitsTitle: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: '#111827',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    streakBadge: {
+        backgroundColor: 'rgba(166, 240, 0, 0.1)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    streakText: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: '#65a30d',
+    },
+    habitsRow: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    habitCard: {
+        flex: 1,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 16,
+        padding: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+    },
+    habitCardActive: {
+        backgroundColor: 'rgba(166, 240, 0, 0.15)',
+        borderColor: '#a6f000',
+    },
+    habitEmoji: {
+        fontSize: 20,
+        marginBottom: 4,
+    },
+    habitLabel: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#9CA3AF',
+    },
+    habitLabelActive: {
+        color: '#15803d',
+    },
+    // ——— Taste Mini styles (Decision Killer card) ———
+    tasteMiniRow: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        flexWrap: 'wrap' as const,
+        gap: 6,
+        marginBottom: 16,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        padding: 8,
+        borderRadius: 12,
+    },
+    tasteMiniLabel: {
+        fontSize: 11,
+        color: '#9CA3AF',
+        fontWeight: '600' as const,
+    },
+    tasteMiniChip: {
+        backgroundColor: 'rgba(166, 240, 0, 0.1)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+    },
+    tasteMiniChipText: {
+        fontSize: 10,
+        color: '#a6f000',
+        fontWeight: '700' as const,
+    },
+    tasteEditLink: {
+        fontSize: 12,
+        marginLeft: 4,
+    },
+    tasteSetupRow: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 8,
+        marginBottom: 20,
+        backgroundColor: 'rgba(166, 240, 0, 0.05)',
+        padding: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(166, 240, 0, 0.1)',
+    },
+    tasteSetupText: {
+        fontSize: 13,
+        fontWeight: '700' as const,
+        color: '#a6f000',
+    },
+
 });
+

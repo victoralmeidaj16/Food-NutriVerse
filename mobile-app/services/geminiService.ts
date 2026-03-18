@@ -311,7 +311,8 @@ export const generateFitnessRecipe = async (
     dislikes: string[] = [],
     tasteProfile?: TasteProfile,
     onProgress?: (status: string, progress: number) => void,
-    language: SupportedLanguage = 'pt'
+    language: SupportedLanguage = 'pt',
+    base64Images?: string[] // Optional images for the desire mode
 ): Promise<Recipe | null> => {
 
     const lang = AI_PROMPTS[language];
@@ -330,7 +331,8 @@ export const generateFitnessRecipe = async (
         `;
         } else {
             coreInstruction = `
-          The user wants to eat: "${input}".
+          The user wants to eat: "${input || 'the dish shown in the image(s)'}".
+          ${base64Images && base64Images.length > 0 ? 'The user also provided image(s) of the dish they want to transform. Use the images to identify the dish and understand its composition.' : ''}
           Create a "fitness" version (FitSwap) of this dish. Keep the essence of the original flavor, but replace caloric or processed ingredients with functional options aligned to the goal.
           IMPORTANT: Explicitly list the substitutions made in the 'substitutions' array.
         `;
@@ -344,7 +346,8 @@ export const generateFitnessRecipe = async (
         `;
         } else {
             coreInstruction = `
-          O usuário tem desejo de comer: "${input}".
+          O usuário tem desejo de comer: "${input || 'o prato mostrado na(s) imagem(ns)'}".
+          ${base64Images && base64Images.length > 0 ? 'O usuário também forneceu imagem(ns) do prato que deseja transformar. Use as imagens para identificar o prato e entender sua composição.' : ''}
           Crie uma versão "fitness" (FitSwap) desse prato. Mantenha a essência do sabor original, mas substitua ingredientes calóricos ou processados por opções funcionais alinhadas ao objetivo.
           IMPORTANTE: Liste explicitamente quais trocas foram feitas no array 'substitutions'.
         `;
@@ -400,11 +403,20 @@ export const generateFitnessRecipe = async (
     Gere uma resposta JSON estrita seguindo o schema fornecido. Certifique-se de que todos os campos obrigatórios estejam preenchidos com conteúdo rico.
   `;
 
+    // Build contents: if images provided, include them alongside the prompt text
+    const contentParts: any[] = [];
+    if (base64Images && base64Images.length > 0) {
+        for (const imgBase64 of base64Images) {
+            contentParts.push({ inlineData: { mimeType: 'image/jpeg', data: imgBase64 } });
+        }
+    }
+    contentParts.push({ text: prompt });
+
     try {
         onProgress?.(lang.progress.analyzing, 0.3);
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
             model: "gemini-2.0-flash",
-            contents: [{ text: prompt }],
+            contents: [{ parts: contentParts }],
             config: {
                 responseMimeType: "application/json",
                 responseSchema: getRecipeSchema(language),
@@ -431,6 +443,8 @@ export const generateFitnessRecipe = async (
         // Auto-assign citations based on health tips
         const citations = mapHealthTipToReference(data.healthTips || "");
 
+        onProgress?.(lang.progress.done, 1.0);
+
         return {
             ...data,
             id: randomUUID(),
@@ -452,33 +466,48 @@ export const generateQuickDecision = async (
     language: SupportedLanguage = 'pt'
 ): Promise<QuickDecision | null> => {
     const timeOfDay = new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening';
-    let tasteProfileContext = "";
-    if (userProfile.tasteProfile) {
-        tasteProfileContext = language === 'en'
-            ? `User loves: ${userProfile.tasteProfile.favoriteDish}, ${userProfile.tasteProfile.favoriteFastFood} and ${userProfile.tasteProfile.favoriteSweet}.`
-            : `O usuário adora: ${userProfile.tasteProfile.favoriteDish}, ${userProfile.tasteProfile.favoriteFastFood} e ${userProfile.tasteProfile.favoriteSweet}.`;
+
+    // Build taste context from all available fields
+    const tp = userProfile.tasteProfile;
+    let tasteContext = '';
+    if (tp) {
+        const parts: string[] = [];
+        if (tp.favoriteDish) parts.push(language === 'en' ? `Favorite dish: ${tp.favoriteDish}` : `Prato favorito: ${tp.favoriteDish}`);
+        if (tp.favoriteFastFood) parts.push(language === 'en' ? `Favorite fast food: ${tp.favoriteFastFood}` : `Fast food favorito: ${tp.favoriteFastFood}`);
+        if (tp.favoriteSweet) parts.push(language === 'en' ? `Favorite sweet: ${tp.favoriteSweet}` : `Doce favorito: ${tp.favoriteSweet}`);
+        if (tp.favoriteFoods?.length) parts.push(language === 'en' ? `Foods they love: ${tp.favoriteFoods.join(', ')}` : `Comidas que ama: ${tp.favoriteFoods.join(', ')}`);
+        if (tp.usualEatingHabits) parts.push(language === 'en' ? `Eating habits: ${tp.usualEatingHabits}` : `Hábitos alimentares: ${tp.usualEatingHabits}`);
+        if (parts.length > 0) tasteContext = '\nUser taste profile:\n- ' + parts.join('\n- ');
     }
+
+    const dislikes = userProfile.dislikes?.length ? (language === 'en' ? `Dislikes: ${userProfile.dislikes.join(', ')}` : `Não gosta de: ${userProfile.dislikes.join(', ')}`) : '';
 
     const prompt = language === 'en' ? `
         The user is hungry NOW (${timeOfDay}) and needs an instant decision.
         Goal: ${userProfile.goal}
         Restrictions: ${userProfile.dietaryRestrictions.join(', ') || 'None'}
-        ${tasteProfileContext}
+        ${dislikes}
+        ${tasteContext}
 
+        Suggest a dish that closely matches their taste profile when available.
         Golden Rules:
         1. ULTRA fast to prepare (under 15 min).
         2. Extremely common ingredients.
         3. Simple and appetizing dish name.
+        4. Prioritize dishes aligned with their favorite foods/habits.
     ` : `
         O usuário está com fome AGORA (${timeOfDay}) e precisa de uma decisão instantânea.
         Objetivo: ${userProfile.goal}
         Restrições: ${userProfile.dietaryRestrictions.join(', ') || 'Nenhuma'}
-        ${tasteProfileContext}
+        ${dislikes}
+        ${tasteContext}
 
+        Sugira um prato que combine bem com o perfil de gosto do usuário quando disponível.
         Regras de Ouro:
         1. Seja ULTRA rápido para preparar (menos de 15 min).
         2. Ingredientes extremamente comuns.
         3. Nome do prato direto e apetitoso.
+        4. Priorize pratos alinhados com as comidas/hábitos favoritos do usuário.
     `;
 
     const decisionSchema: Schema = {

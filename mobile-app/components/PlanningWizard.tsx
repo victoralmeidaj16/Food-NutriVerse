@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, ActivityIndicator } from 'react-native';
 import { ArrowRightIcon, CloseIcon } from './Icons';
+import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../context/LanguageContext';
 
 export const PlanningWizard = ({
@@ -25,6 +26,7 @@ export const PlanningWizard = ({
     ];
 
     const handleGenerate = async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setIsGenerating(true);
         try {
             await onGenerate(preference, mealsCount, allowRepeats);
@@ -50,7 +52,7 @@ export const PlanningWizard = ({
                             {preferences.map(opt => (
                                 <TouchableOpacity
                                     key={opt.key}
-                                    onPress={() => setPreference(opt.label)}
+                                    onPress={() => { Haptics.selectionAsync(); setPreference(opt.label); }}
                                     style={[styles.optionChip, preference === opt.label && styles.optionChipSelected]}
                                     disabled={isGenerating}
                                 >
@@ -62,7 +64,7 @@ export const PlanningWizard = ({
                         <Text style={styles.label}>{t('planning.mealsPerDay')}</Text>
                         <View style={styles.counterRow}>
                             <TouchableOpacity
-                                onPress={() => setMealsCount(Math.max(1, mealsCount - 1))}
+                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMealsCount(Math.max(1, mealsCount - 1)); }}
                                 style={styles.counterBtn}
                                 disabled={isGenerating}
                             >
@@ -70,7 +72,7 @@ export const PlanningWizard = ({
                             </TouchableOpacity>
                             <Text style={styles.counterValue}>{mealsCount}</Text>
                             <TouchableOpacity
-                                onPress={() => setMealsCount(Math.min(6, mealsCount + 1))}
+                                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMealsCount(Math.min(6, mealsCount + 1)); }}
                                 style={styles.counterBtn}
                                 disabled={isGenerating}
                             >
@@ -81,14 +83,14 @@ export const PlanningWizard = ({
                         <Text style={styles.label}>{t('planning.repeatDishes')}</Text>
                         <View style={styles.switchRow}>
                             <TouchableOpacity
-                                onPress={() => setAllowRepeats(true)}
+                                onPress={() => { Haptics.selectionAsync(); setAllowRepeats(true); }}
                                 style={[styles.switchOption, allowRepeats && styles.switchActive]}
                                 disabled={isGenerating}
                             >
                                 <Text style={[styles.switchText, allowRepeats && styles.switchTextActive]}>{t('planning.canRepeat')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => setAllowRepeats(false)}
+                                onPress={() => { Haptics.selectionAsync(); setAllowRepeats(false); }}
                                 style={[styles.switchOption, !allowRepeats && styles.switchActive]}
                                 disabled={isGenerating}
                             >

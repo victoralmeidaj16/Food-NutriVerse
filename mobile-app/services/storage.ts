@@ -8,6 +8,7 @@ const KEYS = {
     WEEKLY_PLAN: '@food_nutriverse_weekly_plan',
     SHOPPING_LIST: '@food_nutriverse_shopping_list',
     RECIPE_HISTORY: '@food_nutriverse_recipe_history',
+    FULL_SAVED_RECIPES: '@food_nutriverse_full_saved_recipes',
     USER_LISTS: '@food_nutriverse_user_lists',
 };
 
@@ -89,6 +90,25 @@ export const storageService = {
             return json ? JSON.parse(json) : [];
         } catch (e) {
             console.error('Failed to load recipes', e);
+            return [];
+        }
+    },
+
+    // --- Full Saved Recipes (Persistence) ---
+    saveFullSavedRecipes: async (recipes: Recipe[]) => {
+        try {
+            await AsyncStorage.setItem(KEYS.FULL_SAVED_RECIPES, JSON.stringify(recipes));
+        } catch (e) {
+            console.error('Failed to save full recipes', e);
+        }
+    },
+
+    loadFullSavedRecipes: async (): Promise<Recipe[]> => {
+        try {
+            const json = await AsyncStorage.getItem(KEYS.FULL_SAVED_RECIPES);
+            return json ? JSON.parse(json) : [];
+        } catch (e) {
+            console.error('Failed to load full recipes', e);
             return [];
         }
     },

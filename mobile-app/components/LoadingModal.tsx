@@ -47,15 +47,38 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
     const progressAnim = useRef(new Animated.Value(0)).current;
     const iconAnim = useRef(new Animated.Value(0)).current;
 
-    // Smooth progress bar animation
+    const [animatedProgress, setAnimatedProgress] = useState(0);
+
+    // Smooth fake progress bar animation
+    useEffect(() => {
+        // Start by snapping to the actual progress prop, then simulate forward progress
+        setAnimatedProgress(progress);
+
+        // This interval artificially bumps the progress by a small amount
+        // up to a max of 0.9 (90%), to make the user feel things are moving smoothly
+        // even if the AI backend is taking a long time.
+        const fakeProgressInterval = setInterval(() => {
+            setAnimatedProgress(prev => {
+                // If real progress is already 1 (100%), just return 1
+                if (progress >= 1) return 1;
+                // Only simulate progress up to 90%
+                if (prev >= 0.90) return prev;
+                // Otherwise increment by 2-5% every 1.5s
+                return Math.min(0.90, prev + (Math.random() * 0.05 + 0.02));
+            });
+        }, 1500);
+
+        return () => clearInterval(fakeProgressInterval);
+    }, [progress]);
+
     useEffect(() => {
         Animated.timing(progressAnim, {
-            toValue: progress,
-            duration: 500,
+            toValue: animatedProgress,
+            duration: 800,
             useNativeDriver: false,
             easing: Easing.out(Easing.ease)
         }).start();
-    }, [progress]);
+    }, [animatedProgress]);
 
     // Bouncing icon animation
     useEffect(() => {
@@ -123,7 +146,7 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
                             ]}
                         />
                     </View>
-                    <Text style={styles.percentageText}>{Math.round(progress * 100)}%</Text>
+                    <Text style={styles.percentageText}>{Math.min(100, Math.round(animatedProgress * 100))}%</Text>
 
                     <View style={styles.tipContainer}>
                         <Text style={styles.tipTitle}>{tipTitle}</Text>
