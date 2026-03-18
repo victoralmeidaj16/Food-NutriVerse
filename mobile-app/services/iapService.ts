@@ -202,7 +202,7 @@ class IAPService {
                             error: 'A confirmação da compra demorou mais que o esperado'
                         });
                     }
-                }, 60000);
+                }, 300000); // 5 minutes timeout to allow time for Apple ID password entry
 
                 this.pendingPurchase = {
                     productId,
