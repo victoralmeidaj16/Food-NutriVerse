@@ -432,9 +432,9 @@ export default function App() {
 
   const handleOnboardingComplete = (profile: UserProfile) => {
     setPendingProfile(profile);
-    setSignupMessage('');
-    // User finished onboarding. Show Paywall BEFORE Sign Up.
-    setCurrentScreen('PAYWALL');
+    setSignupMessage('Crie sua conta para salvar seu plano!'); // Informative message
+    // User finished onboarding. Show Sign Up BEFORE Paywall.
+    setCurrentScreen('SIGNUP');
   };
 
   const handleRecipeClick = (recipe: Recipe) => {
@@ -577,6 +577,7 @@ export default function App() {
 
               setPendingProfile(subscribedProfile);
 
+              // If already logged in, the purchase is now complete and we can go to MAIN
               if (firebaseUser) {
                 setUserProfile(subscribedProfile);
                 await updateUserProfile(firebaseUser.uid, {
@@ -593,7 +594,7 @@ export default function App() {
                 return;
               }
 
-              setSignupMessage('Plano ativado! Finalize seu cadastro:');
+              // Fallback for unexpected cases where no user is logged in
               setCurrentScreen('SIGNUP');
             }}
             onRestore={async (purchaseResult: PurchaseResult) => {

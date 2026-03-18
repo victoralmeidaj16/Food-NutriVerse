@@ -65,7 +65,7 @@ export const OnboardingScreen = ({
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [loadingMessage, setLoadingMessage] = useState('');
 
-    const totalSteps = 10; // 0 to 9 (Paywall is 9)
+    const totalSteps = 9; // 0 to 8
 
     const handleNext = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -645,15 +645,16 @@ export const OnboardingScreen = ({
                 </View>
             </View>
 
-            <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleFinish}>
                 <Text style={styles.primaryButtonText}>{language === 'en' ? 'Unlock my access' : 'Liberar meu acesso'}</Text>
             </TouchableOpacity>
         </View>
     );
 
-    if (step === 9) {
+    /* Paywall step removed - now handled in App.tsx after Signup */
+    /* if (step === 9) {
         return <PaywallScreen onPurchase={handleFinish} onRestore={handleFinish} onClose={handleFinish} />;
-    }
+    } */
 
     return (
         <SafeAreaView style={styles.container}>
@@ -665,7 +666,7 @@ export const OnboardingScreen = ({
                         </TouchableOpacity>
                         <View style={styles.progressBarContainer}>
                             <View style={styles.progressBarTrack}>
-                                <View style={[styles.progressBarFill, { width: `${(step / 9) * 100}%` }]} />
+                                <View style={[styles.progressBarFill, { width: `${(step / 8) * 100}%` }]} />
                             </View>
                         </View>
                         <View style={{ width: 40 }} />
