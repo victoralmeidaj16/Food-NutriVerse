@@ -378,6 +378,8 @@ export default function App() {
 
         const loadedProfile = await loadUserSpecificData(currentUser.uid);
         const effectiveProfile = await reconcileAppleSubscription(currentUser.uid, loadedProfile);
+        setPendingProfile(null);
+        setSignupMessage('');
 
         if (effectiveProfile?.isPro) {
           setCurrentScreen('MAIN');
@@ -402,6 +404,8 @@ export default function App() {
         setFullSavedRecipes([]);
         setUserLists([]);
         setWeeklyPlan(null); // Clear weekly plan on logout
+        setPendingProfile(null);
+        setSignupMessage('');
         // Initial screen is now ONBOARDING
         // currentScreen will be managed by components mostly, 
         // but on logout we go to Onboarding
@@ -517,6 +521,40 @@ export default function App() {
     }
   };
 
+  const persistSubscriptionForUser = async (uid: string, profile: UserProfile) => {
+    try {
+      await updateUserProfile(uid, {
+        isPro: profile.isPro,
+        plan: profile.plan,
+        subscriptionExpiry: profile.subscriptionExpiry,
+        transactionReceipt: profile.transactionReceipt,
+        subscriptionTransactionId: profile.subscriptionTransactionId,
+        subscriptionOriginalTransactionId: profile.subscriptionOriginalTransactionId
+      });
+    } catch (error) {
+      console.error('Error persisting subscribed profile:', error);
+    }
+
+    try {
+      await reconcileAppleSubscription(uid, profile);
+    } catch (error) {
+      console.error('Error verifying subscribed profile:', error);
+    }
+  };
+
+  const unlockProAccess = async (profile: UserProfile) => {
+    setPendingProfile(null);
+    setSignupMessage('');
+    setUserProfile(profile);
+    setUser({ name: profile.name });
+    await storageService.saveProfile(profile);
+    setCurrentScreen('MAIN');
+
+    if (firebaseUser) {
+      void persistSubscriptionForUser(firebaseUser.uid, profile);
+    }
+  };
+
   const renderScreen = () => {
     switch (currentScreen) {
       case 'ONBOARDING':
@@ -545,7 +583,7 @@ export default function App() {
           <PaywallScreen
             onPurchase={async (purchaseResult: PurchaseResult) => {
               const subscribedProfile = applySubscriptionToProfile(
-                pendingProfile || userProfile || {
+                userProfile || pendingProfile || {
                   name: 'Usuário',
                   goal: UserGoal.LOSE_WEIGHT,
                   activityLevel: ActivityLevel.MEDIUM,
@@ -575,26 +613,13 @@ export default function App() {
                 purchaseResult.originalTransactionId
               );
 
-              setPendingProfile(subscribedProfile);
-
-              // If already logged in, the purchase is now complete and we can go to MAIN
               if (firebaseUser) {
-                setUserProfile(subscribedProfile);
-                await updateUserProfile(firebaseUser.uid, {
-                  isPro: subscribedProfile.isPro,
-                  plan: subscribedProfile.plan,
-                  subscriptionExpiry: subscribedProfile.subscriptionExpiry,
-                  transactionReceipt: subscribedProfile.transactionReceipt,
-                  subscriptionTransactionId: subscribedProfile.subscriptionTransactionId,
-                  subscriptionOriginalTransactionId: subscribedProfile.subscriptionOriginalTransactionId
-                });
-                await storageService.saveProfile(subscribedProfile);
-                const verifiedProfile = await reconcileAppleSubscription(firebaseUser.uid, subscribedProfile);
-                setCurrentScreen(verifiedProfile?.isPro ? 'MAIN' : 'PAYWALL');
+                await unlockProAccess(subscribedProfile);
                 return;
               }
 
               // Fallback for unexpected cases where no user is logged in
+              setPendingProfile(subscribedProfile);
               setCurrentScreen('SIGNUP');
             }}
             onRestore={async (purchaseResult: PurchaseResult) => {
@@ -607,18 +632,7 @@ export default function App() {
                   purchaseResult.transactionId,
                   purchaseResult.originalTransactionId
                 );
-                setUserProfile(restoredProfile);
-                await updateUserProfile(firebaseUser.uid, {
-                  isPro: restoredProfile.isPro,
-                  plan: restoredProfile.plan,
-                  subscriptionExpiry: restoredProfile.subscriptionExpiry,
-                  transactionReceipt: restoredProfile.transactionReceipt,
-                  subscriptionTransactionId: restoredProfile.subscriptionTransactionId,
-                  subscriptionOriginalTransactionId: restoredProfile.subscriptionOriginalTransactionId
-                });
-                await storageService.saveProfile(restoredProfile);
-                const verifiedProfile = await reconcileAppleSubscription(firebaseUser.uid, restoredProfile);
-                setCurrentScreen(verifiedProfile?.isPro ? 'MAIN' : 'PAYWALL');
+                await unlockProAccess(restoredProfile);
                 return;
               }
 

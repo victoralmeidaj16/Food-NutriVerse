@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityInd
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { saveUserProfile } from '../services/userService';
+import { storageService } from '../services/storage';
 import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan } from '../types';
 import { MailIcon, LockIcon, EyeIcon, EyeOffIcon, ArrowRightIcon, UserIcon } from '../components/Icons';
 import { useLanguage } from '../context/LanguageContext';
@@ -23,9 +24,6 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile, welcomeMessage
 
         setLoading(true);
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-            const uid = userCredential.user.uid;
-
             // Use initialProfile if available, otherwise create default
             const baseProfile: UserProfile = initialProfile || {
                 name: name,
@@ -62,6 +60,11 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile, welcomeMessage
             // Ensure no undefined values
             const cleanProfile = JSON.parse(JSON.stringify(newProfile));
 
+            // Save locally before the auth listener runs so the app does not hydrate with stale profile data.
+            await storageService.saveProfile(cleanProfile);
+
+            const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+            const uid = userCredential.user.uid;
             await saveUserProfile(uid, cleanProfile);
             // Auth state listener in App.tsx will handle navigation
         } catch (error: any) {
