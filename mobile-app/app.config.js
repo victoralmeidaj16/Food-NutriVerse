@@ -4,6 +4,7 @@ module.exports = {
     expo: {
         name: "Fitswap",
         slug: "mobile-app",
+        scheme: "fitswap",
         version: "1.0.9",
         orientation: "portrait",
         icon: "./assets/icon.png",

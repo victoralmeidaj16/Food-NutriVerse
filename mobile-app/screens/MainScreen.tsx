@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 // ... MainScreen component ...
 
 
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, StyleSheet, Dimensions, ActivityIndicator, Alert, SafeAreaView, Modal, LayoutAnimation, Platform, UIManager, Animated, Linking, KeyboardAvoidingView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, StyleSheet, Dimensions, ActivityIndicator, Alert, SafeAreaView, Modal, LayoutAnimation, Platform, UIManager, Animated, Linking, KeyboardAvoidingView, Keyboard } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
@@ -175,6 +175,12 @@ export const MainScreen = ({
     }, []);
     const [showAllRecipes, setShowAllRecipes] = useState(false);
     const { t, language, setLanguage } = useLanguage();
+    const exploreScrollRef = useRef<ScrollView>(null);
+    const exploreFieldPositions = useRef<Record<'dishInput' | 'manualIngredient', number>>({
+        dishInput: 0,
+        manualIngredient: 0,
+    });
+    const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
     // Enable LayoutAnimation on Android
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -188,6 +194,16 @@ export const MainScreen = ({
             if (list) setShoppingList(list);
         };
         loadData();
+    }, []);
+
+    useEffect(() => {
+        const showSubscription = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
+        const hideSubscription = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
+
+        return () => {
+            showSubscription.remove();
+            hideSubscription.remove();
+        };
     }, []);
 
     // --- Handlers ---
@@ -212,6 +228,13 @@ export const MainScreen = ({
     const changeExploreMode = (mode: 'TEXT' | 'PANTRY') => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setExploreMode(mode);
+    };
+
+    const scrollExploreFieldIntoView = (field: 'dishInput' | 'manualIngredient') => {
+        requestAnimationFrame(() => {
+            const targetY = Math.max(exploreFieldPositions.current[field] - 140, 0);
+            exploreScrollRef.current?.scrollTo({ y: targetY, animated: true });
+        });
     };
 
     const playSound = async () => {
@@ -1138,9 +1161,14 @@ export const MainScreen = ({
 
     const renderExplore = () => (
         <ScrollView
-            contentContainerStyle={styles.scrollContent}
+            ref={exploreScrollRef}
+            contentContainerStyle={[
+                styles.scrollContent,
+                isKeyboardVisible && styles.scrollContentKeyboardOpen
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
         >
             <View style={styles.exploreHeader}>
                 <Text style={styles.pageTitle}>{language === 'en' ? 'Explore' : 'Explorar'}</Text>
@@ -1239,13 +1267,19 @@ export const MainScreen = ({
                         )}
 
                         {/* Text Input + Send Button row */}
-                        <View style={styles.inputRow}>
+                        <View
+                            style={styles.inputRow}
+                            onLayout={({ nativeEvent }) => {
+                                exploreFieldPositions.current.dishInput = nativeEvent.layout.y;
+                            }}
+                        >
                             <TextInput
                                 style={styles.textInputFlex}
                                 placeholder={language === 'en' ? 'E.g. Pizza, Lasagna, Brownie...' : 'Ex: Pizza, Lasanha, Brigadeiro...'}
                                 value={dishInput}
                                 onChangeText={setDishInput}
                                 placeholderTextColor="#9CA3AF"
+                                onFocus={() => scrollExploreFieldIntoView('dishInput')}
                             />
                             <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
                                 <TouchableOpacity
@@ -1301,13 +1335,19 @@ export const MainScreen = ({
                         <Text style={styles.sectionTitle}>
                             {language === 'en' ? 'Add Manually' : 'Adicionar Manualmente'}
                         </Text>
-                        <View style={styles.miniInputRow}>
+                        <View
+                            style={styles.miniInputRow}
+                            onLayout={({ nativeEvent }) => {
+                                exploreFieldPositions.current.manualIngredient = nativeEvent.layout.y;
+                            }}
+                        >
                             <TextInput
                                 style={styles.miniInput}
                                 placeholder="Ex: Frango, Batata Doce..."
                                 value={manualIngredient}
                                 onChangeText={setManualIngredient}
                                 onSubmitEditing={addManualIngredient}
+                                onFocus={() => scrollExploreFieldIntoView('manualIngredient')}
                             />
                             <TouchableOpacity onPress={addManualIngredient} style={styles.miniAddBtn}>
                                 <PlusIcon size={20} color="black" />
@@ -1864,7 +1904,7 @@ export const MainScreen = ({
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.container}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 40}
             >
                 <Animated.View style={[
                     styles.content,
@@ -1987,6 +2027,9 @@ const styles = StyleSheet.create({
     scrollContent: {
         padding: 24,
         paddingBottom: 140, // Increased for floating nav
+    },
+    scrollContentKeyboardOpen: {
+        paddingBottom: 260,
     },
     center: {
         flex: 1,
@@ -3679,4 +3722,3 @@ const styles = StyleSheet.create({
     },
 
 });
-
