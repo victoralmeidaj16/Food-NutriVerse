@@ -8,7 +8,7 @@ import { UserProfile, UserGoal, ActivityLevel, AppUsageMode, SubscriptionPlan } 
 import { MailIcon, LockIcon, EyeIcon, EyeOffIcon, ArrowRightIcon, UserIcon } from '../components/Icons';
 import { useLanguage } from '../context/LanguageContext';
 
-export const SignUpScreen = ({ onNavigateToLogin, initialProfile, welcomeMessage }: { onNavigateToLogin: () => void, initialProfile?: UserProfile | null, welcomeMessage?: string }) => {
+export const SignUpScreen = ({ onNavigateToLogin, onSignUpSuccess, initialProfile, welcomeMessage }: { onNavigateToLogin: () => void, onSignUpSuccess?: () => void, initialProfile?: UserProfile | null, welcomeMessage?: string }) => {
     const { t } = useLanguage();
     const [name, setName] = useState(initialProfile?.name === 'Atleta' ? '' : (initialProfile?.name || ''));
     const [email, setEmail] = useState('');
@@ -66,7 +66,7 @@ export const SignUpScreen = ({ onNavigateToLogin, initialProfile, welcomeMessage
             const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
             const uid = userCredential.user.uid;
             await saveUserProfile(uid, cleanProfile);
-            // Auth state listener in App.tsx will handle navigation
+            onSignUpSuccess?.();
         } catch (error: any) {
             console.error(error);
             let msg = t('errors.generic');

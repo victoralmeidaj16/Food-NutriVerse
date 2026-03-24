@@ -115,6 +115,23 @@ export const MainScreen = ({
     const [isAnalyzingMapa, setIsAnalyzingMapa] = useState(false);
     const [dailyLoop, setDailyLoop] = useState({ morning: false, lunch: false, evening: false });
 
+    // Toast
+    const [toastMessage, setToastMessage] = useState('');
+    const toastAnim = useRef(new Animated.Value(0)).current;
+    const toastTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const showToast = (message: string) => {
+        if (toastTimeout.current) clearTimeout(toastTimeout.current);
+        setToastMessage(message);
+        toastAnim.setValue(0);
+        Animated.sequence([
+            Animated.timing(toastAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+            Animated.delay(1800),
+            Animated.timing(toastAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        ]).start();
+        toastTimeout.current = setTimeout(() => setToastMessage(''), 2200);
+    };
+
     // --- Animation Refs ---
     const bgScale = useRef(new Animated.Value(1)).current;
     const bgOpacity = useRef(new Animated.Value(1)).current;
@@ -543,7 +560,7 @@ export const MainScreen = ({
         // const updatedProfile = SubscriptionService.incrementSavedRecipes(userProfile);
         // onUpdateProfile(updatedProfile);
 
-        Alert.alert(t('common.success'), t('messages.recipeSaved'));
+        showToast(t('messages.recipeSaved'));
     };
     const handleGenerateRecipe = async (overrideInput?: string | any) => {
         // overrideInput may be an event object if called directly from onPress without an arrow function, so we check if it's a string
@@ -925,8 +942,7 @@ export const MainScreen = ({
                                 <UserIcon size={20} color="#6B7280" />
                             </View>
                         )}
-                        <View style={styles.notificationDot} />
-                    </TouchableOpacity>
+                        </TouchableOpacity>
                 </View>
 
 
@@ -1128,9 +1144,14 @@ export const MainScreen = ({
                                 : `Receitas de ${getRecipeCategories(language).find(c => c.id === selectedCategory)?.label}`)
                             : (language === 'en' ? 'Highlights' : 'Destaques')}
                     </Text>
-                    {selectedCategory && (
+                    {selectedCategory ? (
                         <TouchableOpacity onPress={() => setSelectedCategory(null)}>
                             <Text style={styles.clearFilter}>{language === 'en' ? 'Clear' : 'Limpar'}</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity onPress={() => changeTab('LIBRARY')} style={styles.libraryLink}>
+                            <BookHeartIcon size={14} color="#a6f000" />
+                            <Text style={styles.libraryLinkText}>{language === 'en' ? 'Library' : 'Biblioteca'}</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -1955,10 +1976,10 @@ export const MainScreen = ({
                     </Animated.View>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => changeTab('LIBRARY')} style={styles.navItem}>
-                    <BookHeartIcon size={24} color={activeTab === 'LIBRARY' ? '#a6f000' : '#9CA3AF'} />
-                    <Text style={[styles.navLabel, activeTab === 'LIBRARY' && styles.navLabelActive]}>
-                        {language === 'en' ? 'Library' : 'Biblioteca'}
+                <TouchableOpacity onPress={() => changeTab('PLANNING')} style={styles.navItem}>
+                    <CalendarIcon size={24} color={activeTab === 'PLANNING' ? '#a6f000' : '#9CA3AF'} />
+                    <Text style={[styles.navLabel, activeTab === 'PLANNING' && styles.navLabelActive]}>
+                        {language === 'en' ? 'Plan' : 'Plano'}
                     </Text>
                 </TouchableOpacity>
 
@@ -1969,6 +1990,14 @@ export const MainScreen = ({
                     </Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Toast */}
+            {toastMessage !== '' && (
+                <Animated.View style={[styles.toast, { opacity: toastAnim, transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }]}>
+                    <CheckIcon size={16} color="white" />
+                    <Text style={styles.toastText}>{toastMessage}</Text>
+                </Animated.View>
+            )}
 
             {/* Global Loading Modal */}
             <LoadingModal
@@ -2020,6 +2049,29 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#FAFAFA',
+    },
+    toast: {
+        position: 'absolute',
+        bottom: 120,
+        alignSelf: 'center',
+        backgroundColor: '#111827',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 40,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 6,
+        zIndex: 999,
+    },
+    toastText: {
+        color: 'white',
+        fontSize: 14,
+        fontWeight: '600',
     },
     content: {
         flex: 1,
@@ -2208,6 +2260,16 @@ const styles = StyleSheet.create({
     clearFilter: {
         fontSize: 12,
         color: '#EF4444',
+        fontWeight: '700',
+    },
+    libraryLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    libraryLinkText: {
+        fontSize: 13,
+        color: '#a6f000',
         fontWeight: '700',
     },
     recipesList: {

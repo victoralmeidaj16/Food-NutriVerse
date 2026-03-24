@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppState, AppStateStatus, StyleSheet, View, StatusBar, ActivityIndicator } from 'react-native';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './services/firebaseConfig';
@@ -34,6 +34,15 @@ export default function App() {
   const [pendingProfile, setPendingProfile] = useState<UserProfile | null>(null);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
   const [signupMessage, setSignupMessage] = useState<string>('');
+  const pendingProfileRef = useRef<UserProfile | null>(null);
+  const signupFlowActiveRef = useRef(false);
+  const userProfileRef = useRef<UserProfile | null>(null);
+
+  useEffect(() => {
+    userProfileRef.current = userProfile;
+  }, [userProfile]);
+
+  const getAuthenticatedUser = () => auth.currentUser || firebaseUser;
 
   const getPlanFromProductId = (productId?: string): SubscriptionPlan => {
     if (productId === PRODUCT_IDS.MONTHLY) return SubscriptionPlan.MONTHLY;
@@ -377,13 +386,31 @@ export default function App() {
         }
 
         const loadedProfile = await loadUserSpecificData(currentUser.uid);
-        const isFreshSignup = !!pendingProfile;
+        const isFreshSignup = signupFlowActiveRef.current || !!pendingProfileRef.current;
 
         if (isFreshSignup) {
+          const completedPurchaseProfile =
+            pendingProfileRef.current?.isPro
+              ? pendingProfileRef.current
+              : userProfileRef.current?.isPro
+                ? userProfileRef.current
+                : loadedProfile?.isPro
+                  ? loadedProfile
+                  : null;
+
+          if (completedPurchaseProfile) {
+            await unlockProAccess(completedPurchaseProfile);
+            setIsLoading(false);
+            return;
+          }
+
           if (loadedProfile) {
+            userProfileRef.current = loadedProfile;
             setUserProfile(loadedProfile);
             setUser({ name: loadedProfile.name });
           }
+          signupFlowActiveRef.current = false;
+          pendingProfileRef.current = null;
           setPendingProfile(null);
           setSignupMessage('');
           setCurrentScreen('PAYWALL');
@@ -420,6 +447,7 @@ export default function App() {
         setWeeklyPlan(null); // Clear weekly plan on logout
         setPendingProfile(null);
         setSignupMessage('');
+        signupFlowActiveRef.current = false;
         // Initial screen is now ONBOARDING
         // currentScreen will be managed by components mostly, 
         // but on logout we go to Onboarding
@@ -449,11 +477,17 @@ export default function App() {
 
 
   const handleOnboardingComplete = (profile: UserProfile) => {
+    pendingProfileRef.current = profile;
+    signupFlowActiveRef.current = true;
     setPendingProfile(profile);
     setSignupMessage('Crie sua conta para salvar seu plano!'); // Informative message
     // User finished onboarding. Show Sign Up BEFORE Paywall.
     setCurrentScreen('SIGNUP');
   };
+
+  useEffect(() => {
+    pendingProfileRef.current = pendingProfile;
+  }, [pendingProfile]);
 
   const handleRecipeClick = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
@@ -548,15 +582,16 @@ export default function App() {
     } catch (error) {
       console.error('Error persisting subscribed profile:', error);
     }
-
-    try {
-      await reconcileAppleSubscription(uid, profile);
-    } catch (error) {
-      console.error('Error verifying subscribed profile:', error);
-    }
+    // Reconciliation is intentionally skipped here: calling it immediately after a
+    // fresh purchase can cause a silent downgrade if Apple's receipt validation
+    // hasn't propagated yet. Reconciliation happens automatically on app resume.
   };
 
   const unlockProAccess = async (profile: UserProfile) => {
+    const authenticatedUser = getAuthenticatedUser();
+
+    pendingProfileRef.current = null;
+    userProfileRef.current = profile;
     setPendingProfile(null);
     setSignupMessage('');
     setUserProfile(profile);
@@ -564,8 +599,8 @@ export default function App() {
     await storageService.saveProfile(profile);
     setCurrentScreen('MAIN');
 
-    if (firebaseUser) {
-      void persistSubscriptionForUser(firebaseUser.uid, profile);
+    if (authenticatedUser) {
+      void persistSubscriptionForUser(authenticatedUser.uid, profile);
     }
   };
 
@@ -591,11 +626,21 @@ export default function App() {
           />
         );
       case 'SIGNUP':
-        return <SignUpScreen onNavigateToLogin={() => setCurrentScreen('LOGIN')} initialProfile={pendingProfile} welcomeMessage={signupMessage} />;
+        return (
+          <SignUpScreen
+            onNavigateToLogin={() => setCurrentScreen('LOGIN')}
+            onSignUpSuccess={() => {
+              setSignupMessage('Conta criada. Carregando pagamento...');
+            }}
+            initialProfile={pendingProfile}
+            welcomeMessage={signupMessage}
+          />
+        );
       case 'PAYWALL':
         return (
           <PaywallScreen
             onPurchase={async (purchaseResult: PurchaseResult) => {
+              const authenticatedUser = getAuthenticatedUser();
               const subscribedProfile = applySubscriptionToProfile(
                 userProfile || pendingProfile || {
                   name: 'Usuário',
@@ -627,17 +672,20 @@ export default function App() {
                 purchaseResult.originalTransactionId
               );
 
-              if (firebaseUser) {
+              if (authenticatedUser) {
                 await unlockProAccess(subscribedProfile);
                 return;
               }
 
               // Fallback for unexpected cases where no user is logged in
+              pendingProfileRef.current = subscribedProfile;
               setPendingProfile(subscribedProfile);
               setCurrentScreen('SIGNUP');
             }}
             onRestore={async (purchaseResult: PurchaseResult) => {
-              if (firebaseUser && userProfile) {
+              const authenticatedUser = getAuthenticatedUser();
+
+              if (authenticatedUser && userProfile) {
                 const restoredProfile = applySubscriptionToProfile(
                   userProfile,
                   purchaseResult.productId,

@@ -1,21 +1,12 @@
 // In-App Purchase Service
-// Handles StoreKit integration for iOS subscriptions
-// Auto-detects environment: Mock mode for Expo/Dev, Real IAP for Production
+// Handles StoreKit integration for iOS subscriptions using react-native-iap
+// Auto-detects environment: Mock mode for Expo Go/Dev, Real IAP for Production
 
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
-import type * as IAPTypes from 'expo-in-app-purchases';
-
-// Conditional import - only when not in Expo Go
-let InAppPurchases: any = null;
-try {
-    InAppPurchases = require('expo-in-app-purchases');
-} catch (e) {
-    console.log('📱 IAP: Running in Expo Go - using mock mode');
-}
+import * as RNIAP from 'react-native-iap';
 
 // Product IDs - MUST match exactly what's configured in App Store Connect
-// ⚠️ These match the existing configuration in App Store Connect
 export const PRODUCT_IDS = {
     MONTHLY: 'Plano_Pro_Nutriverse',  // Match App Store Connect: Plano Pro - Mensal
     YEARLY: 'Plano_Pro_Anual',        // Match App Store Connect: Plano Pro - Anual
@@ -40,455 +31,235 @@ export interface SubscriptionStatusResult {
     verificationState: 'verified_active' | 'verified_inactive' | 'unknown';
 }
 
-interface PendingPurchase {
-    productId: string;
-    resolve: (result: PurchaseResult) => void;
-    timeoutId: ReturnType<typeof setTimeout>;
-}
-
-// Mock products for development
+// Mock products for development (used when RNIAP fails or in Expo Go)
 const MOCK_PRODUCTS: any[] = [
     {
         productId: PRODUCT_IDS.MONTHLY,
         title: 'Plano Pro - Mensal',
         description: 'Acesso ilimitado a todas as funcionalidades por 1 mês',
-        price: 'R$ 19,90',
-        type: 'SUBSCRIPTION',
-        subscriptionPeriodIOS: 'P1M'
+        localizedPrice: 'R$ 19,90',
+        type: 'subs'
     },
     {
         productId: PRODUCT_IDS.YEARLY,
         title: 'Plano Pro - Anual',
         description: 'Acesso ilimitado a todas as funcionalidades por 1 ano (economize 50%)',
-        price: 'R$ 179,90',
-        type: 'SUBSCRIPTION',
-        subscriptionPeriodIOS: 'P1Y'
+        localizedPrice: 'R$ 179,90',
+        type: 'subs'
     }
 ];
 
 class IAPService {
     private isInitialized = false;
-    private products: any[] = [];
+    private products: RNIAP.Product[] = [];
     private useMockMode = false;
-    private listenerRegistered = false;
-    private pendingPurchase: PendingPurchase | null = null;
+    private purchaseUpdateSubscription: any = null;
+    private purchaseErrorSubscription: any = null;
+    private pendingPurchasePromise: { resolve: (res: PurchaseResult) => void, productId: string } | null = null;
 
     /**
      * Initialize IAP connection
-     * Call this once when app starts
      */
     async initialize(): Promise<boolean> {
         try {
-            if (this.isInitialized) {
-                return true;
-            }
+            if (this.isInitialized) return true;
 
-            // Detect environment
-            const isExpoGo = Constants.appOwnership === 'expo' || !InAppPurchases;
-            const isDevelopment = __DEV__;
-            this.useMockMode = isExpoGo || isDevelopment;
+            const isExpoGo =
+                Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
+                Constants.appOwnership === 'expo';
+            this.useMockMode = isExpoGo;
 
-            if (this.useMockMode) {
-                console.log('🎭 IAP: Using MOCK mode (Expo Go or Development)');
-                this.products = MOCK_PRODUCTS;
+            if (isExpoGo) {
+                console.log('🎭 IAP: Running in Expo Go - Using Mock Mode');
                 this.isInitialized = true;
                 return true;
             }
 
-            // Only initialize for iOS in production
-            if (Platform.OS !== 'ios') {
-                console.log('IAP: Skipping initialization - not iOS');
-                return false;
-            }
-
-            // Connect to store (production only)
-            console.log('💳 IAP: Connecting to REAL App Store...');
-            await InAppPurchases.connectAsync();
+            console.log('💳 IAP: Initializing react-native-iap...');
+            await RNIAP.initConnection();
+            
+            // Setup Listeners
+            this.setupListeners();
+            
             this.isInitialized = true;
-            console.log('✅ IAP: Successfully connected to App Store');
-
-            // Load products
             await this.loadProducts();
-
-            // Set up purchase listener
-            if (!this.listenerRegistered) {
-                this.setupPurchaseListener();
-                this.listenerRegistered = true;
-            }
-
+            
             return true;
         } catch (error) {
             console.error('IAP: Failed to initialize', error);
+            this.useMockMode = true; // Fallback to mock if init fails (likely development)
             return false;
         }
     }
 
-    /**
-     * Load available products from App Store
-     */
-    private async loadProducts(): Promise<void> {
-        try {
-            const { results, responseCode } = await InAppPurchases.getProductsAsync(
-                Object.values(PRODUCT_IDS)
-            );
+    private setupListeners() {
+        if (this.purchaseUpdateSubscription) return;
 
-            if (responseCode === InAppPurchases.IAPResponseCode.OK) {
-                this.products = results || [];
-                console.log('IAP: Loaded products:', this.products.map(p => p.productId));
-            } else {
-                console.warn('IAP: Failed to load products, code:', responseCode);
-            }
-        } catch (error) {
-            console.error('IAP: Error loading products', error);
-        }
-    }
-
-    /**
-     * Get product details
-     */
-    getProduct(productId: string): IAPTypes.IAPItemDetails | undefined {
-        return this.products.find(p => p.productId === productId);
-    }
-
-    /**
-     * Get all available products
-     */
-    getAllProducts(): IAPTypes.IAPItemDetails[] {
-        return this.products;
-    }
-
-    /**
-     * Purchase a subscription
-     */
-    async purchaseProduct(productId: string): Promise<PurchaseResult> {
-        if (!this.isInitialized) {
-            return {
-                success: false,
-                error: 'IAP not initialized. Please restart the app.'
-            };
-        }
-
-        // Mock purchase for development
-        if (this.useMockMode) {
-            console.log('🎭 IAP: MOCK purchase for', productId);
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    resolve({
-                        success: true,
-                        productId,
-                        transactionReceipt: `MOCK_RECEIPT_${Date.now()}_${productId}`,
-                        transactionId: `MOCK_TRANSACTION_${Date.now()}_${productId}`,
-                        originalTransactionId: `MOCK_ORIGINAL_${productId}`
-                    });
-                }, 1500); // Simulate network delay
-            });
-        }
-
-        try {
-            console.log('💳 IAP: Starting REAL purchase for', productId);
-
-            if (this.pendingPurchase) {
-                return {
-                    success: false,
-                    error: 'Já existe uma compra em andamento'
-                };
-            }
-
-            return await new Promise<PurchaseResult>(async (resolve) => {
-                const timeoutId = setTimeout(() => {
-                    if (this.pendingPurchase?.productId === productId) {
-                        this.resolvePendingPurchase({
-                            success: false,
-                            error: 'A confirmação da compra demorou mais que o esperado'
-                        });
-                    }
-                }, 300000); // 5 minutes timeout to allow time for Apple ID password entry
-
-                this.pendingPurchase = {
-                    productId,
-                    resolve,
-                    timeoutId
-                };
-
+        this.purchaseUpdateSubscription = RNIAP.purchaseUpdatedListener(async (purchase: RNIAP.Purchase) => {
+            console.log('IAP: Purchase updated', purchase.productId || (purchase as any).productIds?.[0]);
+            
+            const receipt = (purchase as any).transactionReceipt || purchase.transactionId;
+            const normalizedTransactionId = purchase.transactionId ?? undefined;
+            const normalizedOriginalTransactionId =
+                (purchase as any).originalTransactionIdIOS ?? purchase.transactionId ?? undefined;
+            if (receipt) {
                 try {
-                    await InAppPurchases.purchaseItemAsync(productId);
-                } catch (error: any) {
-                    this.resolvePendingPurchase({
-                        success: false,
-                        error: error?.message || 'Erro ao processar compra'
-                    });
+                    // Tell the store that we have delivered what has been paid for
+                    await RNIAP.finishTransaction({ purchase, isConsumable: false });
+                    
+                    if (this.pendingPurchasePromise && this.pendingPurchasePromise.productId === (purchase.productId || (purchase as any).productIds?.[0])) {
+                        this.pendingPurchasePromise.resolve({
+                            success: true,
+                            productId: purchase.productId || (purchase as any).productIds?.[0],
+                            transactionReceipt: receipt,
+                            transactionId: normalizedTransactionId,
+                            originalTransactionId: normalizedOriginalTransactionId
+                        });
+                        this.pendingPurchasePromise = null;
+                    }
+                } catch (ackErr) {
+                    console.warn('IAP: Ack Error', ackErr);
                 }
-            });
-
-        } catch (error: any) {
-            console.error('IAP: Purchase failed', error);
-
-            // Handle user cancellation
-            if (error?.code === 'E_USER_CANCELLED') {
-                return {
-                    success: false,
-                    error: 'Compra cancelada pelo usuário'
-                };
             }
+        });
 
-            return {
-                success: false,
-                error: error?.message || 'Erro ao processar compra'
-            };
-        }
-    }
-
-    /**
-     * Restore previous purchases
-     * Important for users who reinstall the app
-     */
-    async restorePurchases(): Promise<PurchaseResult> {
-        if (!this.isInitialized) {
-            return {
-                success: false,
-                error: 'IAP not initialized'
-            };
-        }
-
-        // Mock restore for development
-        if (this.useMockMode) {
-            console.log('🎭 IAP: MOCK restore - no purchases');
-            return {
-                success: false,
-                error: 'Nenhuma compra anterior encontrada (Modo de Desenvolvimento)'
-            };
-        }
-
-        try {
-            console.log('💳 IAP: Restoring REAL purchases');
-            const status = await this.checkSubscriptionStatus();
-
-            if (status.verificationState === 'verified_active' && status.productId) {
-                return {
-                    success: true,
-                    productId: status.productId,
-                    transactionReceipt: status.transactionReceipt,
-                    transactionId: status.transactionId,
-                    originalTransactionId: status.originalTransactionId
-                };
-            }
-
-            if (status.verificationState === 'unknown') {
-                return {
+        this.purchaseErrorSubscription = RNIAP.purchaseErrorListener((error: RNIAP.PurchaseError) => {
+            console.warn('IAP: Purchase error', error);
+            if (this.pendingPurchasePromise) {
+                this.pendingPurchasePromise.resolve({
                     success: false,
-                    error: 'Não foi possível validar a assinatura agora'
-                };
-            }
-
-            return {
-                success: false,
-                error: 'Nenhuma assinatura ativa encontrada'
-            };
-
-        } catch (error: any) {
-            console.error('IAP: Restore failed', error);
-            return {
-                success: false,
-                error: error?.message || 'Erro ao restaurar compras'
-            };
-        }
-    }
-
-    /**
-     * Set up listener for purchase events
-     */
-    private setupPurchaseListener(): void {
-        InAppPurchases.setPurchaseListener(({ responseCode, results, errorCode }: { responseCode: number, results: IAPTypes.InAppPurchase[], errorCode: any }) => {
-            console.log('IAP: Purchase update', { responseCode, errorCode });
-
-            if (responseCode === InAppPurchases.IAPResponseCode.OK && results) {
-                void this.handleSuccessfulPurchases(results);
-            } else if (responseCode === InAppPurchases.IAPResponseCode.USER_CANCELED) {
-                console.log('IAP: User canceled purchase');
-                this.resolvePendingPurchase({
-                    success: false,
-                    error: 'Compra cancelada pelo usuário'
+                    error: error.message || 'Erro ao processar compra'
                 });
-            } else if (responseCode === InAppPurchases.IAPResponseCode.ERROR) {
-                console.error('IAP: Purchase error', errorCode);
-                this.resolvePendingPurchase({
-                    success: false,
-                    error: errorCode || 'Erro ao processar compra'
-                });
+                this.pendingPurchasePromise = null;
             }
         });
     }
 
-    private async handleSuccessfulPurchases(results: IAPTypes.InAppPurchase[]): Promise<void> {
-        for (const purchase of results) {
-            console.log('IAP: Purchase successful', purchase.productId);
-
-            await this.finishTransaction(purchase);
-
-            if (this.pendingPurchase?.productId === purchase.productId) {
-                this.resolvePendingPurchase({
-                    success: true,
-                    productId: purchase.productId,
-                    transactionReceipt: purchase.transactionReceipt,
-                    transactionId: purchase.orderId,
-                    originalTransactionId: purchase.originalOrderId || purchase.orderId
-                });
-            }
-        }
-    }
-
-    private resolvePendingPurchase(result: PurchaseResult): void {
-        if (!this.pendingPurchase) {
+    async loadProducts(): Promise<void> {
+        if (this.useMockMode) {
+            this.products = MOCK_PRODUCTS as any;
             return;
         }
 
-        clearTimeout(this.pendingPurchase.timeoutId);
-        const { resolve } = this.pendingPurchase;
-        this.pendingPurchase = null;
-        resolve(result);
-    }
-
-    /**
-     * Finish a transaction (acknowledge the purchase)
-     */
-    private async finishTransaction(purchase: IAPTypes.InAppPurchase): Promise<void> {
         try {
-            await InAppPurchases.finishTransactionAsync(purchase, true);
-            console.log('IAP: Transaction finished', purchase.productId);
-        } catch (error) {
-            console.error('IAP: Failed to finish transaction', error);
+            const skus = Object.values(PRODUCT_IDS);
+            const items = await RNIAP.fetchProducts({ skus, type: 'subs' }) || [];
+            this.products = items as any;
+            console.log('IAP: Loaded products:', items.map((i: any) => i.productId || i.id));
+        } catch (err) {
+            console.error('IAP: Error loading products', err);
         }
     }
 
-    /**
-     * Check if user has active subscription
-     * This should be called on app startup and after purchases
-     */
-    async checkSubscriptionStatus(): Promise<SubscriptionStatusResult> {
+    async purchaseProduct(productId: string): Promise<PurchaseResult> {
+        if (!this.isInitialized) await this.initialize();
+
         if (this.useMockMode) {
-            // In mock mode, we currently don't persist state, so we always return inactive 
-            // unless we want to simulate a pro user for testing.
-            // For now, let's keep it safe and return inactive, 
-            // but you can uncomment the lines below to test "Pro" state in dev.
-            /*
-            return {
-                isActive: true,
-                productId: PRODUCT_IDS.YEARLY,
-                expiryDate: Date.now() + 1000000000
-            };
-            */
-            return { isActive: false, verificationState: 'verified_inactive' };
+            console.log('🎭 IAP: Mock purchase starting for', productId);
+            return new Promise(resolve => setTimeout(() => resolve({
+                success: true,
+                productId,
+                transactionReceipt: 'MOCK_RECEIPT',
+                transactionId: 'MOCK_ID'
+            }), 1000));
         }
 
-        try {
-            // Get transaction history
-            const { results } = await InAppPurchases.getPurchaseHistoryAsync();
+        const PURCHASE_TIMEOUT_MS = 60_000;
 
-            if (!results || results.length === 0) {
-                return { isActive: false, verificationState: 'verified_inactive' };
-            }
+        return new Promise(async (resolve) => {
+            this.pendingPurchasePromise = { resolve, productId };
 
-            // Sort purchases by time (newest first) to check the most recent renewal/purchase
-            const sortedPurchases = results.sort((a: any, b: any) => b.purchaseTime - a.purchaseTime);
-
-            const now = Date.now();
-
-            for (const purchase of sortedPurchases) {
-                // Must be acknowledged
-                if (!purchase.acknowledged) continue;
-
-                // Determine duration based on product ID
-                let durationMs = 0;
-                if (purchase.productId === PRODUCT_IDS.MONTHLY) {
-                    // approximately 31 days to be safe for monthly renewals
-                    durationMs = 31 * 24 * 60 * 60 * 1000;
-                } else if (purchase.productId === PRODUCT_IDS.YEARLY) {
-                    // 366 days for leap year safety
-                    durationMs = 366 * 24 * 60 * 60 * 1000;
-                } else {
-                    // Unknown product, skip
-                    continue;
+            const timeout = setTimeout(() => {
+                if (this.pendingPurchasePromise?.productId === productId) {
+                    this.pendingPurchasePromise = null;
+                    resolve({ success: false, error: 'Tempo limite excedido. Tente novamente.' });
                 }
+            }, PURCHASE_TIMEOUT_MS);
 
-                // Check expiration
-                // Note: On iOS, for a robust check, you should ideally validate 'transactionReceipt' 
-                // with the App Store Server API. This local check assumes 'purchaseTime' 
-                // is updated for renewals, which typically happens when 'getPurchaseHistoryAsync' is called.
-                const purchaseTime = purchase.purchaseTime;
-                const expirationTime = purchaseTime + durationMs;
+            const resolveOnce = (result: PurchaseResult) => {
+                clearTimeout(timeout);
+                resolve(result);
+            };
 
-                if (expirationTime > now) {
-                    // Found a valid, non-expired subscription
+            // Replace the resolve in pendingPurchasePromise so the listener uses resolveOnce
+            this.pendingPurchasePromise = { resolve: resolveOnce, productId };
+
+            try {
+                await RNIAP.requestPurchase({
+                    type: 'subs',
+                    request: {
+                        ios: { sku: productId },
+                        android: { skus: [productId] }
+                    }
+                });
+            } catch (err: any) {
+                clearTimeout(timeout);
+                this.pendingPurchasePromise = null;
+                resolve({ success: false, error: err.message });
+            }
+        });
+    }
+
+    async checkSubscriptionStatus(): Promise<SubscriptionStatusResult> {
+        if (this.useMockMode) return { isActive: false, verificationState: 'verified_inactive' };
+
+        try {
+            const purchases = await RNIAP.getAvailablePurchases();
+
+            for (const purchase of purchases) {
+                if (purchase.productId === PRODUCT_IDS.MONTHLY || purchase.productId === PRODUCT_IDS.YEARLY) {
                     return {
                         isActive: true,
-                        productId: purchase.productId,
-                        expiryDate: expirationTime,
-                        transactionReceipt: purchase.transactionReceipt,
-                        transactionId: purchase.orderId,
-                        originalTransactionId: purchase.originalOrderId || purchase.orderId,
+                        productId: (purchase as any).productId || (purchase as any).productIds?.[0],
+                        transactionId: purchase.transactionId ?? undefined,
+                        originalTransactionId: (purchase as any).originalTransactionIdIOS ?? purchase.transactionId ?? undefined,
+                        transactionReceipt: (purchase as any).transactionReceipt || purchase.transactionId || undefined,
                         verificationState: 'verified_active'
                     };
                 }
             }
-
-            // No active subscription found
             return { isActive: false, verificationState: 'verified_inactive' };
-
-        } catch (error) {
-            console.error('IAP: Failed to check subscription status', error);
+        } catch (err) {
+            console.error('IAP: Check status error', err);
             return { isActive: false, verificationState: 'unknown' };
         }
     }
 
-    /**
-     * Check if running in mock mode
-     */
-    isInMockMode(): boolean {
-        return this.useMockMode;
-    }
-
-    /**
-     * Get environment description
-     */
-    getEnvironmentInfo(): string {
-        if (this.useMockMode) {
-            return '🎭 Modo de Desenvolvimento (Compras Simuladas)';
+    async restorePurchases(): Promise<PurchaseResult> {
+        if (!this.isInitialized) await this.initialize();
+        const status = await this.checkSubscriptionStatus();
+        if (status.isActive) {
+            return {
+                success: true,
+                productId: status.productId,
+                transactionReceipt: status.transactionReceipt,
+                transactionId: status.transactionId
+            };
         }
-        return '💳 Modo Produção (Compras Reais - App Store)';
+        return { success: false, error: 'Nenhuma assinatura ativa encontrada' };
     }
 
-    /**
-     * Disconnect from the store
-     * Call this when app is closed
-     */
-    async disconnect(): Promise<void> {
-        if (this.isInitialized && !this.useMockMode) {
-            await InAppPurchases.disconnectAsync();
-            this.isInitialized = false;
-            this.listenerRegistered = false;
-            console.log('IAP: Disconnected from App Store');
-        }
-    }
-
-    /**
-     * Format price for display
-     */
+    getAllProducts() { return this.products; }
+    
     formatPrice(productId: string): string {
-        const product = this.getProduct(productId);
-        if (!product) return 'Carregando...';
-
-        // expo-in-app-purchases provides formatted price
-        return product.price || 'R$ 0,00';
+        const p = this.products.find((i: any) => (i.productId === productId || i.id === productId));
+        return p ? (p as any).localizedPrice || 'R$ 0,00' : 'Carregando...';
     }
 
-    /**
-     * Get product title
-     */
-    getProductTitle(productId: string): string {
-        const product = this.getProduct(productId);
-        return product?.title || 'Plano Premium';
+    async disconnect() {
+        if (this.purchaseUpdateSubscription) {
+            this.purchaseUpdateSubscription.remove();
+            this.purchaseUpdateSubscription = null;
+        }
+        if (this.purchaseErrorSubscription) {
+            this.purchaseErrorSubscription.remove();
+            this.purchaseErrorSubscription = null;
+        }
+        if (!this.useMockMode) {
+            await RNIAP.endConnection();
+        }
+        this.isInitialized = false;
     }
 }
 
-// Export singleton instance
 export const iapService = new IAPService();
