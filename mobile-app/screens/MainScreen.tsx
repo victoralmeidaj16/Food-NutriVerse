@@ -257,17 +257,10 @@ export const MainScreen = ({
     const playSound = async () => {
         try {
             const { sound } = await Audio.Sound.createAsync(
-                require('../assets/sounds/pop.mp3') // Assuming we will add this, or use a URI
+                require('../assets/sounds/pop.mp3')
             ).catch(() => ({ sound: null }));
 
-            // Fallback to a remote URL if local file doesn't exist (for this demo)
-            if (!sound) {
-                const { sound: remoteSound } = await Audio.Sound.createAsync(
-                    { uri: 'https://www.soundjay.com/buttons/sounds/button-09.mp3' }
-                );
-                await remoteSound.playAsync();
-                return;
-            }
+            if (!sound) return;
 
             await sound.playAsync();
         } catch (error) {
@@ -989,17 +982,14 @@ export const MainScreen = ({
                             </Text>
                             <Animated.View style={{ transform: [{ scale: decisionBtnScale }], width: '100%' }}>
                                 <TouchableOpacity
-                                    style={[styles.decisionButton, { justifyContent: 'center', opacity: (userProfile?.tasteProfile?.favoriteFoods?.length || userProfile?.tasteProfile?.favoriteDish) ? 1 : 0.5 }]}
+                                    style={[styles.decisionButton, { justifyContent: 'center', opacity: (userProfile?.tasteProfile?.favoriteFoods?.length || userProfile?.tasteProfile?.favoriteDish) ? 1 : 0.4 }]}
                                     activeOpacity={0.8}
+                                    disabled={!(userProfile?.tasteProfile?.favoriteFoods?.length || userProfile?.tasteProfile?.favoriteDish)}
                                     onPressIn={() => animateButtonPress(decisionBtnScale)}
                                     onPressOut={() => animateButtonRelease(decisionBtnScale)}
                                     onPress={() => {
-                                        if (userProfile?.tasteProfile?.favoriteFoods?.length || userProfile?.tasteProfile?.favoriteDish) {
-                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                                            handleGetQuickDecision();
-                                        } else {
-                                            Alert.alert('Gosto não configurado', 'Por favor, configure seu gosto primeiro para sugestões imbatíveis.');
-                                        }
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                        handleGetQuickDecision();
                                     }}
                                 >
                                     <SparklesIcon size={18} color="black" />
@@ -1960,7 +1950,7 @@ export const MainScreen = ({
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => changeTab('MAPA')} style={styles.navItem}>
-                    <CameraIcon size={24} color={activeTab === 'MAPA' ? '#a6f000' : '#9CA3AF'} />
+                    <ActivityIcon size={24} color={activeTab === 'MAPA' ? '#a6f000' : '#9CA3AF'} />
                     <Text style={[styles.navLabel, activeTab === 'MAPA' && styles.navLabelActive]}>
                         {t('mapa.title')}
                     </Text>
