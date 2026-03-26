@@ -51,6 +51,7 @@ const MOCK_PRODUCTS: any[] = [
 
 class IAPService {
     private isInitialized = false;
+    private initializingPromise: Promise<boolean> | null = null;
     private products: RNIAP.Product[] = [];
     private useMockMode = false;
     private purchaseUpdateSubscription: any = null;
@@ -61,6 +62,16 @@ class IAPService {
      * Initialize IAP connection
      */
     async initialize(): Promise<boolean> {
+        if (this.isInitialized) return true;
+        // Prevent concurrent initializations
+        if (this.initializingPromise) return this.initializingPromise;
+        this.initializingPromise = this._doInitialize();
+        const result = await this.initializingPromise;
+        this.initializingPromise = null;
+        return result;
+    }
+
+    private async _doInitialize(): Promise<boolean> {
         try {
             if (this.isInitialized) return true;
 
@@ -243,7 +254,7 @@ class IAPService {
     
     formatPrice(productId: string): string {
         const p = this.products.find((i: any) => (i.productId === productId || i.id === productId));
-        return p ? (p as any).localizedPrice || 'R$ 0,00' : 'Carregando...';
+        return p ? (p as any).localizedPrice || (p as any).displayPrice || 'R$ 0,00' : 'Carregando...';
     }
 
     async disconnect() {
