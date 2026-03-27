@@ -5,11 +5,11 @@ module.exports = {
         name: "Fitswap",
         slug: "mobile-app",
         scheme: "fitswap",
-        version: "1.4.0",
+        version: "1.4.1",
         orientation: "portrait",
         icon: "./assets/icon.png",
         userInterfaceStyle: "light",
-        newArchEnabled: false,
+        newArchEnabled: true,
         splash: {
             image: "./assets/splash-icon.png",
             resizeMode: "contain",
@@ -18,7 +18,7 @@ module.exports = {
         ios: {
             supportsTablet: true,
             bundleIdentifier: "com.victoralmeidaj16.foodnutriverse",
-            buildNumber: "31",
+            buildNumber: "32",
             infoPlist: {
                 NSCameraUsageDescription: "Precisamos de acesso à câmera para você escanear ingredientes e gerar receitas personalizadas.",
                 NSPhotoLibraryUsageDescription: "Precisamos de acesso à galeria para você escolher fotos de ingredientes para análise.",
@@ -31,7 +31,7 @@ module.exports = {
                 backgroundColor: "#ffffff"
             },
             package: "com.victoralmeidaj16.foodnutriverse",
-            versionCode: 31,
+            versionCode: 32,
             edgeToEdgeEnabled: true,
             predictiveBackGestureEnabled: false
         },
