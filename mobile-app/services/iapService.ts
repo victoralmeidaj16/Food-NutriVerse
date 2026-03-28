@@ -218,16 +218,22 @@ class IAPService {
             const purchases = await RNIAP.getAvailablePurchases();
 
             for (const purchase of purchases) {
-                if (purchase.productId === PRODUCT_IDS.MONTHLY || purchase.productId === PRODUCT_IDS.YEARLY) {
-                    return {
-                        isActive: true,
-                        productId: (purchase as any).productId || (purchase as any).productIds?.[0],
-                        transactionId: purchase.transactionId ?? undefined,
-                        originalTransactionId: (purchase as any).originalTransactionIdIOS ?? purchase.transactionId ?? undefined,
-                        transactionReceipt: (purchase as any).transactionReceipt || purchase.transactionId || undefined,
-                        verificationState: 'verified_active'
-                    };
-                }
+                const productId = (purchase as any).productId || (purchase as any).productIds?.[0];
+                if (productId !== PRODUCT_IDS.MONTHLY && productId !== PRODUCT_IDS.YEARLY) continue;
+
+                // Check expiry if available (StoreKit provides subscriptionExpirationDateMS on iOS)
+                const expiryMs: number | undefined = (purchase as any).subscriptionExpirationDateMS;
+                if (expiryMs !== undefined && expiryMs < Date.now()) continue; // expired
+
+                return {
+                    isActive: true,
+                    productId,
+                    expiryDate: expiryMs,
+                    transactionId: purchase.transactionId ?? undefined,
+                    originalTransactionId: (purchase as any).originalTransactionIdIOS ?? purchase.transactionId ?? undefined,
+                    transactionReceipt: (purchase as any).transactionReceipt || purchase.transactionId || undefined,
+                    verificationState: 'verified_active'
+                };
             }
             return { isActive: false, verificationState: 'verified_inactive' };
         } catch (err) {

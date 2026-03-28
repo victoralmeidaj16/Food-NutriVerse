@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Animated, Alert, ActivityIndicator, Linking } from 'react-native';
-import { CheckIcon, SparklesIcon, LockIcon } from '../components/Icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Alert, ActivityIndicator, Linking } from 'react-native';
+import { CheckIcon, SparklesIcon } from '../components/Icons';
 import * as Haptics from 'expo-haptics';
 import { iapService, PRODUCT_IDS, PurchaseResult } from '../services/iapService';
 import { useLanguage } from '../context/LanguageContext';
@@ -10,8 +9,7 @@ const { width } = Dimensions.get('window');
 
 export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onPurchase: (result: PurchaseResult) => void | Promise<void>, onRestore: (result: PurchaseResult) => void | Promise<void>, onClose: () => void, onLogin?: () => void }) => {
     const { t, language } = useLanguage();
-    const [selectedPlan, setSelectedPlan] = useState<'YEARLY' | 'MONTHLY'>('YEARLY');
-    // const closeButtonOpacity = useRef(new Animated.Value(0)).current; // Removed
+    const [selectedPlan, setSelectedPlan] = useState<'YEARLY' | 'MONTHLY'>('YEARLY'); // kept for future plan toggle UI
     const [loading, setLoading] = useState(false);
     const [productsLoaded, setProductsLoaded] = useState(false);
 
@@ -34,52 +32,25 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
         "Acesso imediato ao seu plano"
     ];
 
-    // Close button opacity removed
+    const [loadError, setLoadError] = useState(false);
 
+    const initProducts = async () => {
+        setLoadError(false);
+        // Products may already be loaded from App.tsx initialization
+        if (iapService.getAllProducts().length > 0) {
+            setProductsLoaded(true);
+            return;
+        }
+        await iapService.initialize();
+        if (iapService.getAllProducts().length > 0) {
+            setProductsLoaded(true);
+        } else {
+            setLoadError(true);
+        }
+    };
 
     useEffect(() => {
-        let attempts = 0;
-
-        // Function to check and load products
-        const loadProducts = async () => {
-            // First try to get existing products
-            const products = iapService.getAllProducts();
-            if (products.length > 0) {
-                setProductsLoaded(true);
-                setLoading(false);
-                return;
-            }
-
-            // If no products, try to initialize again (maybe App.tsx didn't finish or failed)
-            if (attempts < 5) { // Try a few times
-                console.log('Paywall: Products not loaded, attempting init...', attempts);
-                attempts++;
-                await iapService.initialize();
-
-                // Check again after init
-                const freshProducts = iapService.getAllProducts();
-                if (freshProducts.length > 0) {
-                    setProductsLoaded(true);
-                    setLoading(false);
-                }
-            } else {
-                // Failsafe: If we timed out (5 seconds), and we are in dev/simulator, forcing productsLoaded might be risky 
-                // but better than a stuck screen. 
-                // However, let's just stop loading so the user sees *something* (buttons will be disabled but maybe we can enable them?)
-                // Actually, if we are in Mock mode, initialize SHOULD have worked.
-                // Let's force a re-render or check via interval.
-            }
-        };
-
-        // Initial check
-        loadProducts();
-
-        // Polling interval
-        const interval = setInterval(loadProducts, 1000);
-
-        return () => {
-            clearInterval(interval);
-        };
+        void initProducts();
     }, []);
 
     const handlePurchase = async (productId: string) => {
@@ -145,10 +116,10 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
         ? "Eat well every day. Without thinking."
         : "Alimente-se bem todos os dias. Sem pensar.";
 
-    const ctaText = language === 'en' ? "Start Now" : "Começar Agora";
     const restoreText = language === 'en' ? "Restore purchases" : "Restaurar compras";
-    const continueText = language === 'en' ? "Continue with limited version" : "Continuar com versão limitada";
     const loadingText = language === 'en' ? "Loading payment options..." : "Carregando opções de pagamento...";
+    const retryText = language === 'en' ? "Retry" : "Tentar novamente";
+    const loadErrorText = language === 'en' ? "Could not load prices." : "Não foi possível carregar os preços.";
     const disclaimerText = language === 'en'
         ? "Subscription renews automatically. Cancel anytime in store settings."
         : "A assinatura é renovada automaticamente. Cancele a qualquer momento nas configurações da loja.";
@@ -241,10 +212,19 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
 
                 {!productsLoaded && (
                     <View style={{ alignItems: 'center', marginTop: 12 }}>
-                        <ActivityIndicator size="small" color="#6B7280" />
-                        <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>
-                            {loadingText}
-                        </Text>
+                        {loadError ? (
+                            <>
+                                <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>{loadErrorText}</Text>
+                                <TouchableOpacity onPress={() => void initProducts()} style={{ marginTop: 8 }}>
+                                    <Text style={{ fontSize: 13, color: '#a6f000', fontWeight: '700' }}>{retryText}</Text>
+                                </TouchableOpacity>
+                            </>
+                        ) : (
+                            <>
+                                <ActivityIndicator size="small" color="#6B7280" />
+                                <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>{loadingText}</Text>
+                            </>
+                        )}
                     </View>
                 )}
 

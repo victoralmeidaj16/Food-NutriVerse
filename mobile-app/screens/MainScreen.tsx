@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { UserProfile, Recipe, Tab, WeeklyPlan, ShoppingList, UserGoal, RECIPE_CATEGORIES, UserList } from '../types';
 import { RecipeCard } from '../components/RecipeCard';
 import {
-    HomeIcon, SearchIcon, CalendarIcon, UserIcon, CameraIcon,
+    HomeIcon, SearchIcon, CalendarIcon, UserIcon, CameraIcon, ActivityIcon,
     ChefHatIcon, SparklesIcon, ArrowRightIcon, PlusIcon, CheckIcon,
     CloseIcon, BookHeartIcon, ShoppingBagIcon, TrashIcon, TimerIcon, FlameIcon, CopyIcon, RefreshIcon, SettingsIcon,
     FileTextIcon, HelpCircleIcon, LockIcon
@@ -1139,9 +1139,9 @@ export const MainScreen = ({
                             <Text style={styles.clearFilter}>{language === 'en' ? 'Clear' : 'Limpar'}</Text>
                         </TouchableOpacity>
                     ) : (
-                        <TouchableOpacity onPress={() => changeTab('LIBRARY')} style={styles.libraryLink}>
-                            <BookHeartIcon size={14} color="#a6f000" />
-                            <Text style={styles.libraryLinkText}>{language === 'en' ? 'Library' : 'Biblioteca'}</Text>
+                        <TouchableOpacity onPress={() => changeTab('MAPA')} style={styles.libraryLink}>
+                            <ActivityIcon size={14} color="#a6f000" />
+                            <Text style={styles.libraryLinkText}>{language === 'en' ? 'Food Map' : 'Mapa Alimentar'}</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -1949,10 +1949,10 @@ export const MainScreen = ({
                     </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => changeTab('MAPA')} style={styles.navItem}>
-                    <ActivityIcon size={24} color={activeTab === 'MAPA' ? '#a6f000' : '#9CA3AF'} />
-                    <Text style={[styles.navLabel, activeTab === 'MAPA' && styles.navLabelActive]}>
-                        {t('mapa.title')}
+                <TouchableOpacity onPress={() => changeTab('LIBRARY')} style={styles.navItem}>
+                    <BookHeartIcon size={24} color={activeTab === 'LIBRARY' ? '#a6f000' : '#9CA3AF'} />
+                    <Text style={[styles.navLabel, activeTab === 'LIBRARY' && styles.navLabelActive]}>
+                        {language === 'en' ? 'Library' : 'Biblioteca'}
                     </Text>
                 </TouchableOpacity>
 
