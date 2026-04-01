@@ -304,6 +304,49 @@ const getRecipeSchema = (language: SupportedLanguage = 'pt'): Schema => {
     };
 };
 
+// Lightweight schema used for weekly plan generation (21 recipes at once — must stay within token limits)
+const getPlanRecipeSchema = (language: SupportedLanguage = 'pt'): Schema => {
+    const lang = AI_PROMPTS[language];
+    return {
+        type: Type.OBJECT,
+        properties: {
+            name: { type: Type.STRING },
+            description: { type: Type.STRING, description: language === 'en' ? "One sentence description" : "Uma frase descritiva" },
+            prepTime: { type: Type.STRING },
+            difficulty: { type: Type.STRING, enum: [...lang.difficulties] },
+            category: { type: Type.STRING, enum: [...lang.categories] },
+            macros: {
+                type: Type.OBJECT,
+                properties: {
+                    calories: { type: Type.NUMBER },
+                    protein: { type: Type.NUMBER },
+                    carbs: { type: Type.NUMBER },
+                    fats: { type: Type.NUMBER },
+                },
+                required: ["calories", "protein", "carbs", "fats"],
+            },
+            ingredients: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        name: { type: Type.STRING },
+                        quantity: { type: Type.STRING },
+                        icon: { type: Type.STRING },
+                    },
+                    required: ["name", "quantity", "icon"]
+                },
+            },
+            instructions: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: language === 'en' ? "3-5 concise steps" : "3-5 passos concisos",
+            },
+        },
+        required: ["name", "description", "prepTime", "difficulty", "category", "macros", "ingredients", "instructions"],
+    };
+};
+
 export const generateFitnessRecipe = async (
     input: string | string[], // Can be a dish name (string) or ingredients list (string[])
     goal: UserGoal,
@@ -758,7 +801,7 @@ export const generateWeeklyPlan = async (
                                 type: Type.OBJECT,
                                 properties: {
                                     timeSlot: { type: Type.STRING, enum: [...lang.timeSlots] },
-                                    recipe: getRecipeSchema(language)
+                                    recipe: getPlanRecipeSchema(language)
                                 },
                                 required: ["timeSlot", "recipe"]
                             }
@@ -779,6 +822,7 @@ export const generateWeeklyPlan = async (
                 responseMimeType: "application/json",
                 responseSchema: planSchema,
                 temperature: 0.7,
+                maxOutputTokens: 16384,
             }
         }, undefined, language));
 

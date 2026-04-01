@@ -146,6 +146,7 @@ export interface RoutineMeal {
         carbs: number;
         fat: number;
     };
+    imageUrl?: string;
 }
 
 export interface RoutineDiagnostic {

@@ -862,26 +862,34 @@ export const MainScreen = ({
 
         const result = source === 'camera'
             ? await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true })
-            : await ImagePicker.launchImageLibraryAsync({ quality: 0.5, base64: true });
+            : await ImagePicker.launchImageLibraryAsync({ quality: 0.5, base64: true, allowsMultipleSelection: true });
 
-        if (!result.canceled && result.assets[0].base64) {
+        if (!result.canceled && result.assets && result.assets.length > 0) {
             setLoading(true);
-            setLoadingMsg(language === 'en' ? "Analyzing meal..." : "Analisando refeição...");
+            setLoadingMsg(language === 'en' ? "Analyzing meal(s)..." : "Analisando refeição...");
             try {
-                const analysis = await analyzeMealImage(result.assets[0].base64, language as SupportedLanguage);
-                if (analysis && analysis.name && analysis.calories && analysis.macros) {
-                    const newMeal: RoutineMeal = {
-                        id: Math.random().toString(36).substr(2, 9),
-                        name: analysis.name,
-                        calories: analysis.calories,
-                        macros: analysis.macros as any,
-                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                    };
-                    setMapaMeals(prev => [...prev, newMeal]);
+                const newMeals: RoutineMeal[] = [];
+                for (const asset of result.assets) {
+                    if (asset.base64) {
+                        const analysis = await analyzeMealImage(asset.base64, language as SupportedLanguage);
+                        if (analysis && analysis.name && analysis.calories && analysis.macros) {
+                            newMeals.push({
+                                id: Math.random().toString(36).substr(2, 9),
+                                name: analysis.name,
+                                calories: analysis.calories,
+                                macros: analysis.macros as any,
+                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                imageUrl: asset.uri
+                            });
+                        }
+                    }
+                }
+                if (newMeals.length > 0) {
+                    setMapaMeals(prev => [...prev, ...newMeals]);
                 }
             } catch (error: any) {
                 console.error(error);
-                Alert.alert(t('common.error'), error?.message || "Error analyzing image");
+                Alert.alert(t('common.error'), error?.message || "Error analyzing image(s)");
             } finally {
                 setLoading(false);
             }
@@ -1810,7 +1818,10 @@ export const MainScreen = ({
                             <View style={styles.mapaMealsList}>
                                 {mapaMeals.map((meal) => (
                                     <View key={meal.id} style={styles.mapaMealItem}>
-                                        <View style={styles.mapaMealInfo}>
+                                        {meal.imageUrl && (
+                                            <Image source={{ uri: meal.imageUrl }} style={{ width: 44, height: 44, borderRadius: 8, marginRight: 12 }} />
+                                        )}
+                                        <View style={[styles.mapaMealInfo, { flex: 1 }]}>
                                             <Text style={styles.mapaMealTime}>{meal.time}</Text>
                                             <Text style={styles.mapaMealName}>{meal.name}</Text>
                                         </View>
@@ -1994,6 +2005,11 @@ export const MainScreen = ({
                 visible={loading}
                 progress={loadingProgress}
                 status={loadingStatus || loadingMsg}
+                personalizationText={
+                    userProfile?.goal === 'LOSE_WEIGHT' ? (language === 'en' ? 'Adapting to: Weight Loss' : 'Adaptando para: Emagrecimento') :
+                    userProfile?.goal === 'GAIN_MUSCLE' ? (language === 'en' ? 'Goal: High Protein' : 'Meta: Alta Proteína') :
+                    (language === 'en' ? 'Adapting to: Healthy Lifestyle' : 'Adaptando para: Vida Saudável')
+                }
             />
             {showPlanningWizard && (
                 <PlanningWizard
