@@ -30,6 +30,7 @@ import { SubscriptionService } from '../services/subscriptionService';
 import { CopyMealModal } from '../components/CopyMealModal';
 import { WeeklyPlanIntro } from '../components/WeeklyPlanIntro';
 import { PantryImagePreview } from '../components/PantryImagePreview';
+import { ScanningModal } from '../components/ScanningModal';
 
 const { width } = Dimensions.get('window');
 
@@ -114,6 +115,10 @@ export const MainScreen = ({
     const [mapaAnalysis, setMapaAnalysis] = useState<MapaAlimentarResult | null>(null);
     const [isAnalyzingMapa, setIsAnalyzingMapa] = useState(false);
     const [dailyLoop, setDailyLoop] = useState({ morning: false, lunch: false, evening: false });
+
+    // Scanning modal
+    const [scanningImages, setScanningImages] = useState<string[]>([]);
+    const [scanningStatus, setScanningStatus] = useState('');
 
     // Toast
     const [toastMessage, setToastMessage] = useState('');
@@ -424,6 +429,11 @@ export const MainScreen = ({
         console.log('🔍 handleAnalyzePantryImages started', { imagesCount: pantryImages.length, manualIngredients });
         setShowPantryPreview(false);
 
+        if (pantryImages.length > 0) {
+            setScanningImages([...pantryImages]);
+            setScanningStatus(language === 'en' ? 'Scanning ingredients...' : 'Escaneando ingredientes...');
+        }
+
         setLoading(true);
         setLoadingMsg(t('loading.analyzingPantry'));
         setLoadingStatus(t('explore.processingImages'));
@@ -499,6 +509,8 @@ export const MainScreen = ({
                 onUpdateHistory([recipe, ...generatedRecipes].slice(0, 100));
                 setActiveTab('EXPLORE');
                 // Auto-open the recipe details
+                setScanningImages([]);
+                setScanningStatus('');
                 setLoading(false);
                 setTimeout(() => onRecipeClick(recipe), 300);
                 return; // Don't hit the finally block setLoading(false) again
@@ -509,6 +521,8 @@ export const MainScreen = ({
             console.error('❌ Pantry analysis error:', error);
             Alert.alert(t('common.error'), `${t('errors.couldNotProcess')}: ${error.message || t('errors.unknownError')}`);
         } finally {
+            setScanningImages([]);
+            setScanningStatus('');
             setLoading(false);
         }
     };
@@ -614,6 +628,11 @@ export const MainScreen = ({
         setLoadingProgress(0);
         setLoading(true);
 
+        if (exploreMode === 'TEXT' && desireImages.length > 0) {
+            setScanningImages([...desireImages]);
+            setScanningStatus(language === 'en' ? 'Scanning your food images...' : 'Escaneando suas imagens...');
+        }
+
         try {
             console.log('🚀 Calling generateFitnessRecipe...');
 
@@ -663,6 +682,8 @@ export const MainScreen = ({
             console.error('❌ Recipe generation error:', e);
             Alert.alert(t('common.error'), e?.message || t('errors.aiConnectionFailed'));
         } finally {
+            setScanningImages([]);
+            setScanningStatus('');
             setLoading(false);
         }
     };
@@ -865,6 +886,8 @@ export const MainScreen = ({
             : await ImagePicker.launchImageLibraryAsync({ quality: 0.5, base64: true, allowsMultipleSelection: true });
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
+            setScanningImages(result.assets.map(a => a.uri));
+            setScanningStatus(language === 'en' ? 'Analyzing your meal...' : 'Analisando sua refeição...');
             setLoading(true);
             setLoadingMsg(language === 'en' ? "Analyzing meal(s)..." : "Analisando refeição...");
             try {
@@ -891,6 +914,8 @@ export const MainScreen = ({
                 console.error(error);
                 Alert.alert(t('common.error'), error?.message || "Error analyzing image(s)");
             } finally {
+                setScanningImages([]);
+                setScanningStatus('');
                 setLoading(false);
             }
         }
@@ -1676,56 +1701,116 @@ export const MainScreen = ({
     };
 
     const renderProfile = () => {
-        return (
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.header}>
-                    <Text style={styles.pageTitle}>{language === 'en' ? 'Profile' : 'Perfil'}</Text>
-                    <TouchableOpacity onPress={() => setShowEditProfile(true)}>
-                        <Text style={styles.editProfileText}>{language === 'en' ? 'Edit' : 'Editar'}</Text>
-                    </TouchableOpacity>
-                </View>
+        const goalLabel = language === 'en'
+            ? (userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Burn Fat' : userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Build Muscle' : 'Healthy')
+            : (userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Queimar Gordura' : userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Ganhar Massa' : 'Saudável');
 
-                <View style={styles.profileCard}>
-                    <View style={styles.profileImageContainer}>
-                        {userProfile?.profilePicture ? (
-                            <Image source={{ uri: userProfile.profilePicture }} style={styles.profileImage} />
-                        ) : (
-                            <UserIcon size={48} color="#D1D5DB" />
+        const foodImages = userProfile?.tasteProfile?.favoriteFoodImages || [];
+        const favoriteFoods = userProfile?.tasteProfile?.favoriteFoods || [];
+        const restrictions = userProfile?.dietaryRestrictions || [];
+        const dislikes = userProfile?.dislikes || [];
+
+        return (
+            <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
+
+                {/* Hero section */}
+                <TouchableOpacity onPress={() => setShowEditProfile(true)} activeOpacity={0.85}>
+                    <View style={styles.profileHero}>
+                        <View style={styles.profileHeroAvatar}>
+                            {userProfile?.profilePicture ? (
+                                <Image source={{ uri: userProfile.profilePicture }} style={styles.profileHeroImage} />
+                            ) : (
+                                <View style={styles.profileHeroPlaceholder}>
+                                    <UserIcon size={36} color="#9CA3AF" />
+                                </View>
+                            )}
+                            <View style={styles.profileHeroEditBadge}>
+                                <CameraIcon size={13} color="black" />
+                            </View>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.profileHeroName}>{userProfile?.name || '—'}</Text>
+                            <View style={styles.profileHeroGoalRow}>
+                                <View style={styles.profileHeroGoalBadge}>
+                                    <Text style={styles.profileHeroGoalText}>{goalLabel}</Text>
+                                </View>
+                            </View>
+                        </View>
+                        <View style={styles.profileHeroEditBtn}>
+                            <Text style={styles.profileHeroEditText}>{language === 'en' ? 'Edit' : 'Editar'}</Text>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+
+                {/* Taste snapshot — only if set */}
+                {(foodImages.length > 0 || favoriteFoods.length > 0) && (
+                    <View style={styles.profileTasteCard}>
+                        <Text style={styles.profileSectionLabel}>
+                            {language === 'en' ? 'My Taste Profile' : 'Meu Gosto'}
+                        </Text>
+                        {foodImages.length > 0 && (
+                            <View style={styles.profileFoodImagesRow}>
+                                {foodImages.slice(0, 5).map((uri, i) => (
+                                    <Image key={i} source={{ uri }} style={styles.profileFoodThumb} />
+                                ))}
+                                {foodImages.length > 5 && (
+                                    <View style={styles.profileFoodThumbMore}>
+                                        <Text style={styles.profileFoodThumbMoreText}>+{foodImages.length - 5}</Text>
+                                    </View>
+                                )}
+                            </View>
+                        )}
+                        {favoriteFoods.length > 0 && (
+                            <View style={styles.profileTagsRow}>
+                                {favoriteFoods.slice(0, 6).map((f, i) => (
+                                    <View key={i} style={styles.profileTag}>
+                                        <Text style={styles.profileTagText}>{f}</Text>
+                                    </View>
+                                ))}
+                            </View>
                         )}
                     </View>
-                    <Text style={styles.profileName}>{userProfile?.name}</Text>
-                    <Text style={styles.profileGoal}>
-                        {language === 'en'
-                            ? (userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Burn Fat' :
-                                userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Build Muscle' : 'Healthy')
-                            : (userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Queimar Gordura' :
-                                userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Ganhar Massa' : 'Saudável')}
-                    </Text>
-                    <TouchableOpacity onPress={() => setShowEditProfile(true)} style={{ marginTop: 10 }}>
-                        <Text style={{ color: '#a6f000', fontWeight: '600' }}>
-                            {language === 'en' ? 'Edit Profile' : 'Editar Perfil'}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+                )}
 
-                <View style={styles.statsContainer}>
-                    <View style={styles.statBox}>
-                        <Text style={styles.statValue}>{userProfile?.dietaryRestrictions.length || 0}</Text>
-                        <Text style={styles.statLabel}>{language === 'en' ? 'Restrictions' : 'Restrições'}</Text>
+                {/* Restrictions & dislikes — only if set */}
+                {(restrictions.length > 0 || dislikes.length > 0) && (
+                    <View style={styles.profileTasteCard}>
+                        {restrictions.length > 0 && (
+                            <>
+                                <Text style={styles.profileSectionLabel}>
+                                    {language === 'en' ? 'Restrictions' : 'Restrições'}
+                                </Text>
+                                <View style={styles.profileTagsRow}>
+                                    {restrictions.map((r, i) => (
+                                        <View key={i} style={[styles.profileTag, { backgroundColor: '#FEF2F2', borderColor: '#FEE2E2' }]}>
+                                            <Text style={[styles.profileTagText, { color: '#EF4444' }]}>{r}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </>
+                        )}
+                        {dislikes.length > 0 && (
+                            <>
+                                <Text style={[styles.profileSectionLabel, { marginTop: restrictions.length > 0 ? 12 : 0 }]}>
+                                    {language === 'en' ? "Doesn't eat" : 'Não come'}
+                                </Text>
+                                <View style={styles.profileTagsRow}>
+                                    {dislikes.slice(0, 8).map((d, i) => (
+                                        <View key={i} style={[styles.profileTag, { backgroundColor: '#F9FAFB' }]}>
+                                            <Text style={styles.profileTagText}>{d}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </>
+                        )}
                     </View>
-                    <View style={styles.statBox}>
-                        <Text style={styles.statValue}>{userProfile?.dislikes.length || 0}</Text>
-                        <Text style={styles.statLabel}>{language === 'en' ? 'Dislikes' : 'Não Gosta'}</Text>
-                    </View>
-                </View>
+                )}
 
+                {/* Menu */}
                 <View style={styles.menuSection}>
                     <Text style={styles.menuTitle}>{language === 'en' ? 'Support & Legal' : 'Suporte & Legal'}</Text>
 
-                    <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => Linking.openURL('https://victoralmeidaj16.github.io/Food-NutriVerse/support.html')}
-                    >
+                    <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('https://victoralmeidaj16.github.io/Food-NutriVerse/support.html')}>
                         <View style={styles.menuIconBox}>
                             <HelpCircleIcon size={20} color="#4B5563" />
                         </View>
@@ -1733,10 +1818,7 @@ export const MainScreen = ({
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => Linking.openURL('https://victoralmeidaj16.github.io/Food-NutriVerse/terms.html')}
-                    >
+                    <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('https://victoralmeidaj16.github.io/Food-NutriVerse/terms.html')}>
                         <View style={styles.menuIconBox}>
                             <FileTextIcon size={20} color="#4B5563" />
                         </View>
@@ -1744,10 +1826,7 @@ export const MainScreen = ({
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => Linking.openURL('https://victoralmeidaj16.github.io/Food-NutriVerse/privacy.html')}
-                    >
+                    <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('https://victoralmeidaj16.github.io/Food-NutriVerse/privacy.html')}>
                         <View style={styles.menuIconBox}>
                             <LockIcon size={20} color="#4B5563" />
                         </View>
@@ -1755,10 +1834,7 @@ export const MainScreen = ({
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => setShowSourcesScreen(true)}
-                    >
+                    <TouchableOpacity style={styles.menuItem} onPress={() => setShowSourcesScreen(true)}>
                         <View style={[styles.menuIconBox, { backgroundColor: '#E0F2FE' }]}>
                             <FileTextIcon size={20} color="#0369A1" />
                         </View>
@@ -1767,10 +1843,7 @@ export const MainScreen = ({
                     </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => setLanguage(language === 'pt' ? 'en' : 'pt')}
-                >
+                <TouchableOpacity style={styles.menuItem} onPress={() => setLanguage(language === 'pt' ? 'en' : 'pt')}>
                     <View style={[styles.menuIconBox, { backgroundColor: '#EEF2FF' }]}>
                         <Text style={{ fontSize: 16 }}>🌐</Text>
                     </View>
@@ -1815,21 +1888,25 @@ export const MainScreen = ({
                                 <Text style={styles.mapaEmptyText}>{t('mapa.emptyMeals')}</Text>
                             </View>
                         ) : (
-                            <View style={styles.mapaMealsList}>
-                                {mapaMeals.map((meal) => (
-                                    <View key={meal.id} style={styles.mapaMealItem}>
-                                        {meal.imageUrl && (
-                                            <Image source={{ uri: meal.imageUrl }} style={{ width: 44, height: 44, borderRadius: 8, marginRight: 12 }} />
-                                        )}
-                                        <View style={[styles.mapaMealInfo, { flex: 1 }]}>
-                                            <Text style={styles.mapaMealTime}>{meal.time}</Text>
-                                            <Text style={styles.mapaMealName}>{meal.name}</Text>
-                                        </View>
-                                        <View style={styles.mapaMealVisualMeta}>
-                                            <Text style={styles.mapaMealCal}>{meal.calories} {t('mapa.calories')}</Text>
-                                            <TouchableOpacity onPress={() => setMapaMeals(prev => prev.filter(m => m.id !== meal.id))}>
-                                                <TrashIcon size={18} color="#EF4444" />
-                                            </TouchableOpacity>
+                            <View style={styles.mapaTimelineContainer}>
+                                <View style={styles.mapaTimelineAxis} />
+                                {[...mapaMeals].sort((a, b) => a.time.localeCompare(b.time)).map((meal, index) => (
+                                    <View key={meal.id} style={styles.mapaTimelineItem}>
+                                        <View style={styles.mapaTimelineNode} />
+                                        <View style={[styles.mapaMealItem, { flex: 1 }]}>
+                                            {meal.imageUrl && (
+                                                <Image source={{ uri: meal.imageUrl }} style={{ width: 44, height: 44, borderRadius: 8, marginRight: 12 }} />
+                                            )}
+                                            <View style={[styles.mapaMealInfo, { flex: 1 }]}>
+                                                <Text style={styles.mapaMealTime}>{meal.time}</Text>
+                                                <Text style={styles.mapaMealName}>{meal.name}</Text>
+                                            </View>
+                                            <View style={styles.mapaMealVisualMeta}>
+                                                <Text style={styles.mapaMealCal}>{meal.calories} {t('mapa.calories')}</Text>
+                                                <TouchableOpacity onPress={() => setMapaMeals(prev => prev.filter(m => m.id !== meal.id))}>
+                                                    <TrashIcon size={18} color="#EF4444" />
+                                                </TouchableOpacity>
+                                            </View>
                                         </View>
                                     </View>
                                 ))}
@@ -2002,7 +2079,7 @@ export const MainScreen = ({
 
             {/* Global Loading Modal */}
             <LoadingModal
-                visible={loading}
+                visible={loading && scanningImages.length === 0}
                 progress={loadingProgress}
                 status={loadingStatus || loadingMsg}
                 personalizationText={
@@ -2047,6 +2124,13 @@ export const MainScreen = ({
                     <SourcesScreen onBack={() => setShowSourcesScreen(false)} />
                 </Modal>
             )}
+
+            <ScanningModal
+                visible={scanningImages.length > 0}
+                images={scanningImages}
+                status={loadingStatus || scanningStatus}
+                language={language}
+            />
         </SafeAreaView>
     );
 };
@@ -2703,44 +2787,136 @@ const styles = StyleSheet.create({
         color: 'black',
         fontSize: 16,
     },
-    profileCard: {
+    // Profile hero
+    profileHero: {
+        flexDirection: 'row',
         alignItems: 'center',
+        gap: 16,
         backgroundColor: 'white',
-        padding: 32,
-        borderRadius: 32,
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 12,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-        marginBottom: 24,
+        borderColor: '#F3F4F6',
     },
-    profileImageContainer: {
-        width: 96,
-        height: 96,
-        borderRadius: 48,
+    profileHeroAvatar: {
+        position: 'relative',
+    },
+    profileHeroImage: {
+        width: 68,
+        height: 68,
+        borderRadius: 34,
+    },
+    profileHeroPlaceholder: {
+        width: 68,
+        height: 68,
+        borderRadius: 34,
         backgroundColor: '#F3F4F6',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 16,
-        overflow: 'hidden',
     },
-    profileImage: {
-        width: '100%',
-        height: '100%',
+    profileHeroEditBadge: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#a6f000',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: 'white',
     },
-    profileName: {
-        fontSize: 24,
+    profileHeroName: {
+        fontSize: 20,
         fontWeight: '800',
         color: '#1F2937',
-        marginBottom: 4,
+        marginBottom: 6,
     },
-    profileGoal: {
-        fontSize: 14,
-        color: '#6B7280',
+    profileHeroGoalRow: {
+        flexDirection: 'row',
+    },
+    profileHeroGoalBadge: {
         backgroundColor: '#F3F4F6',
-        paddingHorizontal: 12,
+        paddingHorizontal: 10,
         paddingVertical: 4,
-        borderRadius: 12,
-        overflow: 'hidden',
+        borderRadius: 10,
     },
+    profileHeroGoalText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#6B7280',
+    },
+    profileHeroEditBtn: {
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 12,
+    },
+    profileHeroEditText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#374151',
+    },
+    // Taste & preference cards
+    profileTasteCard: {
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 18,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        gap: 10,
+    },
+    profileSectionLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#9CA3AF',
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
+    },
+    profileFoodImagesRow: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    profileFoodThumb: {
+        width: 52,
+        height: 52,
+        borderRadius: 12,
+    },
+    profileFoodThumbMore: {
+        width: 52,
+        height: 52,
+        borderRadius: 12,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    profileFoodThumbMoreText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#6B7280',
+    },
+    profileTagsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
+    profileTag: {
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        backgroundColor: '#F0FDF4',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#D1FAE5',
+    },
+    profileTagText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#065F46',
+    },
+    // Legacy — still used by Library tab
     statsContainer: {
         flexDirection: 'row',
         gap: 16,
@@ -3424,6 +3600,37 @@ const styles = StyleSheet.create({
     },
     mapaMealsList: {
         gap: 12,
+    },
+    mapaTimelineContainer: {
+        position: 'relative',
+        paddingLeft: 32, // More padding to account for the line and node
+        marginTop: 16,
+        gap: 20,
+    },
+    mapaTimelineAxis: {
+        position: 'absolute',
+        top: 8,
+        bottom: 8,
+        left: 11, // Approximately center of the initial padding
+        width: 2,
+        backgroundColor: '#E5E7EB',
+        borderRadius: 1,
+    },
+    mapaTimelineItem: {
+        position: 'relative',
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    mapaTimelineNode: {
+        position: 'absolute',
+        left: -27, // Positioned exactly over the axis line
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#a6f000',
+        borderWidth: 2,
+        borderColor: '#111827',
+        zIndex: 10,
     },
     mapaMealItem: {
         flexDirection: 'row',

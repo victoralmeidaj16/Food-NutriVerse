@@ -63,8 +63,9 @@ export interface TasteProfile {
     favoriteDish: string;
     favoriteFastFood: string;
     favoriteSweet: string;
-    favoriteFoods?: string[];      // Free list of foods the user loves
-    usualEatingHabits?: string;    // Short description of typical eating habits
+    favoriteFoods?: string[];           // Free list of foods the user loves
+    usualEatingHabits?: string;         // Short description of typical eating habits
+    favoriteFoodImages?: string[];      // URIs of food reference photos
 }
 
 
