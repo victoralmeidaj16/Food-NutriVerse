@@ -16,10 +16,10 @@ import {
     HomeIcon, SearchIcon, CalendarIcon, UserIcon, CameraIcon, ActivityIcon,
     ChefHatIcon, SparklesIcon, ArrowRightIcon, PlusIcon, CheckIcon,
     CloseIcon, BookHeartIcon, ShoppingBagIcon, TrashIcon, TimerIcon, FlameIcon, CopyIcon, RefreshIcon, SettingsIcon,
-    FileTextIcon, HelpCircleIcon, LockIcon
+    FileTextIcon, HelpCircleIcon, LockIcon, UploadIcon, GalleryIcon
 } from '../components/Icons';
 import { MOCK_RECIPES } from '../services/mockData';
-import { generateFitnessRecipe, identifyIngredientsFromImage, generateWeeklyPlan, generateShoppingList, SupportedLanguage, generateQuickDecision, analyzeRoutine, analyzeMealImage } from '../services/geminiService';
+import { generateFitnessRecipe, identifyIngredientsFromImage, generateWeeklyPlan, generateShoppingList, SupportedLanguage, generateQuickDecision, analyzeRoutine, analyzeMealImage, generateSingleMealProposal } from '../services/geminiService';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { LoadingModal } from '../components/LoadingModal';
 import { PlanningWizard } from '../components/PlanningWizard';
@@ -97,8 +97,11 @@ export const MainScreen = ({
     const [activePlanningDay, setActivePlanningDay] = useState(0);
     const [showPlanningWizard, setShowPlanningWizard] = useState(false);
     const [showShoppingList, setShowShoppingList] = useState(false);
+    const [weeklyPlanProposal, setWeeklyPlanProposal] = useState<WeeklyPlan | null>(null);
+    const [isApprovingPlan, setIsApprovingPlan] = useState(false);
     // DailyTip state removed
     const [showEditProfile, setShowEditProfile] = useState(false);
+    const [editProfileInitialSection, setEditProfileInitialSection] = useState<'DEFAULT' | 'TASTE'>('DEFAULT');
 
     const [copyMealModalVisible, setCopyMealModalVisible] = useState(false);
     const [selectedMealToCopy, setSelectedMealToCopy] = useState<{ dayIndex: number, mealIndex: number, recipe: Recipe } | null>(null);
@@ -702,24 +705,79 @@ export const MainScreen = ({
         setShowPlanningWizard(false);
         setLoading(true);
         setLoadingMsg(t('loading.generatingPlan'));
+        setLoadingProgress(0);
+        setLoadingStatus('');
+
+        // Simulated progress: 0 → 95% over ~30s with ease-out, stays at 95% until done
+        const PLAN_PROGRESS_DURATION = 30000;
+        const PLAN_PROGRESS_INTERVAL = 250;
+        const startTime = Date.now();
+        const progressInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const t = Math.min(elapsed / PLAN_PROGRESS_DURATION, 1);
+            const eased = 1 - Math.pow(1 - t, 2); // quadratic ease-out
+            setLoadingProgress(Math.min(eased * 0.95, 0.95));
+        }, PLAN_PROGRESS_INTERVAL);
 
         try {
             const plan = await generateWeeklyPlan(userProfile, preference, mealsCount, allowRepeats, language as SupportedLanguage);
+            clearInterval(progressInterval);
             if (plan) {
-                setWeeklyPlan(plan);
-
-                // Increment usage removed
-                // const updatedProfile = SubscriptionService.incrementWeeklyPlanCount(userProfile);
-                // onUpdateProfile(updatedProfile);
-                setActivePlanningDay(0);
+                setLoadingProgress(1);
+                // INSTEAD of setting weekly plan immediately, we enter the approval phase
+                setWeeklyPlanProposal(plan);
+                setIsApprovingPlan(true);
             } else {
                 Alert.alert(t('common.error'), t('errors.planGenerationFailed'));
             }
         } catch (e: any) {
+            clearInterval(progressInterval);
             console.error(e);
             Alert.alert(t('common.error'), e?.message || t('errors.planGenerationFailed'));
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleApproveAllMeals = () => {
+        if (!weeklyPlanProposal) return;
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setWeeklyPlan(weeklyPlanProposal);
+        setActivePlanningDay(0);
+        setIsApprovingPlan(false);
+        setWeeklyPlanProposal(null);
+    };
+
+    const handleRegenerateMealProposal = async (dayIndex: number, mealIndex: number) => {
+        if (!weeklyPlanProposal || !userProfile) return;
+
+        const mealSlot = weeklyPlanProposal.days[dayIndex].meals[mealIndex];
+        setRegeneratingMeal({ dayIndex, mealIndex });
+        
+        try {
+            // Get recent dishes to avoid
+            const recentDishes = weeklyPlanProposal.days.flatMap(d => d.meals.map(m => m.recipe?.name).filter(Boolean) as string[]);
+            
+            const newRecipeProposal = await generateSingleMealProposal(
+                userProfile,
+                mealSlot.timeSlot,
+                recentDishes,
+                language as SupportedLanguage
+            );
+
+            if (newRecipeProposal) {
+                const newProposal = { ...weeklyPlanProposal };
+                newProposal.days[dayIndex].meals[mealIndex].recipe = newRecipeProposal;
+                setWeeklyPlanProposal(newProposal);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } else {
+                Alert.alert(t('common.error'), t('errors.regenerateFailed'));
+            }
+        } catch (error: any) {
+            console.error(error);
+            Alert.alert(t('common.error'), error?.message || t('errors.regenerateFailed'));
+        } finally {
+            setRegeneratingMeal(null);
         }
     };
 
@@ -1299,9 +1357,9 @@ export const MainScreen = ({
                                     style={styles.desireAttachBtn}
                                     onPress={() => pickDesireImage('gallery')}
                                 >
-                                    <Text style={{ fontSize: 16 }}>🖼️</Text>
+                                    <UploadIcon size={16} color="#a6f000" />
                                     <Text style={styles.desireAttachText}>
-                                        {language === 'en' ? 'Gallery' : 'Galeria'}
+                                        {language === 'en' ? 'Upload' : 'Upload'}
                                     </Text>
                                 </TouchableOpacity>
                                 <Text style={styles.desireAttachHint}>
@@ -1454,6 +1512,103 @@ export const MainScreen = ({
         );
     };
 
+    const renderPlanApproval = () => {
+        if (!weeklyPlanProposal) return null;
+
+        return (
+            <View style={styles.content}>
+                <View style={styles.header}>
+                    <Text style={styles.pageTitle}>{language === 'en' ? 'Review Your Plan' : 'Aprove o Plano'}</Text>
+                    <Text style={{color: '#9CA3AF', fontSize: 13, marginTop: 4}}>
+                        {language === 'en' ? 'Review the proposed meals before finalizing.' : 'Revise as refeições propostas antes de finalizar.'}
+                    </Text>
+                </View>
+
+                <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]} showsVerticalScrollIndicator={false}>
+                    {weeklyPlanProposal.days.map((day, dayIndex) => (
+                        <View key={dayIndex} style={{marginBottom: 24}}>
+                            <Text style={{color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 12}}>
+                                {day.dayName}
+                            </Text>
+                            {day.meals.map((mealSlot, mealIndex) => {
+                                const isRegenerating = regeneratingMeal?.dayIndex === dayIndex && regeneratingMeal?.mealIndex === mealIndex;
+                                return (
+                                    <View key={mealIndex} style={{
+                                        backgroundColor: '#1F2937',
+                                        borderRadius: 16,
+                                        padding: 16,
+                                        marginBottom: 12,
+                                        flexDirection: 'row',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}>
+                                        <View style={{flex: 1, paddingRight: 12}}>
+                                            <Text style={{color: '#9CA3AF', fontSize: 12, fontWeight: 'bold', marginBottom: 4}}>{mealSlot.timeSlot.toUpperCase()}</Text>
+                                            <Text style={{color: 'white', fontSize: 16, fontWeight: '600', marginBottom: 4}}>
+                                                {mealSlot.recipe?.name || (language === 'en' ? 'Unplanned' : 'Não planejado')}
+                                            </Text>
+                                            <View style={{flexDirection: 'row', gap: 12, alignItems: 'center'}}>
+                                                <Text style={{color: '#D1D5DB', fontSize: 12}}>🔥 {mealSlot.recipe?.macros?.calories || 0} kcal</Text>
+                                                <Text style={{color: '#D1D5DB', fontSize: 12}}>⏱️ {mealSlot.recipe?.prepTime || '--'}</Text>
+                                            </View>
+                                        </View>
+                                        <TouchableOpacity
+                                            style={{
+                                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                                borderRadius: 20,
+                                                paddingHorizontal: 16,
+                                                paddingVertical: 8,
+                                                opacity: isRegenerating ? 0.5 : 1
+                                            }}
+                                            disabled={isRegenerating}
+                                            onPress={() => handleRegenerateMealProposal(dayIndex, mealIndex)}
+                                        >
+                                            {isRegenerating ? (
+                                                <ActivityIndicator size="small" color="#a6f000" />
+                                            ) : (
+                                                <Text style={{color: 'white', fontSize: 12, fontWeight: 'bold'}}>
+                                                    {language === 'en' ? 'Swap' : 'Trocar'}
+                                                </Text>
+                                            )}
+                                        </TouchableOpacity>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    ))}
+                </ScrollView>
+
+                {/* Fixed bottom validation floating button */}
+                <View style={{
+                    position: 'absolute',
+                    bottom: 20,
+                    left: 20,
+                    right: 20,
+                }}>
+                    <TouchableOpacity
+                        style={{
+                            backgroundColor: '#a6f000',
+                            borderRadius: 24,
+                            padding: 18,
+                            alignItems: 'center',
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            shadowColor: '#a6f000',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.3,
+                            shadowRadius: 8
+                        }}
+                        onPress={handleApproveAllMeals}
+                    >
+                        <Text style={{color: 'black', fontSize: 16, fontWeight: 'bold'}}>
+                            {language === 'en' ? 'Approve All Meals' : 'Aprovar Todas as Refeições'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    };
+
     const renderPlanning = () => (
         <View style={styles.content}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -1482,85 +1637,117 @@ export const MainScreen = ({
                     <WeeklyPlanIntro onStart={() => setShowPlanningWizard(true)} />
                 ) : (
                     <View>
-                        {/* Day Selector */}
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysRow}>
-                            {weeklyPlan.days.map((day, idx) => (
-                                <TouchableOpacity
-                                    key={idx}
-                                    onPress={() => setActivePlanningDay(idx)}
-                                    style={[styles.dayCard, activePlanningDay === idx && styles.dayCardActive]}
-                                >
-                                    <Text style={[styles.dayName, activePlanningDay === idx && styles.dayNameActive]}>
-                                        {day.dayName.substring(0, 3)}
-                                    </Text>
-                                    <Text style={[styles.dayNumber, activePlanningDay === idx && styles.dayNumberActive]}>
-                                        {idx + 1}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
+                        {/* Weekly overview grid */}
+                        <View style={styles.weekOverviewGrid}>
+                            {weeklyPlan.days.map((day, idx) => {
+                                const totalKcal = day.meals.reduce((sum, m) => sum + (m.recipe?.macros?.calories || 0), 0);
+                                const filledMeals = day.meals.filter(m => m.recipe).length;
+                                const allFilled = filledMeals === day.meals.length;
+                                const isActive = idx === activePlanningDay;
+                                return (
+                                    <TouchableOpacity
+                                        key={idx}
+                                        onPress={() => setActivePlanningDay(idx)}
+                                        style={[styles.weekOverviewDay, isActive && styles.weekOverviewDayActive]}
+                                    >
+                                        <Text style={[styles.weekOverviewDayName, isActive && styles.weekOverviewDayNameActive]}>
+                                            {day.dayName.substring(0, 3)}
+                                        </Text>
+                                        <View style={[
+                                            styles.weekOverviewDot,
+                                            allFilled ? styles.weekOverviewDotFull : styles.weekOverviewDotPartial,
+                                            isActive && styles.weekOverviewDotActive,
+                                        ]} />
+                                        {totalKcal > 0 && (
+                                            <Text style={[styles.weekOverviewKcal, isActive && styles.weekOverviewKcalActive]}>
+                                                {totalKcal}
+                                            </Text>
+                                        )}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
 
-                        {/* Loading Modal removed from here, now global at the root */}
-
-                        {/* Modals */}
                         {/* Meals List */}
                         <View style={styles.mealsList}>
-                            {weeklyPlan.days[activePlanningDay].meals.map((meal, idx) => (
-                                <View key={meal.id} style={styles.mealCard}>
-                                    {meal.recipe ? (
-                                        <TouchableOpacity onPress={() => onRecipeClick(meal.recipe!)}>
-                                            <Image source={{ uri: meal.recipe.imageUrl || 'https://via.placeholder.com/150' }} style={styles.mealImage} />
-                                        </TouchableOpacity>
-                                    ) : (
-                                        <View style={[styles.mealImage, { backgroundColor: '#E5E7EB' }]} />
-                                    )}
-                                    <View style={styles.mealInfo}>
-                                        <View style={styles.mealHeader}>
-                                            <View style={styles.timeSlotBadge}>
-                                                <Text style={styles.timeSlotText}>{meal.timeSlot}</Text>
-                                            </View>
-                                            <View style={styles.mealActions}>
-                                                {meal.recipe && (
-                                                    <TouchableOpacity
-                                                        onPress={() => handleOpenCopyModal(activePlanningDay, idx, meal.recipe!)}
-                                                        style={styles.actionBtn}
-                                                    >
-                                                        <CopyIcon size={16} color="#6B7280" />
-                                                    </TouchableOpacity>
+                            {weeklyPlan.days[activePlanningDay].meals.map((meal, idx) => {
+                                const isRegenerating = regeneratingMeal?.dayIndex === activePlanningDay && regeneratingMeal?.mealIndex === idx;
+                                return (
+                                    <View key={meal.id} style={styles.mealCard}>
+                                        {meal.recipe ? (
+                                            <TouchableOpacity onPress={() => onRecipeClick(meal.recipe!)}>
+                                                <Image source={{ uri: meal.recipe.imageUrl || 'https://via.placeholder.com/150' }} style={styles.mealImage} />
+                                            </TouchableOpacity>
+                                        ) : (
+                                            /* Empty slot — generate button */
+                                            <TouchableOpacity
+                                                style={styles.mealImageEmpty}
+                                                onPress={() => handleRegenerateMeal(activePlanningDay, idx)}
+                                                disabled={isRegenerating}
+                                            >
+                                                {isRegenerating ? (
+                                                    <ActivityIndicator size="small" color="#a6f000" />
+                                                ) : (
+                                                    <PlusIcon size={24} color="#9CA3AF" />
                                                 )}
-                                                <TouchableOpacity
-                                                    onPress={() => handleRegenerateMeal(activePlanningDay, idx)}
-                                                    style={styles.actionBtn}
-                                                    disabled={regeneratingMeal?.dayIndex === activePlanningDay && regeneratingMeal?.mealIndex === idx}
-                                                >
-                                                    {regeneratingMeal?.dayIndex === activePlanningDay && regeneratingMeal?.mealIndex === idx ? (
-                                                        <ActivityIndicator size="small" color="#a6f000" />
-                                                    ) : (
-                                                        <RefreshIcon size={16} color="#6B7280" />
+                                            </TouchableOpacity>
+                                        )}
+                                        <View style={styles.mealInfo}>
+                                            <View style={styles.mealHeader}>
+                                                <View style={styles.timeSlotBadge}>
+                                                    <Text style={styles.timeSlotText}>{meal.timeSlot}</Text>
+                                                </View>
+                                                <View style={styles.mealActions}>
+                                                    {meal.recipe && (
+                                                        <TouchableOpacity
+                                                            onPress={() => handleOpenCopyModal(activePlanningDay, idx, meal.recipe!)}
+                                                            style={styles.actionBtn}
+                                                        >
+                                                            <CopyIcon size={16} color="#6B7280" />
+                                                        </TouchableOpacity>
                                                     )}
-                                                </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        onPress={() => handleRegenerateMeal(activePlanningDay, idx)}
+                                                        style={styles.actionBtn}
+                                                        disabled={isRegenerating}
+                                                    >
+                                                        {isRegenerating ? (
+                                                            <ActivityIndicator size="small" color="#a6f000" />
+                                                        ) : (
+                                                            <RefreshIcon size={16} color="#6B7280" />
+                                                        )}
+                                                    </TouchableOpacity>
+                                                </View>
                                             </View>
-                                        </View>
-                                        <TouchableOpacity onPress={() => meal.recipe && onRecipeClick(meal.recipe)}>
-                                            <Text numberOfLines={2} style={styles.mealName}>{meal.recipe?.name}</Text>
-                                        </TouchableOpacity>
-                                        <View style={styles.mealMeta}>
-                                            <View style={styles.metaItem}>
-                                                <TimerIcon size={12} color="#6B7280" />
-                                                <Text style={styles.metaText}>{meal.recipe?.prepTime}</Text>
-                                            </View>
-                                            <View style={styles.metaItem}>
-                                                <FlameIcon size={12} color="#6B7280" />
-                                                <Text style={styles.metaText}>{meal.recipe?.macros.calories} kcal</Text>
-                                            </View>
+                                            {meal.recipe ? (
+                                                <>
+                                                    <TouchableOpacity onPress={() => onRecipeClick(meal.recipe!)}>
+                                                        <Text numberOfLines={2} style={styles.mealName}>{meal.recipe.name}</Text>
+                                                    </TouchableOpacity>
+                                                    <View style={styles.mealMeta}>
+                                                        <View style={styles.metaItem}>
+                                                            <TimerIcon size={12} color="#6B7280" />
+                                                            <Text style={styles.metaText}>{meal.recipe.prepTime}</Text>
+                                                        </View>
+                                                        <View style={styles.metaItem}>
+                                                            <FlameIcon size={12} color="#6B7280" />
+                                                            <Text style={styles.metaText}>{meal.recipe.macros.calories} kcal</Text>
+                                                        </View>
+                                                    </View>
+                                                </>
+                                            ) : (
+                                                <Text style={styles.mealEmptyText}>
+                                                    {language === 'en' ? 'Tap + to generate a recipe' : 'Toque em + para gerar uma receita'}
+                                                </Text>
+                                            )}
                                         </View>
                                     </View>
-                                </View>
-                            ))}
+                                );
+                            })}
                         </View>
 
                         <TouchableOpacity onPress={() => setShowPlanningWizard(true)} style={styles.secondaryBtn}>
-                            <Text style={styles.secondaryBtnText}>Refazer semana inteira</Text>
+                            <Text style={styles.secondaryBtnText}>{language === 'en' ? 'Redo entire week' : 'Refazer semana inteira'}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -1579,28 +1766,51 @@ export const MainScreen = ({
             <Modal visible={showShoppingList} animationType="slide" presentationStyle="pageSheet">
                 <View style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Lista de Compras</Text>
+                        <Text style={styles.modalTitle}>{language === 'en' ? 'Shopping List' : 'Lista de Compras'}</Text>
                         <TouchableOpacity onPress={() => setShowShoppingList(false)} style={styles.closeBtn}>
                             <CloseIcon size={24} color="#1F2937" />
                         </TouchableOpacity>
                     </View>
                     <ScrollView contentContainerStyle={styles.modalContent}>
-                        {shoppingList?.items.map(item => (
-                            <TouchableOpacity
-                                key={item.id}
-                                onPress={() => toggleShoppingItem(item.id)}
-                                style={[styles.shoppingItem, item.checked && styles.shoppingItemChecked]}
-                            >
-                                <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
-                                    {item.checked && <CheckIcon size={12} color="white" />}
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>{item.name}</Text>
-                                    <Text style={styles.itemCat}>{item.category}</Text>
-                                </View>
-                                <Text style={styles.itemQty}>{item.quantity}</Text>
-                            </TouchableOpacity>
-                        ))}
+                        {(() => {
+                            if (!shoppingList) return null;
+                            const categories = language === 'en'
+                                ? ['Produce', 'Proteins', 'Dairy', 'Grocery', 'Other']
+                                : ['Hortifruti', 'Proteínas', 'Laticínios', 'Mercearia', 'Outros'];
+                            const categoryIcons: Record<string, string> = {
+                                'Hortifruti': '🥦', 'Proteínas': '🥩', 'Laticínios': '🥛',
+                                'Mercearia': '🛒', 'Outros': '📦',
+                                'Produce': '🥦', 'Proteins': '🥩', 'Dairy': '🥛',
+                                'Grocery': '🛒', 'Other': '📦',
+                            };
+                            return categories.map(cat => {
+                                const items = shoppingList.items.filter(i => i.category === cat);
+                                if (items.length === 0) return null;
+                                const allChecked = items.every(i => i.checked);
+                                return (
+                                    <View key={cat} style={styles.shoppingCategory}>
+                                        <View style={styles.shoppingCategoryHeader}>
+                                            <Text style={styles.shoppingCategoryIcon}>{categoryIcons[cat]}</Text>
+                                            <Text style={[styles.shoppingCategoryName, allChecked && { color: '#9CA3AF' }]}>{cat}</Text>
+                                            <Text style={styles.shoppingCategoryCount}>{items.filter(i => i.checked).length}/{items.length}</Text>
+                                        </View>
+                                        {items.map(item => (
+                                            <TouchableOpacity
+                                                key={item.id}
+                                                onPress={() => toggleShoppingItem(item.id)}
+                                                style={[styles.shoppingItem, item.checked && styles.shoppingItemChecked]}
+                                            >
+                                                <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
+                                                    {item.checked && <CheckIcon size={12} color="white" />}
+                                                </View>
+                                                <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>{item.name}</Text>
+                                                <Text style={styles.itemQty}>{item.quantity}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                );
+                            });
+                        })()}
                     </ScrollView>
                 </View>
             </Modal>
@@ -1701,143 +1911,112 @@ export const MainScreen = ({
     };
 
     const renderProfile = () => {
-        const goalLabel = language === 'en'
-            ? (userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Burn Fat' : userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Build Muscle' : 'Healthy')
-            : (userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Queimar Gordura' : userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Ganhar Massa' : 'Saudável');
-
-        const foodImages = userProfile?.tasteProfile?.favoriteFoodImages || [];
-        const favoriteFoods = userProfile?.tasteProfile?.favoriteFoods || [];
-        const restrictions = userProfile?.dietaryRestrictions || [];
-        const dislikes = userProfile?.dislikes || [];
-
         return (
-            <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                <View style={styles.header}>
+                    <Text style={styles.pageTitle}>{language === 'en' ? 'Profile' : 'Perfil'}</Text>
+                    <TouchableOpacity onPress={() => { setEditProfileInitialSection('DEFAULT'); setShowEditProfile(true); }}>
+                        <Text style={styles.editProfileText}>{language === 'en' ? 'Edit' : 'Editar'}</Text>
+                    </TouchableOpacity>
+                </View>
 
-                {/* Hero section */}
-                <TouchableOpacity onPress={() => setShowEditProfile(true)} activeOpacity={0.85}>
-                    <View style={styles.profileHero}>
-                        <View style={styles.profileHeroAvatar}>
-                            {userProfile?.profilePicture ? (
-                                <Image source={{ uri: userProfile.profilePicture }} style={styles.profileHeroImage} />
-                            ) : (
-                                <View style={styles.profileHeroPlaceholder}>
-                                    <UserIcon size={36} color="#9CA3AF" />
-                                </View>
-                            )}
-                            <View style={styles.profileHeroEditBadge}>
-                                <CameraIcon size={13} color="black" />
-                            </View>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.profileHeroName}>{userProfile?.name || '—'}</Text>
-                            <View style={styles.profileHeroGoalRow}>
-                                <View style={styles.profileHeroGoalBadge}>
-                                    <Text style={styles.profileHeroGoalText}>{goalLabel}</Text>
-                                </View>
-                            </View>
-                        </View>
-                        <View style={styles.profileHeroEditBtn}>
-                            <Text style={styles.profileHeroEditText}>{language === 'en' ? 'Edit' : 'Editar'}</Text>
-                        </View>
+                <View style={styles.profileCard}>
+                    <View style={styles.profileImageContainer}>
+                        {userProfile?.profilePicture ? (
+                            <Image source={{ uri: userProfile.profilePicture }} style={styles.profileImage} />
+                        ) : (
+                            <UserIcon size={48} color="#D1D5DB" />
+                        )}
                     </View>
+                    <Text style={styles.profileName}>{userProfile?.name}</Text>
+                    <Text style={styles.profileGoal}>
+                        {language === 'en'
+                            ? (userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Burn Fat' :
+                                userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Build Muscle' : 'Healthy')
+                            : (userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Queimar Gordura' :
+                                userProfile?.goal === UserGoal.GAIN_MUSCLE ? 'Ganhar Massa' : 'Saudável')}
+                    </Text>
+                    <TouchableOpacity onPress={() => { setEditProfileInitialSection('DEFAULT'); setShowEditProfile(true); }} style={{ marginTop: 10 }}>
+                        <Text style={{ color: '#a6f000', fontWeight: '600' }}>
+                            {language === 'en' ? 'Edit Profile' : 'Editar Perfil'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.statsContainer}>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statValue}>{userProfile?.dietaryRestrictions.length || 0}</Text>
+                        <Text style={styles.statLabel}>{language === 'en' ? 'Restrictions' : 'Restrições'}</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statValue}>{userProfile?.dislikes.length || 0}</Text>
+                        <Text style={styles.statLabel}>{language === 'en' ? 'Dislikes' : 'Não Gosta'}</Text>
+                    </View>
+                </View>
+
+                {/* Meu Gosto Section / Interactive Card */}
+                <TouchableOpacity
+                    onPress={() => {
+                        setEditProfileInitialSection('TASTE');
+                        setShowEditProfile(true);
+                    }}
+                    activeOpacity={0.9}
+                    style={styles.profileTasteCard}
+                >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <View style={[styles.menuIconBox, { backgroundColor: 'rgba(166, 240, 0, 0.1)' }]}>
+                                <SparklesIcon size={20} color="#a6f000" />
+                            </View>
+                            <View>
+                                <Text style={styles.menuItemText}>{language === 'en' ? 'My Taste Profile' : 'Meu Gosto'}</Text>
+                                <Text style={{ fontSize: 13, color: '#6B7280' }}>
+                                    {language === 'en' ? 'Favorite foods & habits' : 'Comidas favoritas e hábitos'}
+                                </Text>
+                            </View>
+                        </View>
+                        <ArrowRightIcon size={16} color="#9CA3AF" />
+                    </View>
+
+                    {userProfile?.tasteProfile?.favoriteFoods && userProfile.tasteProfile.favoriteFoods.length > 0 && (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+                            {userProfile.tasteProfile.favoriteFoods.slice(0, 3).map((food, i) => (
+                                <View key={i} style={[styles.tasteMiniChip, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', borderWidth: 1 }]}>
+                                    <Text style={[styles.tasteMiniChipText, { color: '#15803d' }]}>{food}</Text>
+                                </View>
+                            ))}
+                            {userProfile.tasteProfile.favoriteFoods.length > 3 && (
+                                <Text style={{ fontSize: 12, color: '#9CA3AF', alignSelf: 'center' }}>
+                                    +{userProfile.tasteProfile.favoriteFoods.length - 3}
+                                </Text>
+                            )}
+                        </View>
+                    )}
                 </TouchableOpacity>
 
-                {/* Taste snapshot — only if set */}
-                {(foodImages.length > 0 || favoriteFoods.length > 0) && (
-                    <View style={styles.profileTasteCard}>
-                        <Text style={styles.profileSectionLabel}>
-                            {language === 'en' ? 'My Taste Profile' : 'Meu Gosto'}
-                        </Text>
-                        {foodImages.length > 0 && (
-                            <View style={styles.profileFoodImagesRow}>
-                                {foodImages.slice(0, 5).map((uri, i) => (
-                                    <Image key={i} source={{ uri }} style={styles.profileFoodThumb} />
-                                ))}
-                                {foodImages.length > 5 && (
-                                    <View style={styles.profileFoodThumbMore}>
-                                        <Text style={styles.profileFoodThumbMoreText}>+{foodImages.length - 5}</Text>
-                                    </View>
-                                )}
-                            </View>
-                        )}
-                        {favoriteFoods.length > 0 && (
-                            <View style={styles.profileTagsRow}>
-                                {favoriteFoods.slice(0, 6).map((f, i) => (
-                                    <View key={i} style={styles.profileTag}>
-                                        <Text style={styles.profileTagText}>{f}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                        )}
-                    </View>
-                )}
-
-                {/* Restrictions & dislikes — only if set */}
-                {(restrictions.length > 0 || dislikes.length > 0) && (
-                    <View style={styles.profileTasteCard}>
-                        {restrictions.length > 0 && (
-                            <>
-                                <Text style={styles.profileSectionLabel}>
-                                    {language === 'en' ? 'Restrictions' : 'Restrições'}
-                                </Text>
-                                <View style={styles.profileTagsRow}>
-                                    {restrictions.map((r, i) => (
-                                        <View key={i} style={[styles.profileTag, { backgroundColor: '#FEF2F2', borderColor: '#FEE2E2' }]}>
-                                            <Text style={[styles.profileTagText, { color: '#EF4444' }]}>{r}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            </>
-                        )}
-                        {dislikes.length > 0 && (
-                            <>
-                                <Text style={[styles.profileSectionLabel, { marginTop: restrictions.length > 0 ? 12 : 0 }]}>
-                                    {language === 'en' ? "Doesn't eat" : 'Não come'}
-                                </Text>
-                                <View style={styles.profileTagsRow}>
-                                    {dislikes.slice(0, 8).map((d, i) => (
-                                        <View key={i} style={[styles.profileTag, { backgroundColor: '#F9FAFB' }]}>
-                                            <Text style={styles.profileTagText}>{d}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            </>
-                        )}
-                    </View>
-                )}
-
-                {/* Menu */}
                 <View style={styles.menuSection}>
                     <Text style={styles.menuTitle}>{language === 'en' ? 'Support & Legal' : 'Suporte & Legal'}</Text>
 
                     <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('https://victoralmeidaj16.github.io/Food-NutriVerse/support.html')}>
-                        <View style={styles.menuIconBox}>
-                            <HelpCircleIcon size={20} color="#4B5563" />
-                        </View>
+                        <View style={styles.menuIconBox}><HelpCircleIcon size={20} color="#4B5563" /></View>
                         <Text style={styles.menuItemText}>{language === 'en' ? 'Contact Us' : 'Fale Conosco'}</Text>
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('https://victoralmeidaj16.github.io/Food-NutriVerse/terms.html')}>
-                        <View style={styles.menuIconBox}>
-                            <FileTextIcon size={20} color="#4B5563" />
-                        </View>
+                        <View style={styles.menuIconBox}><FileTextIcon size={20} color="#4B5563" /></View>
                         <Text style={styles.menuItemText}>{language === 'en' ? 'Terms of Use' : 'Termos de Uso'}</Text>
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('https://victoralmeidaj16.github.io/Food-NutriVerse/privacy.html')}>
-                        <View style={styles.menuIconBox}>
-                            <LockIcon size={20} color="#4B5563" />
-                        </View>
+                        <View style={styles.menuIconBox}><LockIcon size={20} color="#4B5563" /></View>
                         <Text style={styles.menuItemText}>{language === 'en' ? 'Privacy Policy' : 'Política de Privacidade'}</Text>
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.menuItem} onPress={() => setShowSourcesScreen(true)}>
-                        <View style={[styles.menuIconBox, { backgroundColor: '#E0F2FE' }]}>
-                            <FileTextIcon size={20} color="#0369A1" />
-                        </View>
+                        <View style={[styles.menuIconBox, { backgroundColor: '#E0F2FE' }]}><FileTextIcon size={20} color="#0369A1" /></View>
                         <Text style={styles.menuItemText}>{language === 'en' ? 'Sources & References' : 'Fontes e Referências'}</Text>
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
@@ -2022,7 +2201,8 @@ export const MainScreen = ({
                         {activeTab === 'EXPLORE' && renderExplore()}
                         {activeTab === 'MAPA' && renderMapaAlimentar()}
                         {activeTab === 'LIBRARY' && renderLibrary()}
-                        {activeTab === 'PLANNING' && renderPlanning()}
+                        {activeTab === 'PLANNING' && isApprovingPlan && renderPlanApproval()}
+                        {activeTab === 'PLANNING' && !isApprovingPlan && renderPlanning()}
                         {activeTab === 'PROFILE' && renderProfile()}
                     </Animated.View>
                 </Animated.View>
@@ -2098,6 +2278,7 @@ export const MainScreen = ({
             {showEditProfile && userProfile && (
                 <EditProfileModal
                     profile={userProfile}
+                    initialSection={editProfileInitialSection}
                     onClose={() => setShowEditProfile(false)}
                     onSave={(updated) => {
                         onUpdateProfile(updated);
@@ -2787,6 +2968,44 @@ const styles = StyleSheet.create({
         color: 'black',
         fontSize: 16,
     },
+    profileCard: {
+        alignItems: 'center',
+        backgroundColor: 'white',
+        padding: 32,
+        borderRadius: 32,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        marginBottom: 24,
+    },
+    profileImageContainer: {
+        width: 96,
+        height: 96,
+        borderRadius: 48,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+        overflow: 'hidden',
+    },
+    profileImage: {
+        width: '100%',
+        height: '100%',
+    },
+    profileName: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#1F2937',
+        marginBottom: 4,
+    },
+    profileGoal: {
+        fontSize: 14,
+        color: '#6B7280',
+        backgroundColor: '#F3F4F6',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
     // Profile hero
     profileHero: {
         flexDirection: 'row',
@@ -2862,12 +3081,17 @@ const styles = StyleSheet.create({
     // Taste & preference cards
     profileTasteCard: {
         backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 18,
-        marginBottom: 12,
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 24,
+        marginTop: 8,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
-        gap: 10,
+        borderColor: '#F1F5F9',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+        elevation: 2,
     },
     profileSectionLabel: {
         fontSize: 11,
@@ -3313,6 +3537,105 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#6B7280',
+        marginLeft: 'auto',
+    },
+    // Shopping list categories
+    shoppingCategory: {
+        marginBottom: 20,
+    },
+    shoppingCategoryHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 10,
+        paddingHorizontal: 4,
+    },
+    shoppingCategoryIcon: {
+        fontSize: 16,
+    },
+    shoppingCategoryName: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#1F2937',
+        flex: 1,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    shoppingCategoryCount: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#9CA3AF',
+    },
+    // Week overview grid
+    weekOverviewGrid: {
+        flexDirection: 'row',
+        backgroundColor: 'white',
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        marginBottom: 20,
+        overflow: 'hidden',
+    },
+    weekOverviewDay: {
+        flex: 1,
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 4,
+        gap: 4,
+    },
+    weekOverviewDayActive: {
+        backgroundColor: '#111827',
+        borderRadius: 16,
+        margin: 4,
+    },
+    weekOverviewDayName: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#9CA3AF',
+        textTransform: 'uppercase',
+    },
+    weekOverviewDayNameActive: {
+        color: '#a6f000',
+    },
+    weekOverviewDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
+    weekOverviewDotFull: {
+        backgroundColor: '#a6f000',
+    },
+    weekOverviewDotPartial: {
+        backgroundColor: '#E5E7EB',
+    },
+    weekOverviewDotActive: {
+        backgroundColor: '#a6f000',
+    },
+    weekOverviewKcal: {
+        fontSize: 9,
+        fontWeight: '600',
+        color: '#9CA3AF',
+    },
+    weekOverviewKcalActive: {
+        color: 'rgba(255,255,255,0.6)',
+    },
+    // Empty meal slot
+    mealImageEmpty: {
+        width: 80,
+        height: 80,
+        borderRadius: 16,
+        backgroundColor: '#F9FAFB',
+        borderWidth: 2,
+        borderColor: '#E5E7EB',
+        borderStyle: 'dashed',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    mealEmptyText: {
+        fontSize: 13,
+        color: '#9CA3AF',
+        fontStyle: 'italic',
+        marginTop: 4,
     },
     // New Explore Styles
     exploreHeader: {

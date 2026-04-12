@@ -318,8 +318,30 @@ export default function App() {
                             userLists={userLists}
                             onUpdateLists={(lists) => handleUpdateLists(lists, firebaseUser?.uid)}
                             userDislikes={userProfile?.dislikes || []}
+                            userProfile={userProfile!}
                             weeklyPlan={weeklyPlan}
                             onAddToPlan={(recipe, day, slot) => handleAddToPlan(recipe, day, slot, firebaseUser?.uid)}
+                            onUpgradeRecipe={(upgraded) => {
+                                setSelectedRecipe(upgraded);
+                                // Also update the history/plan logic if necessary!
+                                // For now, we update it temporarily or we'd need to deep update weeklyPlan.
+                                // Actually, let's call setWeeklyPlan with the updated recipe.
+                                if (weeklyPlan) {
+                                    const newPlan = {...weeklyPlan};
+                                    let changed = false;
+                                    newPlan.days.forEach(d => {
+                                        d.meals.forEach(m => {
+                                            if (m.recipe?.id === selectedRecipe.id) {
+                                                m.recipe = upgraded;
+                                                changed = true;
+                                            }
+                                        })
+                                    });
+                                    if (changed) {
+                                        setWeeklyPlan(newPlan, firebaseUser?.uid);
+                                    }
+                                }
+                            }}
                         />
                     ) : (
                         renderScreen()

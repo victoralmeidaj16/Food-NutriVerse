@@ -2,14 +2,17 @@
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 
-export const LoadingOverlay = ({ message }: { message: string }) => (
-    <View style={styles.container}>
-        <View style={styles.card}>
-            <ActivityIndicator size="large" color="#a6f000" style={styles.spinner} />
-            <Text style={styles.text}>{message}</Text>
+export const LoadingOverlay = ({ message, visible = true }: { message: string; visible?: boolean }) => {
+    if (!visible) return null;
+    return (
+        <View style={styles.container}>
+            <View style={styles.card}>
+                <ActivityIndicator size="large" color="#a6f000" style={styles.spinner} />
+                <Text style={styles.text}>{message}</Text>
+            </View>
         </View>
-    </View>
-);
+    );
+};
 
 const styles = StyleSheet.create({
     container: {

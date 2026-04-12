@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, Alert, Image, KeyboardAvoidingView, Platform, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { UserProfile, UserGoal, ActivityLevel, RESTRICTION_OPTIONS, getRestrictionOptions } from '../types';
 import { CloseIcon, CheckIcon, CameraIcon, UserIcon, PlusIcon, TrashIcon, SparklesIcon } from './Icons';
@@ -9,12 +9,16 @@ import { useLanguage } from '../context/LanguageContext';
 export const EditProfileModal = ({
   profile,
   onClose,
-  onSave
+  onSave,
+  initialSection = 'DEFAULT'
 }: {
   profile: UserProfile;
   onClose: () => void;
   onSave: (p: UserProfile) => void;
+  initialSection?: 'DEFAULT' | 'TASTE';
 }) => {
+  const scrollRef = React.useRef<ScrollView>(null);
+  const tasteSectionY = React.useRef<number>(0);
   const [name, setName] = useState(profile.name);
   const [goal, setGoal] = useState<UserGoal>(profile.goal);
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(profile.activityLevel);
@@ -24,13 +28,9 @@ export const EditProfileModal = ({
   const [profilePicture, setProfilePicture] = useState<string | undefined>(profile.profilePicture);
 
   // Meu Gosto / Taste Profile fields
-  const [favoriteDish, setFavoriteDish] = useState(profile.tasteProfile?.favoriteDish || '');
-  const [favoriteFastFood, setFavoriteFastFood] = useState(profile.tasteProfile?.favoriteFastFood || '');
-  const [favoriteSweet, setFavoriteSweet] = useState(profile.tasteProfile?.favoriteSweet || '');
   const [favoriteFoods, setFavoriteFoods] = useState<string[]>(profile.tasteProfile?.favoriteFoods || []);
   const [newFavoriteFood, setNewFavoriteFood] = useState('');
   const [usualEatingHabits, setUsualEatingHabits] = useState(profile.tasteProfile?.usualEatingHabits || '');
-  const [favoriteFoodImages, setFavoriteFoodImages] = useState<string[]>(profile.tasteProfile?.favoriteFoodImages || []);
 
   const { t, language } = useLanguage();
 
@@ -84,28 +84,6 @@ export const EditProfileModal = ({
     setFavoriteFoods(prev => prev.filter(i => i !== item));
   };
 
-  const pickFoodImages = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.5,
-      selectionLimit: 6,
-    });
-    if (!result.canceled) {
-      const newUris = result.assets.map(a => a.uri);
-      setFavoriteFoodImages(prev => {
-        const combined = [...prev, ...newUris];
-        return combined.slice(0, 6); // max 6
-      });
-    }
-  };
-
-  const removeFoodImage = (uri: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setFavoriteFoodImages(prev => prev.filter(u => u !== uri));
-  };
-
   const handleSave = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (!name.trim()) {
@@ -113,7 +91,7 @@ export const EditProfileModal = ({
       return;
     }
 
-    const hasTasteData = favoriteDish.trim() || favoriteFastFood.trim() || favoriteSweet.trim() || favoriteFoods.length > 0 || usualEatingHabits.trim() || favoriteFoodImages.length > 0;
+    const hasTasteData = favoriteFoods.length > 0 || usualEatingHabits.trim();
 
     onSave({
       ...profile,
@@ -124,16 +102,24 @@ export const EditProfileModal = ({
       dislikes,
       profilePicture,
       tasteProfile: hasTasteData ? {
-        favoriteDish: favoriteDish.trim(),
-        favoriteFastFood: favoriteFastFood.trim(),
-        favoriteSweet: favoriteSweet.trim(),
-        favoriteFoods: favoriteFoods,
+        favoriteDish: profile.tasteProfile?.favoriteDish || '',
+        favoriteFastFood: profile.tasteProfile?.favoriteFastFood || '',
+        favoriteSweet: profile.tasteProfile?.favoriteSweet || '',
+        favoriteFoods,
         usualEatingHabits: usualEatingHabits.trim(),
-        favoriteFoodImages: favoriteFoodImages,
       } : profile.tasteProfile,
     });
     onClose();
   };
+
+  React.useEffect(() => {
+    if (initialSection === 'TASTE' && scrollRef.current) {
+      // Small delay to ensure layout is ready
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ y: tasteSectionY.current, animated: true });
+      }, 300);
+    }
+  }, [initialSection]);
 
   return (
     <Modal animationType="slide" presentationStyle="pageSheet" visible={true}>
@@ -148,7 +134,11 @@ export const EditProfileModal = ({
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1 }}
         >
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+          >
 
             <View style={styles.imageSection}>
               <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
@@ -275,7 +265,10 @@ export const EditProfileModal = ({
             </View>
 
             {/* ——— MEU GOSTO ——— */}
-            <View style={styles.section}>
+            <View
+              style={styles.section}
+              onLayout={(e) => { tasteSectionY.current = e.nativeEvent.layout.y; }}
+            >
               <View style={styles.tasteSectionHeader}>
                 <SparklesIcon size={18} color="#a6f000" />
                 <Text style={styles.label}>
@@ -287,32 +280,6 @@ export const EditProfileModal = ({
                   ? 'Help the AI suggest dishes that match your taste and habits.'
                   : 'Ajude a IA a sugerir pratos que combinam com seu gosto e hábitos.'}
               </Text>
-
-              {/* Food reference photos */}
-              <View style={styles.tasteField}>
-                <Text style={styles.tasteLabel}>
-                  {language === 'en' ? 'Food photos (reference)' : 'Fotos de alimentos (referência)'}
-                </Text>
-                <Text style={styles.helperText}>
-                  {language === 'en' ? 'Upload photos of foods you love. Up to 6 images.' : 'Envie fotos de alimentos que você ama. Até 6 imagens.'}
-                </Text>
-                <View style={styles.foodImagesRow}>
-                  {favoriteFoodImages.map((uri, i) => (
-                    <View key={i} style={styles.foodImageThumb}>
-                      <Image source={{ uri }} style={styles.foodImageImg} />
-                      <TouchableOpacity style={styles.foodImageRemove} onPress={() => removeFoodImage(uri)}>
-                        <CloseIcon size={12} color="white" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                  {favoriteFoodImages.length < 6 && (
-                    <TouchableOpacity style={styles.foodImageAdd} onPress={pickFoodImages}>
-                      <PlusIcon size={24} color="#9CA3AF" />
-                      <Text style={styles.foodImageAddText}>{language === 'en' ? 'Add' : 'Adicionar'}</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
 
               {/* Favorite foods tag list */}
               <View style={styles.tasteField}>
@@ -343,45 +310,20 @@ export const EditProfileModal = ({
                 </View>
               </View>
 
-              {/* Usual eating habits */}
+              {/* Daily eating habits */}
               <View style={styles.tasteField}>
                 <Text style={styles.tasteLabel}>
-                  {language === 'en' ? 'Typical eating habits' : 'Como você costuma comer'}
+                  {language === 'en' ? 'What do you eat daily?' : 'O que você come no dia a dia?'}
                 </Text>
                 <TextInput
                   style={[styles.input, { minHeight: 80, textAlignVertical: 'top', paddingTop: 14 }]}
                   value={usualEatingHabits}
                   onChangeText={setUsualEatingHabits}
                   placeholder={language === 'en'
-                    ? 'E.g. I eat a lot of rice and beans, I love grilled food...'
-                    : 'Ex: Como muito arroz e feijão, adoro grelhados...'}
+                    ? 'E.g. Rice and beans for lunch, eggs for breakfast, fruit in the afternoon...'
+                    : 'Ex: Arroz e feijão no almoço, ovos no café, fruta à tarde...'}
                   multiline
                   numberOfLines={3}
-                />
-              </View>
-
-              {/* Classic taste fields — compact row */}
-              <View style={styles.tasteField}>
-                <Text style={styles.tasteLabel}>
-                  {language === 'en' ? 'Favorites' : 'Favoritos'}
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  value={favoriteDish}
-                  onChangeText={setFavoriteDish}
-                  placeholder={language === 'en' ? 'Favorite dish (e.g. Lasagna)' : 'Prato favorito (ex: Lasanha)'}
-                />
-                <TextInput
-                  style={styles.input}
-                  value={favoriteFastFood}
-                  onChangeText={setFavoriteFastFood}
-                  placeholder={language === 'en' ? 'Favorite fast food (e.g. Burger)' : 'Fast food favorito (ex: Hambúrguer)'}
-                />
-                <TextInput
-                  style={styles.input}
-                  value={favoriteSweet}
-                  onChangeText={setFavoriteSweet}
-                  placeholder={language === 'en' ? 'Favorite sweet (e.g. Chocolate)' : 'Doce favorito (ex: Chocolate)'}
                 />
               </View>
             </View>
@@ -607,50 +549,5 @@ const styles = StyleSheet.create({
     color: '#15803d',
     fontWeight: '600' as const,
     fontSize: 14,
-  },
-  // Food image upload
-  foodImagesRow: {
-    flexDirection: 'row' as const,
-    flexWrap: 'wrap' as const,
-    gap: 10,
-  },
-  foodImageThumb: {
-    width: 80,
-    height: 80,
-    borderRadius: 14,
-    overflow: 'hidden' as const,
-    position: 'relative' as const,
-  },
-  foodImageImg: {
-    width: '100%',
-    height: '100%',
-  },
-  foodImageRemove: {
-    position: 'absolute' as const,
-    top: 4,
-    right: 4,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  foodImageAdd: {
-    width: 80,
-    height: 80,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderStyle: 'dashed' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    gap: 4,
-    backgroundColor: '#F9FAFB',
-  },
-  foodImageAddText: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    fontWeight: '500' as const,
   },
 });

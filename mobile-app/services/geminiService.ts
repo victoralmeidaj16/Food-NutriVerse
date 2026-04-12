@@ -304,7 +304,7 @@ const getRecipeSchema = (language: SupportedLanguage = 'pt'): Schema => {
     };
 };
 
-// Lightweight schema used for weekly plan generation (21 recipes at once — must stay within token limits)
+// Lightweight schema used for weekly plan generation proposals (21 concepts at once — ultra light)
 const getPlanRecipeSchema = (language: SupportedLanguage = 'pt'): Schema => {
     const lang = AI_PROMPTS[language];
     return {
@@ -324,26 +324,9 @@ const getPlanRecipeSchema = (language: SupportedLanguage = 'pt'): Schema => {
                     fats: { type: Type.NUMBER },
                 },
                 required: ["calories", "protein", "carbs", "fats"],
-            },
-            ingredients: {
-                type: Type.ARRAY,
-                items: {
-                    type: Type.OBJECT,
-                    properties: {
-                        name: { type: Type.STRING },
-                        quantity: { type: Type.STRING },
-                        icon: { type: Type.STRING },
-                    },
-                    required: ["name", "quantity", "icon"]
-                },
-            },
-            instructions: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
-                description: language === 'en' ? "3-5 concise steps" : "3-5 passos concisos",
-            },
+            }
         },
-        required: ["name", "description", "prepTime", "difficulty", "category", "macros", "ingredients", "instructions"],
+        required: ["name", "description", "prepTime", "difficulty", "category", "macros"],
     };
 };
 
@@ -761,6 +744,21 @@ export const generateWeeklyPlan = async (
             ? "O usuário PREFERE repetir refeições para praticidade (ex: jantar de segunda vira almoço de terça). Repita pratos estrategicamente."
             : "O usuário prefere variedade máxima. Evite repetir o mesmo prato.");
 
+    const taste = userProfile.tasteProfile;
+    const tasteContextEn = taste ? [
+        taste.favoriteFoods?.length ? `Favorite foods: ${taste.favoriteFoods.join(', ')}` : '',
+        taste.favoriteDish ? `Favorite dish: ${taste.favoriteDish}` : '',
+        taste.favoriteSweet ? `Favorite sweet: ${taste.favoriteSweet}` : '',
+        taste.usualEatingHabits ? `Usual eating habits: ${taste.usualEatingHabits}` : '',
+    ].filter(Boolean).join('\n      ') : '';
+
+    const tasteContextPt = taste ? [
+        taste.favoriteFoods?.length ? `Comidas favoritas: ${taste.favoriteFoods.join(', ')}` : '',
+        taste.favoriteDish ? `Prato favorito: ${taste.favoriteDish}` : '',
+        taste.favoriteSweet ? `Doce favorito: ${taste.favoriteSweet}` : '',
+        taste.usualEatingHabits ? `Hábitos alimentares: ${taste.usualEatingHabits}` : '',
+    ].filter(Boolean).join('\n      ') : '';
+
     const prompt = language === 'en' ? `
       Create a weekly meal plan (Monday to Sunday) for a user with the following profile:
       Goal: ${userProfile.goal}
@@ -768,9 +766,10 @@ export const generateWeeklyPlan = async (
       Restrictions: ${userProfile.dietaryRestrictions.join(', ') || 'None'}
       Dislikes: ${userProfile.dislikes.join(', ') || 'None'}
       Week preference: ${preference}
-      
+      ${tasteContextEn ? `Taste profile:\n      ${tasteContextEn}` : ''}
       Repetition Strategy: ${repeatInstruction}
 
+      Use the taste profile to suggest dishes that align with the user's preferences.
       Generate a simplified but complete recipe for each meal of each day.
       ALL TEXT CONTENT MUST BE IN ENGLISH.
     ` : `
@@ -780,9 +779,10 @@ export const generateWeeklyPlan = async (
       Restrições: ${userProfile.dietaryRestrictions.join(', ') || 'Nenhuma'}
       Aversões: ${userProfile.dislikes.join(', ') || 'Nenhuma'}
       Preferência da semana: ${preference}
-      
+      ${tasteContextPt ? `Perfil de gosto:\n      ${tasteContextPt}` : ''}
       Estratégia de Repetição: ${repeatInstruction}
 
+      Use o perfil de gosto para sugerir pratos que combinam com as preferências do usuário.
       Gere uma receita simplificada mas completa para cada refeição de cada dia.
     `;
 
@@ -839,6 +839,9 @@ export const generateWeeklyPlan = async (
                 timeSlot: meal.timeSlot,
                 recipe: meal.recipe ? {
                     ...meal.recipe,
+                    ingredients: meal.recipe.ingredients || [],
+                    instructions: meal.recipe.instructions || [],
+                    substitutions: meal.recipe.substitutions || [],
                     id: randomUUID(),
                     createdAt: Date.now(),
                     imageUrl: getImageUrl(meal.recipe.name)
@@ -854,6 +857,60 @@ export const generateWeeklyPlan = async (
 
     } catch (error) {
         console.error("Error generating weekly plan:", error);
+        return null;
+    }
+};
+
+export const generateSingleMealProposal = async (
+    userProfile: UserProfile,
+    timeSlot: string,
+    existingPlanItems: string[] = [],
+    language: SupportedLanguage = 'pt'
+): Promise<Recipe | null> => {
+    const lang = AI_PROMPTS[language];
+    
+    const context = existingPlanItems.length > 0 
+        ? (language === 'en' ? `Avoid generating these recent dishes: ${existingPlanItems.join(', ')}` : `Evite gerar pratos semelhantes a: ${existingPlanItems.join(', ')}`)
+        : '';
+
+    const prompt = language === 'en' ? `
+        Propose ONE new meal for ${timeSlot}.
+        Goal: ${userProfile.goal}. Restrictions: ${userProfile.dietaryRestrictions.join(', ') || 'None'}. Dislikes: ${userProfile.dislikes.join(', ') || 'None'}.
+        ${context}
+        Keep it concise and appetizing.
+    ` : `
+        Proponha APENAS UMA nova refeição para o ${timeSlot}.
+        Objetivo: ${userProfile.goal}. Restrições: ${userProfile.dietaryRestrictions.join(', ') || 'Nenhuma'}. Não gosta de: ${userProfile.dislikes.join(', ') || 'Nenhuma'}.
+        ${context}
+        Seja conciso e apetitoso.
+    `;
+
+    try {
+        const response = await retryOperation(() => callBackend('/api/generate-recipe', {
+            model: "gemini-2.0-flash",
+            contents: [{ text: prompt }],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: getPlanRecipeSchema(language),
+                temperature: 0.8, // Slightly higher to encourage variation
+            }
+        }, undefined, language));
+
+        const text = response.text;
+        if (!text) return null;
+        const data = JSON.parse(text);
+
+        return {
+            ...data,
+            ingredients: [],
+            instructions: [],
+            substitutions: [],
+            id: randomUUID(),
+            createdAt: Date.now(),
+            imageUrl: getImageUrl(data.name)
+        } as Recipe;
+    } catch (error) {
+        console.error("Error generating single meal proposal:", error);
         return null;
     }
 };

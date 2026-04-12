@@ -42,7 +42,9 @@ import {
     AlertTriangle,
     CheckCircle,
     ExternalLink,
-    Info
+    Info,
+    Upload,
+    Image as ImageIcon
 } from 'lucide-react-native';
 
 
@@ -90,4 +92,6 @@ export const AlertTriangleIcon = AlertTriangle;
 export const CheckCircleIcon = CheckCircle;
 export const ExternalLinkIcon = ExternalLink;
 export const InfoIcon = Info;
+export const UploadIcon = Upload;
+export const GalleryIcon = ImageIcon;
 
