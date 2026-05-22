@@ -34,7 +34,7 @@ export const SubscriptionService = {
     },
 
     canGenerateWeeklyPlan: (profile: UserProfile): boolean => {
-        return profile.isPro;
+        return profile.isPro || !profile.usageStats.weeklyPlansGeneratedThisWeek || profile.usageStats.weeklyPlansGeneratedThisWeek === 0;
     },
 
     // Actions (Return updated profile)

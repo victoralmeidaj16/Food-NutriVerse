@@ -1325,6 +1325,29 @@ export default function App() {
         setLoadingQuickDecision(false);
     };
 
+    const handleAnalyzeRoutine = async () => {
+        if (!userProfile || routineMeals.filter(m => m.food.trim() !== '').length === 0) {
+            alert('Adicione pelo menos uma refeição para analisar.');
+            return;
+        }
+
+        setLoadingMapa(true);
+        try {
+            const validMeals = routineMeals.filter(m => m.food.trim() !== '');
+            const result = await analyzeRoutine(validMeals, userProfile.goal, userProfile.tasteProfile);
+            if (result) {
+                setMapaResult(result);
+            } else {
+                alert('Erro ao analisar rotina. Tente novamente.');
+            }
+        } catch (error) {
+            console.error('Error analyzing routine:', error);
+            alert('Erro ao analisar rotina. Tente novamente.');
+        } finally {
+            setLoadingMapa(false);
+        }
+    };
+
     const allRecipes = [...history, ...MOCK_RECIPES];
     const filteredHistory = selectedCategory ? allRecipes.filter(r => r.category === selectedCategory) : allRecipes;
     const libraryRecipes = allRecipes.filter(r => saved.has(r.id));

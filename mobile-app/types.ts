@@ -197,6 +197,7 @@ export interface ShoppingItem {
 
 export interface ShoppingList {
     items: ShoppingItem[];
+    planId?: string;
 }
 
 export interface UserList {

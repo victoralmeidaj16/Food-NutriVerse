@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Animated, Dimensions, Easing, Image } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
+import { SparklesIcon } from './Icons';
 
 const { width, height } = Dimensions.get('window');
 
@@ -136,10 +137,10 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
                             </Animated.View>
                             
                             {/* Logo */}
-                            <Image 
-                                source={require('../assets/icon.png')} 
+                            <Image
+                                source={require('../assets/fitswap-logo.png')}
                                 style={styles.logo}
-                                resizeMode="cover"
+                                resizeMode="contain"
                             />
                         </View>
                     </View>
@@ -180,6 +181,7 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
                     {/* Personalization Info */}
                     {personalizationText && (
                         <View style={[styles.persBox, { opacity: animatedProgress >= 0.05 ? 1 : 0 }]}>
+                            <SparklesIcon size={14} color="#a6f000" />
                             <Text style={styles.persText}>{personalizationText}</Text>
                         </View>
                     )}
@@ -236,10 +238,15 @@ const styles = StyleSheet.create({
     },
     glow: {
         position: 'absolute',
-        width: 140,
-        height: 140,
-        borderRadius: 70,
-        backgroundColor: 'rgba(166, 240, 0, 0.25)',
+        width: 144,
+        height: 144,
+        borderRadius: 72,
+        backgroundColor: 'rgba(166, 240, 0, 0.2)',
+        shadowColor: '#a6f000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+        elevation: 8,
     },
     coreCircle: {
         width: 140,
@@ -266,9 +273,8 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed',
     },
     logo: {
-        width: 60,
-        height: 60,
-        borderRadius: 16,
+        width: 90,
+        height: 90,
     },
     percentageRow: {
         flexDirection: 'row',
@@ -289,30 +295,31 @@ const styles = StyleSheet.create({
         marginLeft: 4,
     },
     statusBox: {
-        height: 48,
+        minHeight: 48,
         justifyContent: 'center',
         marginBottom: 32,
+        paddingHorizontal: 12,
     },
     statusText: {
         fontSize: 11,
         fontWeight: 'bold',
         color: '#6B7280',
         textTransform: 'uppercase',
-        letterSpacing: 2.5,
+        letterSpacing: 1.5,
         textAlign: 'center',
         lineHeight: 18,
     },
     progressTrack: {
         width: '100%',
-        height: 6,
+        height: 10,
         backgroundColor: '#F3F4F6',
-        borderRadius: 3,
+        borderRadius: 5,
         overflow: 'hidden',
     },
     progressFill: {
         height: '100%',
         backgroundColor: '#a6f000',
-        borderRadius: 3,
+        borderRadius: 5,
         position: 'relative',
         overflow: 'hidden',
     },
@@ -337,15 +344,16 @@ const styles = StyleSheet.create({
     persBox: {
         marginTop: 24,
         paddingHorizontal: 16,
-        paddingVertical: 8,
-        backgroundColor: 'rgba(166, 240, 0, 0.1)',
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(166, 240, 0, 0.2)',
+        paddingVertical: 10,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
     persText: {
         fontSize: 12,
-        fontWeight: 'bold',
-        color: '#111827',
+        fontWeight: '700',
+        color: '#374151',
     }
 });

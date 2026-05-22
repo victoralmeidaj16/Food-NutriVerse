@@ -4,7 +4,7 @@ import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Dimensions
 import { UserList, Recipe, WeeklyPlan, UserProfile } from '../types';
 import { SupportedLanguage } from '../services/geminiService';
 import { storageService } from '../services/storage';
-import { ArrowRightIcon, BookHeartIcon, TimerIcon, FlameIcon, ExchangeIcon, LightbulbIcon, CheckIcon, CloseIcon, ChefHatIcon, AlertTriangleIcon, CalendarIcon, CheckCircleIcon, ShoppingBagIcon } from '../components/Icons';
+import { ArrowRightIcon, BookHeartIcon, TimerIcon, FlameIcon, ExchangeIcon, LightbulbIcon, CheckIcon, CloseIcon, ChefHatIcon, AlertTriangleIcon, CalendarIcon, CheckCircleIcon, ShoppingBagIcon, BookmarkIcon } from '../components/Icons';
 import { AddToPlanModal } from '../components/AddToPlanModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getReferencesByIds } from '../services/healthReferences';
@@ -183,7 +183,7 @@ export const RecipeDetailScreen = ({
 
                         <TouchableOpacity onPress={handleSavePress} style={styles.iconBtn}>
                             <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                                <BookHeartIcon size={24} color={isSaved ? "#a6f000" : "white"} fill={isSaved ? "#a6f000" : "none"} />
+                                <BookmarkIcon size={24} color={isSaved ? "#a6f000" : "white"} fill={isSaved ? "#a6f000" : "none"} />
                             </Animated.View>
                         </TouchableOpacity>
 
@@ -216,7 +216,7 @@ export const RecipeDetailScreen = ({
                                             onPress={() => handleAddToList(list.id)}
                                         >
                                             <View style={styles.listIconPlaceholder}>
-                                                <BookHeartIcon size={20} color="#4B5563" />
+                                                <BookmarkIcon size={20} color="#4B5563" />
                                             </View>
                                             <View style={{ flex: 1 }}>
                                                 <Text style={styles.listName}>{list.name}</Text>
@@ -391,13 +391,20 @@ export const RecipeDetailScreen = ({
 
             {/* Cooking Mode Modal */}
             <Modal visible={cookingMode} animationType="slide" presentationStyle="fullScreen">
-                <CookingMode recipe={recipe} onClose={() => setCookingMode(false)} />
+                <CookingMode 
+                    recipe={recipe} 
+                    onClose={() => setCookingMode(false)} 
+                    onGoHome={() => {
+                        setCookingMode(false);
+                        onClose();
+                    }}
+                />
             </Modal>
         </View>
     );
 };
 
-const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void }) => {
+const CookingMode = ({ recipe, onClose, onGoHome }: { recipe: Recipe, onClose: () => void, onGoHome: () => void }) => {
     const { language } = useLanguage();
     const [step, setStep] = useState(0); // 0 = Ingredients Check, 1+ = Instructions
     const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
@@ -433,7 +440,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
     const totalSteps = recipe.instructions.length;
 
     if (step > totalSteps) {
-        return <CompletionView recipe={recipe} onClose={onClose} />;
+        return <CompletionView recipe={recipe} onClose={onClose} onGoHome={onGoHome} />;
     }
 
     return (
@@ -528,10 +535,10 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
                             ) : (
                                 <TouchableOpacity
                                     onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); setStep(step + 1); }} // Go to completion page
-                                    style={[styles.nextBtn, { backgroundColor: '#15803d' }]}
+                                    style={[styles.nextBtn, { backgroundColor: '#a6f000' }]}
                                 >
-                                    <Text style={[styles.nextBtnText, { color: 'white' }]}>{language === 'en' ? 'Complete' : 'Concluir'}</Text>
-                                    <CheckIcon size={20} color="white" />
+                                    <Text style={[styles.nextBtnText, { color: 'black' }]}>{language === 'en' ? 'Complete' : 'Concluir'}</Text>
+                                    <CheckIcon size={20} color="black" />
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -542,7 +549,7 @@ const CookingMode = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void 
     );
 };
 
-const CompletionView = ({ recipe, onClose }: { recipe: Recipe, onClose: () => void }) => {
+const CompletionView = ({ recipe, onClose, onGoHome }: { recipe: Recipe, onClose: () => void, onGoHome: () => void }) => {
     const { language } = useLanguage();
 
     return (
@@ -564,28 +571,28 @@ const CompletionView = ({ recipe, onClose }: { recipe: Recipe, onClose: () => vo
 
                 <View style={styles.shortcutsContainer}>
                     <TouchableOpacity style={styles.shortcutBtn}>
-                        <View style={[styles.shortcutIcon, { backgroundColor: '#ecfccb' }]}>
-                            <BookHeartIcon size={24} color="#65a30d" />
+                        <View style={[styles.shortcutIcon, { backgroundColor: 'rgba(166, 240, 0, 0.15)' }]}>
+                            <BookmarkIcon size={24} color="#1F2937" />
                         </View>
                         <Text style={styles.shortcutLabel}>{language === 'en' ? 'Save' : 'Salvar'}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.shortcutBtn}>
-                        <View style={[styles.shortcutIcon, { backgroundColor: '#dbeafe' }]}>
-                            <CalendarIcon size={24} color="#2563eb" />
+                        <View style={[styles.shortcutIcon, { backgroundColor: 'rgba(166, 240, 0, 0.15)' }]}>
+                            <CalendarIcon size={24} color="#1F2937" />
                         </View>
                         <Text style={styles.shortcutLabel}>{language === 'en' ? 'Plan' : 'Planejar'}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.shortcutBtn}>
-                        <View style={[styles.shortcutIcon, { backgroundColor: '#f3e8ff' }]}>
-                            <ShoppingBagIcon size={24} color="#9333ea" />
+                        <View style={[styles.shortcutIcon, { backgroundColor: 'rgba(166, 240, 0, 0.15)' }]}>
+                            <ShoppingBagIcon size={24} color="#1F2937" />
                         </View>
                         <Text style={styles.shortcutLabel}>{language === 'en' ? 'List' : 'Lista'}</Text>
                     </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity onPress={onClose} style={styles.finishBtn}>
+                <TouchableOpacity onPress={onGoHome} style={styles.finishBtn}>
                     <Text style={styles.finishBtnText}>{language === 'en' ? 'Back to Home' : 'Voltar ao Início'}</Text>
                 </TouchableOpacity>
             </View>

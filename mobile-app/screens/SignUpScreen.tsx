@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../services/firebaseConfig';
 import { saveUserProfile } from '../services/userService';
@@ -87,6 +87,7 @@ export const SignUpScreen = ({ onNavigateToLogin, onSignUpSuccess, initialProfil
             >
                 <View style={styles.authContent}>
                     <View style={styles.logoContainer}>
+                        <Image source={require('../assets/fitswap-logo.png')} style={styles.logoImage} resizeMode="contain" />
                         <Text style={styles.authTitle}>{t('auth.createAccountTitle')}</Text>
                         <Text style={[styles.authSubtitle, welcomeMessage ? { color: '#65A30D', fontWeight: '700', marginTop: 8 } : {}]}>
                             {welcomeMessage || t('auth.createAccountSubtitle')}
@@ -171,6 +172,11 @@ const styles = StyleSheet.create({
     logoContainer: {
         alignItems: 'center',
         marginBottom: 40,
+    },
+    logoImage: {
+        width: 140,
+        height: 80,
+        marginBottom: 20,
     },
     authTitle: {
         fontSize: 28,

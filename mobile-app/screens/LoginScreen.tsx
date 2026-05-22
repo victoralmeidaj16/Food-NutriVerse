@@ -63,7 +63,7 @@ export const LoginScreen = ({ onNavigateToSignUp, onLogin }: { onNavigateToSignU
             >
                 <View style={styles.authContent}>
                     <View style={styles.logoContainer}>
-                        <Image source={require('../assets/icon.png')} style={styles.logoImage} />
+                        <Image source={require('../assets/fitswap-logo.png')} style={styles.logoImage} resizeMode="contain" />
                         <Text style={styles.authTitle}>{t('auth.welcomeBack')}</Text>
                         <Text style={styles.authSubtitle}>{t('auth.loginSubtitle')}</Text>
                     </View>
@@ -139,9 +139,8 @@ const styles = StyleSheet.create({
         marginBottom: 40,
     },
     logoImage: {
-        width: 100,
-        height: 100,
-        borderRadius: 24,
+        width: 140,
+        height: 80,
         marginBottom: 24,
     },
     authTitle: {

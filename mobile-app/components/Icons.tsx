@@ -44,8 +44,13 @@ import {
     ExternalLink,
     Info,
     Upload,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Heart,
+    Bookmark
 } from 'lucide-react-native';
+
+export const HeartIcon = Heart;
+export const BookmarkIcon = Bookmark;
 
 
 export const HomeIcon = Home;

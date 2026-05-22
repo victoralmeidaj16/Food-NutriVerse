@@ -760,7 +760,7 @@ export const generateWeeklyPlan = async (
     ].filter(Boolean).join('\n      ') : '';
 
     const prompt = language === 'en' ? `
-      Create a weekly meal plan (Monday to Sunday) for a user with the following profile:
+      Create a ${userProfile.isPro ? 'weekly meal plan (Monday to Sunday)' : 'trial 1-day meal plan (Monday only)'} for a user with the following profile:
       Goal: ${userProfile.goal}
       Meals per day: ${mealsCount} (Generate exactly this amount of slots per day)
       Restrictions: ${userProfile.dietaryRestrictions.join(', ') || 'None'}
@@ -773,7 +773,7 @@ export const generateWeeklyPlan = async (
       Generate a simplified but complete recipe for each meal of each day.
       ALL TEXT CONTENT MUST BE IN ENGLISH.
     ` : `
-      Crie um plano alimentar semanal (Segunda a Domingo) para um usuário com o seguinte perfil:
+      Crie um plano alimentar ${userProfile.isPro ? 'semanal (Segunda a Domingo)' : 'experimental de APENAS 1 DIA (Segunda-feira)'} para um usuário com o seguinte perfil:
       Objetivo: ${userProfile.goal}
       Refeições por dia: ${mealsCount} (Gere exatamente essa quantidade de slots por dia)
       Restrições: ${userProfile.dietaryRestrictions.join(', ') || 'Nenhuma'}
@@ -926,6 +926,10 @@ export const generateShoppingList = async (
         )
     ).join('; ');
 
+    const recipeNames = plan.days.flatMap(d =>
+        d.meals.map(m => m.recipe?.name).filter(Boolean)
+    ).join(', ');
+
     const categories = language === 'en'
         ? ['Produce', 'Proteins', 'Dairy', 'Grocery', 'Other'] as const
         : ['Hortifruti', 'Proteínas', 'Laticínios', 'Mercearia', 'Outros'] as const;
@@ -934,8 +938,11 @@ export const generateShoppingList = async (
         Analyze this raw list of ingredients from all meals of a week:
         "${allIngredients}"
 
+        The recipes planned for the week are:
+        "${recipeNames}"
+
         Your task is:
-        1. Consolidate repeated items (e.g. sum the quantities of "Chicken" or "Eggs").
+        1. Consolidate repeated items (e.g. sum the quantities of "Chicken" or "Eggs"). If the ingredients list above is empty, infer the necessary ingredients for the recipes listed.
         2. Categorize each item in: ${categories.join(', ')}.
         3. Format quantities in a human-friendly way for shopping (e.g. "500g" instead of "0.5kg", "1 dozen" instead of "12 eggs").
 
@@ -945,8 +952,11 @@ export const generateShoppingList = async (
         Analise esta lista crua de ingredientes de todas as refeições de uma semana:
         "${allIngredients}"
 
+        As receitas planejadas para a semana são:
+        "${recipeNames}"
+
         Sua tarefa é:
-        1. Consolidar itens repetidos (ex: some as quantidades de "Frango" ou "Ovos").
+        1. Consolidar itens repetidos (ex: some as quantidades de "Frango" ou "Ovos"). Se a lista de ingredientes acima estiver vazia, infira os ingredientes necessários para preparar as receitas listadas.
         2. Categorizar cada item em: ${categories.join(', ')}.
         3. Formatar as quantidades de forma humana e lógica para compras (ex: "500g" em vez de "0.5kg", "1 dúzia" em vez de "12 ovos").
 
@@ -988,7 +998,8 @@ export const generateShoppingList = async (
         const data = JSON.parse(text);
 
         return {
-            items: data.items.map((i: any) => ({ ...i, id: randomUUID(), checked: false }))
+            items: data.items.map((i: any) => ({ ...i, id: randomUUID(), checked: false })),
+            planId: plan.id
         } as ShoppingList;
 
     } catch (error) {

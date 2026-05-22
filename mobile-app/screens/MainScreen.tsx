@@ -99,6 +99,7 @@ export const MainScreen = ({
     const [showShoppingList, setShowShoppingList] = useState(false);
     const [weeklyPlanProposal, setWeeklyPlanProposal] = useState<WeeklyPlan | null>(null);
     const [isApprovingPlan, setIsApprovingPlan] = useState(false);
+    const [selectedReviewDay, setSelectedReviewDay] = useState<number>(-1);
     // DailyTip state removed
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [editProfileInitialSection, setEditProfileInitialSection] = useState<'DEFAULT' | 'TASTE'>('DEFAULT');
@@ -708,15 +709,39 @@ export const MainScreen = ({
         setLoadingProgress(0);
         setLoadingStatus('');
 
+        const LOADING_MESSAGES_PT = [
+            "Analisando suas restrições alimentares...",
+            "Selecionando os melhores ingredientes...",
+            "Equilibrando proteínas e carboidratos...",
+            "Cortando gorduras desnecessárias...",
+            "Criando receitas com base no seu paladar...",
+            "Estruturando os horários das suas refeições...",
+            "Montando o cardápio perfeito para você..."
+        ];
+
+        const LOADING_MESSAGES_EN = [
+            "Analyzing your dietary restrictions...",
+            "Selecting the best ingredients...",
+            "Balancing proteins and carbohydrates...",
+            "Cutting unnecessary fats...",
+            "Creating recipes based on your taste...",
+            "Structuring the times for your meals...",
+            "Assembling the perfect menu for you..."
+        ];
+
         // Simulated progress: 0 → 95% over ~30s with ease-out, stays at 95% until done
         const PLAN_PROGRESS_DURATION = 30000;
         const PLAN_PROGRESS_INTERVAL = 250;
         const startTime = Date.now();
         const progressInterval = setInterval(() => {
             const elapsed = Date.now() - startTime;
-            const t = Math.min(elapsed / PLAN_PROGRESS_DURATION, 1);
-            const eased = 1 - Math.pow(1 - t, 2); // quadratic ease-out
+            const tVal = Math.min(elapsed / PLAN_PROGRESS_DURATION, 1);
+            const eased = 1 - Math.pow(1 - tVal, 2); // quadratic ease-out
             setLoadingProgress(Math.min(eased * 0.95, 0.95));
+
+            const msgList = language === 'en' ? LOADING_MESSAGES_EN : LOADING_MESSAGES_PT;
+            const msgIndex = Math.min(Math.floor(elapsed / 4000), msgList.length - 1);
+            setLoadingStatus(msgList[msgIndex]);
         }, PLAN_PROGRESS_INTERVAL);
 
         try {
@@ -727,6 +752,11 @@ export const MainScreen = ({
                 // INSTEAD of setting weekly plan immediately, we enter the approval phase
                 setWeeklyPlanProposal(plan);
                 setIsApprovingPlan(true);
+                setSelectedReviewDay(-1); // Reset selected day to show all by default
+
+                // Increment weekly plan generation count
+                const updatedProfile = SubscriptionService.incrementWeeklyPlanCount(userProfile);
+                onUpdateProfile(updatedProfile);
             } else {
                 Alert.alert(t('common.error'), t('errors.planGenerationFailed'));
             }
@@ -783,6 +813,10 @@ export const MainScreen = ({
 
     const handleCreateShoppingList = async () => {
         if (!weeklyPlan) return;
+        if (!userProfile?.isPro) {
+            onShowPaywall();
+            return;
+        }
         setLoading(true);
         setLoadingMsg(t('loading.calculatingList'));
         try {
@@ -797,6 +831,28 @@ export const MainScreen = ({
             Alert.alert(t('common.error'), e?.message || t('errors.generic'));
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleOpenShoppingList = async () => {
+        if (!weeklyPlan) return;
+        if (!userProfile?.isPro) {
+            onShowPaywall();
+            return;
+        }
+        // Check local state cache
+        if (shoppingList && shoppingList.planId === weeklyPlan.id) {
+            setShowShoppingList(true);
+            return;
+        }
+        // Check AsyncStorage cache
+        const cached = await storageService.loadShoppingList();
+        if (cached && cached.planId === weeklyPlan.id) {
+            setShoppingList(cached);
+            setShowShoppingList(true);
+        } else {
+            // Generate fresh list
+            await handleCreateShoppingList();
         }
     };
 
@@ -1038,44 +1094,30 @@ export const MainScreen = ({
                     colors={['#111827', '#1F2937']}
                     style={[styles.decisionCard, { marginBottom: 16, padding: 16, borderRadius: 24 }]}
                 >
-                    {/* Taste Profile mini display */}
-                    {userProfile?.tasteProfile?.favoriteFoods?.length || userProfile?.tasteProfile?.favoriteDish ? (
-                        <View style={styles.tasteMiniRow}>
-                            <SparklesIcon size={12} color="#a6f000" />
-                            <Text style={[styles.tasteMiniLabel, { color: '#9CA3AF' }]}>
-                                {language === 'en' ? 'Based on your taste:' : 'Baseado no seu gosto:'}
-                            </Text>
-                            {[
-                                ...(userProfile?.tasteProfile?.favoriteFoods || []).slice(0, 3),
-                                ...(userProfile?.tasteProfile?.favoriteDish ? [userProfile.tasteProfile.favoriteDish] : []),
-                            ].slice(0, 3).map((food, i) => (
-                                <View key={i} style={[styles.tasteMiniChip, { backgroundColor: 'rgba(166, 240, 0, 0.1)' }]}>
-                                    <Text style={[styles.tasteMiniChipText, { color: '#a6f000' }]}>{food}</Text>
-                                </View>
-                            ))}
-                            <TouchableOpacity onPress={() => setShowEditProfile(true)}>
-                                <Text style={styles.tasteEditLink}>✏️</Text>
-                            </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <TouchableOpacity style={styles.tasteSetupRow} onPress={() => setShowEditProfile(true)}>
-                            <SparklesIcon size={14} color="#a6f000" />
-                            <Text style={[styles.tasteSetupText, { color: '#a6f000', fontWeight: 'bold' }]}>
-                                {language === 'en' ? 'Set your taste → better suggestions' : 'Configure seu gosto → sugestões melhores'}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-
                     {!quickDecision ? (
                         <View style={styles.decisionPlaceholder}>
-                            <Text style={[styles.decisionText, { color: 'white', textAlign: 'center', marginBottom: 16, fontSize: 16 }]}>
+                            <Text style={[styles.decisionText, { color: 'white', textAlign: 'center', marginBottom: 8, fontSize: 16 }]}>
                                 {t('home.decisionKillerDesc')}
                             </Text>
+
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 16 }}>
+                                <SparklesIcon size={12} color="#a6f000" />
+                                <Text style={{ color: '#9CA3AF', fontSize: 13, fontWeight: '500' }}>
+                                    {language === 'en' ? 'Based on your taste' : 'Baseado no seu gosto'}
+                                </Text>
+                                <TouchableOpacity 
+                                    onPress={() => setShowEditProfile(true)}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    style={{ marginLeft: 2 }}
+                                >
+                                    <Text style={{ fontSize: 12 }}>✏️</Text>
+                                </TouchableOpacity>
+                            </View>
+
                             <Animated.View style={{ transform: [{ scale: decisionBtnScale }], width: '100%' }}>
                                 <TouchableOpacity
-                                    style={[styles.decisionButton, { justifyContent: 'center', opacity: (userProfile?.tasteProfile?.favoriteFoods?.length || userProfile?.tasteProfile?.favoriteDish) ? 1 : 0.4 }]}
+                                    style={[styles.decisionButton, { justifyContent: 'center' }]}
                                     activeOpacity={0.8}
-                                    disabled={!(userProfile?.tasteProfile?.favoriteFoods?.length || userProfile?.tasteProfile?.favoriteDish)}
                                     onPressIn={() => animateButtonPress(decisionBtnScale)}
                                     onPressOut={() => animateButtonRelease(decisionBtnScale)}
                                     onPress={() => {
@@ -1524,24 +1566,73 @@ export const MainScreen = ({
                     </Text>
                 </View>
 
-                <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]} showsVerticalScrollIndicator={false}>
-                    {weeklyPlanProposal.days.map((day, dayIndex) => (
-                        <View key={dayIndex} style={{marginBottom: 24}}>
-                            <Text style={{color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 12}}>
-                                {day.dayName}
+                {/* Day selector tabs */}
+                <View style={{ marginBottom: 12, paddingHorizontal: 16 }}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setSelectedReviewDay(-1);
+                            }}
+                            style={{
+                                backgroundColor: selectedReviewDay === -1 ? '#a6f000' : 'rgba(255,255,255,0.05)',
+                                paddingHorizontal: 16,
+                                paddingVertical: 8,
+                                borderRadius: 20,
+                                borderWidth: 1,
+                                borderColor: selectedReviewDay === -1 ? '#a6f000' : 'rgba(255,255,255,0.1)'
+                            }}
+                        >
+                            <Text style={{ color: selectedReviewDay === -1 ? 'black' : 'white', fontWeight: '700', fontSize: 13 }}>
+                                {language === 'en' ? 'All Days' : 'Todos os Dias'}
                             </Text>
-                            {day.meals.map((mealSlot, mealIndex) => {
-                                const isRegenerating = regeneratingMeal?.dayIndex === dayIndex && regeneratingMeal?.mealIndex === mealIndex;
-                                return (
-                                    <View key={mealIndex} style={{
-                                        backgroundColor: '#1F2937',
-                                        borderRadius: 16,
-                                        padding: 16,
-                                        marginBottom: 12,
-                                        flexDirection: 'row',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}>
+                        </TouchableOpacity>
+
+                        {weeklyPlanProposal.days.map((day, idx) => (
+                            <TouchableOpacity
+                                key={idx}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    setSelectedReviewDay(idx);
+                                }}
+                                style={{
+                                    backgroundColor: selectedReviewDay === idx ? '#a6f000' : 'rgba(255,255,255,0.05)',
+                                    paddingHorizontal: 16,
+                                    paddingVertical: 8,
+                                    borderRadius: 20,
+                                    borderWidth: 1,
+                                    borderColor: selectedReviewDay === idx ? '#a6f000' : 'rgba(255,255,255,0.1)'
+                                }}
+                            >
+                                <Text style={{ color: selectedReviewDay === idx ? 'black' : 'white', fontWeight: '700', fontSize: 13 }}>
+                                    {day.dayName}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+
+                <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]} showsVerticalScrollIndicator={false}>
+                    {weeklyPlanProposal.days
+                        .map((day, dayIndex) => ({ day, dayIndex }))
+                        .filter(({ dayIndex }) => selectedReviewDay === -1 || selectedReviewDay === dayIndex)
+                        .map(({ day, dayIndex }) => (
+                            <View key={dayIndex} style={{marginBottom: 24}}>
+                                <Text style={{color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 12}}>
+                                    {day.dayName}
+                                </Text>
+                                {day.meals.map((mealSlot, mealIndex) => {
+                                    const isRegenerating = regeneratingMeal?.dayIndex === dayIndex && regeneratingMeal?.mealIndex === mealIndex;
+                                    return (
+                                        <View key={mealIndex} style={{
+                                            backgroundColor: '#1F2937',
+                                            borderRadius: 16,
+                                            padding: 16,
+                                            marginBottom: 12,
+                                            flexDirection: 'row',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center'
+                                        }}>
                                         <View style={{flex: 1, paddingRight: 12}}>
                                             <Text style={{color: '#9CA3AF', fontSize: 12, fontWeight: 'bold', marginBottom: 4}}>{mealSlot.timeSlot.toUpperCase()}</Text>
                                             <Text style={{color: 'white', fontSize: 16, fontWeight: '600', marginBottom: 4}}>
@@ -1623,7 +1714,7 @@ export const MainScreen = ({
                                 <TrashIcon size={16} color="#EF4444" />
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={handleCreateShoppingList}
+                                onPress={handleOpenShoppingList}
                                 style={styles.shoppingListBtn}
                             >
                                 <ShoppingBagIcon size={16} color="#a6f000" />
@@ -1639,38 +1730,73 @@ export const MainScreen = ({
                     <View>
                         {/* Weekly overview grid */}
                         <View style={styles.weekOverviewGrid}>
-                            {weeklyPlan.days.map((day, idx) => {
-                                const totalKcal = day.meals.reduce((sum, m) => sum + (m.recipe?.macros?.calories || 0), 0);
-                                const filledMeals = day.meals.filter(m => m.recipe).length;
-                                const allFilled = filledMeals === day.meals.length;
-                                const isActive = idx === activePlanningDay;
-                                return (
-                                    <TouchableOpacity
-                                        key={idx}
-                                        onPress={() => setActivePlanningDay(idx)}
-                                        style={[styles.weekOverviewDay, isActive && styles.weekOverviewDayActive]}
-                                    >
-                                        <Text style={[styles.weekOverviewDayName, isActive && styles.weekOverviewDayNameActive]}>
-                                            {day.dayName.substring(0, 3)}
-                                        </Text>
-                                        <View style={[
-                                            styles.weekOverviewDot,
-                                            allFilled ? styles.weekOverviewDotFull : styles.weekOverviewDotPartial,
-                                            isActive && styles.weekOverviewDotActive,
-                                        ]} />
-                                        {totalKcal > 0 && (
-                                            <Text style={[styles.weekOverviewKcal, isActive && styles.weekOverviewKcalActive]}>
-                                                {totalKcal}
+                            {(() => {
+                                const daysOfWeekPt = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+                                const daysOfWeekEn = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+                                
+                                return Array.from({ length: 7 }).map((_, idx) => {
+                                    const day = weeklyPlan.days[idx];
+                                    const dayName = language === 'en' ? daysOfWeekEn[idx] : daysOfWeekPt[idx];
+
+                                    if (!day) {
+                                        // Render placeholder/locked day for free tier
+                                        return (
+                                            <TouchableOpacity
+                                                key={idx}
+                                                onPress={() => {
+                                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                                                    onShowPaywall();
+                                                }}
+                                                style={[
+                                                    styles.weekOverviewDay,
+                                                    { opacity: 0.5, borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(255,255,255,0.02)' }
+                                                ]}
+                                            >
+                                                <Text style={[styles.weekOverviewDayName, { color: '#6B7280' }]}>
+                                                    {dayName}
+                                                </Text>
+                                                <LockIcon size={12} color="#6B7280" style={{ marginTop: 4 }} />
+                                            </TouchableOpacity>
+                                        );
+                                    }
+
+                                    const totalKcal = day.meals.reduce((sum, m) => sum + (m.recipe?.macros?.calories || 0), 0);
+                                    const filledMeals = day.meals.filter(m => m.recipe).length;
+                                    const allFilled = filledMeals === day.meals.length;
+                                    const isActive = idx === activePlanningDay;
+
+                                    return (
+                                        <TouchableOpacity
+                                            key={idx}
+                                            onPress={() => {
+                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                                setActivePlanningDay(idx);
+                                            }}
+                                            style={[styles.weekOverviewDay, isActive && styles.weekOverviewDayActive]}
+                                        >
+                                            <Text style={[styles.weekOverviewDayName, isActive && styles.weekOverviewDayNameActive]}>
+                                                {day.dayName.substring(0, 3)}
                                             </Text>
-                                        )}
-                                    </TouchableOpacity>
-                                );
-                            })}
+                                            <View style={[
+                                                styles.weekOverviewDot,
+                                                allFilled ? styles.weekOverviewDotFull : styles.weekOverviewDotPartial,
+                                                isActive && styles.weekOverviewDotActive,
+                                            ]} />
+                                            {totalKcal > 0 && (
+                                                <Text style={[styles.weekOverviewKcal, isActive && styles.weekOverviewKcalActive]}>
+                                                    {totalKcal}
+                                                </Text>
+                                            )}
+                                        </TouchableOpacity>
+                                    );
+                                });
+                            })()}
                         </View>
 
                         {/* Meals List */}
                         <View style={styles.mealsList}>
-                            {weeklyPlan.days[activePlanningDay].meals.map((meal, idx) => {
+                            {weeklyPlan.days[activePlanningDay]?.meals.map((meal, idx) => {
                                 const isRegenerating = regeneratingMeal?.dayIndex === activePlanningDay && regeneratingMeal?.mealIndex === idx;
                                 return (
                                     <View key={meal.id} style={styles.mealCard}>
@@ -1746,6 +1872,46 @@ export const MainScreen = ({
                             })}
                         </View>
 
+                        {/* Free Tier Call-to-Action Promo Card */}
+                        {!userProfile?.isPro && (
+                            <View style={{
+                                backgroundColor: 'rgba(166, 240, 0, 0.05)',
+                                borderRadius: 16,
+                                padding: 20,
+                                marginVertical: 16,
+                                borderWidth: 1,
+                                borderColor: 'rgba(166, 240, 0, 0.2)',
+                                alignItems: 'center'
+                            }}>
+                                <Text style={{ color: '#a6f000', fontSize: 18, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' }}>
+                                    {language === 'en' ? 'Enjoying your Magic Monday? 💫' : 'Gostou da sua Segunda-feira Mágica? 💫'}
+                                </Text>
+                                <Text style={{ color: '#9CA3AF', fontSize: 13, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
+                                    {language === 'en' 
+                                        ? 'Unlock the rest of the week (Tuesday to Sunday) and the consolidated Shopping List with Fitswap Pro.' 
+                                        : 'Desbloqueie o restante da semana (Terça a Domingo) e a Lista de Compras consolidada com o Fitswap Pro.'}
+                                </Text>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                        onShowPaywall();
+                                    }}
+                                    style={{
+                                        backgroundColor: '#a6f000',
+                                        paddingHorizontal: 24,
+                                        paddingVertical: 12,
+                                        borderRadius: 24,
+                                        width: '100%',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 14 }}>
+                                        {language === 'en' ? 'Get Fitswap Pro' : 'Obter Fitswap Pro'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
                         <TouchableOpacity onPress={() => setShowPlanningWizard(true)} style={styles.secondaryBtn}>
                             <Text style={styles.secondaryBtnText}>{language === 'en' ? 'Redo entire week' : 'Refazer semana inteira'}</Text>
                         </TouchableOpacity>
@@ -1767,9 +1933,23 @@ export const MainScreen = ({
                 <View style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>{language === 'en' ? 'Shopping List' : 'Lista de Compras'}</Text>
-                        <TouchableOpacity onPress={() => setShowShoppingList(false)} style={styles.closeBtn}>
-                            <CloseIcon size={24} color="#1F2937" />
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+                            <TouchableOpacity 
+                                onPress={async () => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                    setShowShoppingList(false);
+                                    setTimeout(() => {
+                                        handleCreateShoppingList();
+                                    }, 400);
+                                }} 
+                                style={{ padding: 4 }}
+                            >
+                                <RefreshIcon size={20} color="#4B5563" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => setShowShoppingList(false)} style={styles.closeBtn}>
+                                <CloseIcon size={24} color="#1F2937" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                     <ScrollView contentContainerStyle={styles.modalContent}>
                         {(() => {
