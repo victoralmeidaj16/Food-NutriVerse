@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(ls /Users/victoralmeidaj16/Downloads/Food-NutriVerse/mobile-app/ios/*.xcworkspace)",
+      "Bash(open /Users/victoralmeidaj16/Downloads/Food-NutriVerse/mobile-app/ios/Fitswap.xcworkspace)",
+      "Bash(npx expo:*)"
+    ]
+  }
+}

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Fitswap – App Store Screenshots Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0a;
+    font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+    padding: 40px 24px 60px;
+    min-height: 100vh;
+  }
+
+  .top-header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .app-logo {
+    width: 72px; height: 72px;
+    background: #a6f000;
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 16px;
+    box-shadow: 0 8px 32px rgba(166,240,0,0.3);
+  }
+  .app-name { font-size: 32px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+  .app-tagline { font-size: 16px; color: #6B7280; }
+
+  /* Grid */
+  .screenshots-grid {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 2200px;
+    margin: 0 auto;
+  }
+
+  /* Device frame */
+  .device-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .device-frame {
+    width: 393px;
+    height: 852px;
+    border-radius: 52px;
+    border: 10px solid #1a1a1a;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px #333,
+      0 40px 80px rgba(0,0,0,0.6),
+      inset 0 0 0 1px #2a2a2a;
+    position: relative;
+    background: #fff;
+    flex-shrink: 0;
+  }
+  .device-frame::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 34px;
+    background: #1a1a1a;
+    border-radius: 0 0 22px 22px;
+    z-index: 10;
+  }
+  .device-frame iframe {
+    width: 393px;
+    height: 852px;
+    border: none;
+    display: block;
+  }
+
+  /* Caption */
+  .caption {
+    text-align: center;
+    max-width: 340px;
+  }
+  .caption-number {
+    font-size: 11px; font-weight: 700;
+    color: #a6f000;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .caption-title {
+    font-size: 20px; font-weight: 800; color: #fff;
+    margin-bottom: 6px; line-height: 1.2;
+  }
+  .caption-sub { font-size: 13px; color: #6B7280; line-height: 1.5; }
+
+  /* CTA bottom */
+  .bottom-cta {
+    text-align: center;
+    margin-top: 56px;
+  }
+  .cta-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: #a6f000;
+    color: #000;
+    font-size: 16px; font-weight: 800;
+    padding: 16px 36px;
+    border-radius: 20px;
+    text-decoration: none;
+    box-shadow: 0 8px 32px rgba(166,240,0,0.3);
+  }
+  .cta-stores {
+    display: flex; gap: 16px; justify-content: center;
+    margin-top: 20px;
+  }
+  .store-badge {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 14px;
+    padding: 12px 24px;
+    color: #fff;
+    font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="top-header">
+  <div class="app-logo">🥗</div>
+  <div class="app-name">Fitswap</div>
+  <div class="app-tagline">Receitas personalizadas com Inteligência Artificial</div>
+</div>
+
+<!-- Screenshots Grid -->
+<div class="screenshots-grid">
+
+  <!-- 1: Home -->
+  <div class="device-wrapper">
+    <div class="device-frame">
+      <iframe src="screenshot-1-home.html" scrolling="no"></iframe>
+    </div>
+    <div class="caption">
+      <div class="caption-number">01</div>
+      <div class="caption-title">Receitas Feitas Para Você</div>
+      <div class="caption-sub">IA gera receitas personalizadas baseadas no seu objetivo e gosto</div>
+    </div>
+  </div>
+
+  <!-- 2: Scanner -->
+  <div class="device-wrapper">
+    <div class="device-frame" style="background:#0a0a0a;">
+      <iframe src="screenshot-2-scanner.html" scrolling="no"></iframe>
+    </div>
+    <div class="caption">
+      <div class="caption-number">02</div>
+      <div class="caption-title">Escaneie Sua Despensa</div>
+      <div class="caption-sub">Tire uma foto dos ingredientes e receba receitas instantâneas</div>
+    </div>
+  </div>
+
+  <!-- 3: Plan -->
+  <div class="device-wrapper">
+    <div class="device-frame">
+      <iframe src="screenshot-3-plan.html" scrolling="no"></iframe>
+    </div>
+    <div class="caption">
+      <div class="caption-number">03</div>
+      <div class="caption-title">Plano Semanal Inteligente</div>
+      <div class="caption-sub">7 dias de refeições balanceadas geradas automaticamente pela IA</div>
+    </div>
+  </div>
+
+  <!-- 4: Shopping -->
+  <div class="device-wrapper">
+    <div class="device-frame" style="background:#F8F9FA;">
+      <iframe src="screenshot-4-shopping.html" scrolling="no"></iframe>
+    </div>
+    <div class="caption">
+      <div class="caption-number">04</div>
+      <div class="caption-title">Lista de Compras Automática</div>
+      <div class="caption-sub">Lista categorizada gerada a partir do seu plano semanal</div>
+    </div>
+  </div>
+
+  <!-- 5: Recipe -->
+  <div class="device-wrapper">
+    <div class="device-frame">
+      <iframe src="screenshot-5-recipe.html" scrolling="no"></iframe>
+    </div>
+    <div class="caption">
+      <div class="caption-number">05</div>
+      <div class="caption-title">Receitas Detalhadas</div>
+      <div class="caption-sub">Ingredientes, modo de preparo e informações nutricionais completas</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom CTA -->
+<div class="bottom-cta">
+  <div class="cta-stores">
+    <a class="store-badge" href="#">
+      🍎 App Store
+    </a>
+    <a class="store-badge" href="#">
+      🤖 Google Play
+    </a>
+  </div>
+</div>
+
+</body>
+</html>

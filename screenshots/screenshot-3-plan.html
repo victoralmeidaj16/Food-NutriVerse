@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Screenshot 3 – Plano Semanal</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 393px; height: 852px;
+    background: #ffffff;
+    font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .status-bar {
+    height: 54px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px 0;
+    background: #fff;
+  }
+  .status-time { font-size: 15px; font-weight: 600; color: #111827; }
+
+  /* Header */
+  .header {
+    padding: 12px 24px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .h-title { font-size: 24px; font-weight: 800; color: #111827; }
+  .gen-btn {
+    background: #a6f000;
+    border-radius: 14px;
+    padding: 8px 16px;
+    font-size: 13px; font-weight: 700; color: #000;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* Week grid */
+  .week-grid {
+    padding: 0 24px 16px;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .day-col { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .day-label { font-size: 10px; font-weight: 600; color: #9CA3AF; }
+  .day-bubble {
+    width: 34px; height: 34px;
+    border-radius: 12px;
+    background: #F3F4F6;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #374151;
+  }
+  .day-bubble.active {
+    background: #111827;
+    color: #fff;
+  }
+  .day-bubble.today {
+    background: #a6f000;
+    color: #000;
+  }
+  .day-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #a6f000;
+  }
+  .day-dot.empty { background: #E5E7EB; }
+
+  /* Day selector pills */
+  .day-selector {
+    display: flex; gap: 6px;
+    padding: 0 24px 14px;
+    overflow: hidden;
+  }
+  .day-pill {
+    padding: 6px 14px;
+    border-radius: 14px;
+    font-size: 12px; font-weight: 600;
+    background: #F3F4F6;
+    color: #6B7280;
+    flex-shrink: 0;
+  }
+  .day-pill.active {
+    background: #111827;
+    color: #fff;
+  }
+
+  /* Meals list */
+  .meals-section { padding: 0 24px; }
+  .section-title {
+    font-size: 14px; font-weight: 700; color: #6B7280;
+    letter-spacing: 0.5px; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .meal-card {
+    border-radius: 18px;
+    border: 1.5px solid #F3F4F6;
+    background: #fff;
+    margin-bottom: 10px;
+    display: flex;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .meal-color-bar {
+    width: 5px;
+    flex-shrink: 0;
+  }
+  .meal-card-body {
+    flex: 1;
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .meal-emoji { font-size: 30px; }
+  .meal-info { flex: 1; }
+  .meal-type { font-size: 10px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.8px; }
+  .meal-name { font-size: 14px; font-weight: 700; color: #111827; margin: 2px 0; }
+  .meal-meta { font-size: 11px; color: #6B7280; }
+  .meal-kcal {
+    background: #F3F4F6;
+    border-radius: 10px;
+    padding: 4px 10px;
+    font-size: 11px; font-weight: 700; color: #374151;
+    flex-shrink: 0;
+  }
+
+  /* Summary bar */
+  .summary-bar {
+    margin: 6px 24px 12px;
+    background: #111827;
+    border-radius: 18px;
+    padding: 14px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .summary-item { text-align: center; }
+  .summary-value { font-size: 18px; font-weight: 800; color: #a6f000; }
+  .summary-label { font-size: 10px; color: #9CA3AF; font-weight: 600; }
+  .summary-divider { width: 1px; height: 30px; background: #333; }
+
+  /* Shopping button */
+  .shop-btn {
+    margin: 0 24px;
+    border: 2px dashed #a6f000;
+    border-radius: 16px;
+    padding: 12px 16px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 14px; font-weight: 700; color: #374151;
+  }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 82px;
+    background: #fff;
+    border-top: 1px solid #F3F4F6;
+    display: flex; align-items: flex-start;
+    padding-top: 10px;
+    justify-content: space-around;
+  }
+  .nav-item {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 4px; flex: 1;
+  }
+  .nav-label { font-size: 10px; font-weight: 600; color: #9CA3AF; }
+  .nav-dot { width: 5px; height: 5px; border-radius: 50%; background: #a6f000; margin-top: -3px; }
+</style>
+</head>
+<body>
+
+<!-- Status Bar -->
+<div class="status-bar">
+  <span class="status-time">9:41</span>
+  <div style="display:flex;gap:6px;align-items:center;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#111827"><rect x="1" y="6" width="18" height="12" rx="2"/></svg>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="h-title">Plano Semanal</div>
+  <div class="gen-btn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    Gerar com IA
+  </div>
+</div>
+
+<!-- Week Grid -->
+<div class="week-grid">
+  <div class="day-col">
+    <div class="day-label">SEG</div>
+    <div class="day-bubble">13</div>
+    <div class="day-dot"></div>
+  </div>
+  <div class="day-col">
+    <div class="day-label">TER</div>
+    <div class="day-bubble today">14</div>
+    <div class="day-dot"></div>
+  </div>
+  <div class="day-col">
+    <div class="day-label">QUA</div>
+    <div class="day-bubble active">15</div>
+    <div class="day-dot"></div>
+  </div>
+  <div class="day-col">
+    <div class="day-label">QUI</div>
+    <div class="day-bubble">16</div>
+    <div class="day-dot"></div>
+  </div>
+  <div class="day-col">
+    <div class="day-label">SEX</div>
+    <div class="day-bubble">17</div>
+    <div class="day-dot empty"></div>
+  </div>
+  <div class="day-col">
+    <div class="day-label">SÁB</div>
+    <div class="day-bubble">18</div>
+    <div class="day-dot empty"></div>
+  </div>
+  <div class="day-col">
+    <div class="day-label">DOM</div>
+    <div class="day-bubble">19</div>
+    <div class="day-dot empty"></div>
+  </div>
+</div>
+
+<!-- Summary Bar -->
+<div class="summary-bar">
+  <div class="summary-item">
+    <div class="summary-value">1.850</div>
+    <div class="summary-label">Kcal/dia</div>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-item">
+    <div class="summary-value">142g</div>
+    <div class="summary-label">Proteína</div>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-item">
+    <div class="summary-value">4/4</div>
+    <div class="summary-label">Refeições</div>
+  </div>
+  <div class="summary-divider"></div>
+  <div class="summary-item">
+    <div class="summary-value">7d</div>
+    <div class="summary-label">Planejados</div>
+  </div>
+</div>
+
+<!-- Meals -->
+<div class="meals-section">
+  <div class="section-title">Quarta-feira · 15 Jan</div>
+
+  <div class="meal-card">
+    <div class="meal-color-bar" style="background:#fbbf24;"></div>
+    <div class="meal-card-body">
+      <div class="meal-emoji">☀️</div>
+      <div class="meal-info">
+        <div class="meal-type">Café da Manhã</div>
+        <div class="meal-name">Omelete Proteico com Aveia</div>
+        <div class="meal-meta">⏱ 15 min · Fácil</div>
+      </div>
+      <div class="meal-kcal">310 kcal</div>
+    </div>
+  </div>
+
+  <div class="meal-card">
+    <div class="meal-color-bar" style="background:#a6f000;"></div>
+    <div class="meal-card-body">
+      <div class="meal-emoji">🥗</div>
+      <div class="meal-info">
+        <div class="meal-type">Almoço</div>
+        <div class="meal-name">Bowl de Frango Grelhado</div>
+        <div class="meal-meta">⏱ 25 min · Alto proteico</div>
+      </div>
+      <div class="meal-kcal">520 kcal</div>
+    </div>
+  </div>
+
+  <div class="meal-card">
+    <div class="meal-color-bar" style="background:#818cf8;"></div>
+    <div class="meal-card-body">
+      <div class="meal-emoji">🍎</div>
+      <div class="meal-info">
+        <div class="meal-type">Lanche</div>
+        <div class="meal-name">Iogurte Grego com Frutas</div>
+        <div class="meal-meta">⏱ 5 min · Sem cozinhar</div>
+      </div>
+      <div class="meal-kcal">180 kcal</div>
+    </div>
+  </div>
+
+  <div class="meal-card">
+    <div class="meal-color-bar" style="background:#34d399;"></div>
+    <div class="meal-card-body">
+      <div class="meal-emoji">🥘</div>
+      <div class="meal-info">
+        <div class="meal-type">Jantar</div>
+        <div class="meal-name">Salmão com Legumes Assados</div>
+        <div class="meal-meta">⏱ 30 min · Ômega-3</div>
+      </div>
+      <div class="meal-kcal">440 kcal</div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-item">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    <span class="nav-label">Início</span>
+  </div>
+  <div class="nav-item">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <div class="nav-dot"></div>
+    <span class="nav-label" style="color:#000;">Plano</span>
+  </div>
+  <div class="nav-item">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    <span class="nav-label">Mapa</span>
+  </div>
+  <div class="nav-item">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span class="nav-label">Perfil</span>
+  </div>
+</div>
+
+</body>
+</html>

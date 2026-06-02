@@ -7,7 +7,7 @@ O **Fitswap** é um aplicativo móvel inovador que utiliza Inteligência Artific
 ## 🚀 Funcionalidades Principais
 
 ### 1. IA Chef & "Fitzar" Receita
-*   **Transformação Mágica:** O usuário digita o nome de um prato calórico (ex: "Pizza", "Lasanha") e a IA gera uma versão saudável, ajustada aos objetivos do usuário (perda de peso, ganho de massa, saúde), respeitando restrições alimentares (vegano, sem glúten, etc.) e alimentos que o usuário não gosta.
+*   **Transformação Mágica:** O usuário digita o nome de um prato calórico (ex: "Pizza", "Lasanha") e a IA gera uma versão saudável, ajustada aos objetivos do usuário (perda de peso ou ganho de massa ousaúde), respeitando restrições alimentares (vegano, sem glúten, etc.) e alimentos que o usuário não gosta.
 *   **Scanner de Despensa:** Utiliza a câmera para identificar ingredientes reais ou permite entrada manual. A IA então cria uma receita exclusiva utilizando apenas esses itens.
 
 ### 2. Planejamento Semanal Inteligente

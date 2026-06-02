@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Screenshot 2 – Scanner</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 393px; height: 852px;
+    background: #0a0a0a;
+    font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Status Bar */
+  .status-bar {
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px 0;
+  }
+  .status-time { font-size: 15px; font-weight: 600; color: #fff; }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+
+  /* Camera viewfinder */
+  .viewfinder {
+    width: 393px;
+    height: 480px;
+    position: relative;
+    overflow: hidden;
+    background: #1a1a1a;
+  }
+
+  /* Food image simulation */
+  .food-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 40%, rgba(166,240,0,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 60%, rgba(251,191,36,0.12) 0%, transparent 60%),
+      linear-gradient(160deg, #2a2a1a 0%, #1a1f0a 50%, #0f1a0a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Ingredient items in the view */
+  .ingredient-circles {
+    position: absolute; inset: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 60px 30px 20px;
+    align-items: center;
+    justify-content: center;
+  }
+  .food-item {
+    font-size: 52px;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+    animation: float 3s ease-in-out infinite;
+  }
+  .food-item:nth-child(2) { animation-delay: 0.5s; }
+  .food-item:nth-child(3) { animation-delay: 1s; }
+  .food-item:nth-child(4) { animation-delay: 1.5s; }
+  .food-item:nth-child(5) { animation-delay: 0.8s; }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  /* Scan frame corners */
+  .scan-frame {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 260px; height: 220px;
+  }
+  .corner {
+    position: absolute;
+    width: 28px; height: 28px;
+  }
+  .corner-tl { top: 0; left: 0; border-top: 3px solid #a6f000; border-left: 3px solid #a6f000; border-radius: 4px 0 0 0; }
+  .corner-tr { top: 0; right: 0; border-top: 3px solid #a6f000; border-right: 3px solid #a6f000; border-radius: 0 4px 0 0; }
+  .corner-bl { bottom: 0; left: 0; border-bottom: 3px solid #a6f000; border-left: 3px solid #a6f000; border-radius: 0 0 0 4px; }
+  .corner-br { bottom: 0; right: 0; border-bottom: 3px solid #a6f000; border-right: 3px solid #a6f000; border-radius: 0 0 4px 0; }
+
+  /* Scan line */
+  .scan-line {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 260px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, #a6f000 30%, #a6f000 70%, transparent 100%);
+    box-shadow: 0 0 12px #a6f000, 0 0 24px rgba(166,240,0,0.4);
+  }
+
+  /* Labels overlay */
+  .label-badge {
+    position: absolute;
+    background: rgba(166,240,0,0.9);
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 10px;
+  }
+  .label-1 { top: 140px; left: 52px; }
+  .label-2 { top: 200px; right: 60px; }
+  .label-3 { bottom: 100px; left: 80px; }
+
+  /* Dark overlay gradient at bottom of camera */
+  .cam-gradient {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 80px;
+    background: linear-gradient(to bottom, transparent, #0a0a0a);
+  }
+
+  /* Header bar */
+  .cam-header {
+    position: absolute;
+    top: 54px; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+    z-index: 10;
+  }
+  .back-btn {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(10px);
+  }
+  .cam-title { font-size: 16px; font-weight: 700; color: #fff; }
+  .flash-btn {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(10px);
+    font-size: 18px;
+  }
+
+  /* Bottom Panel */
+  .bottom-panel {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: #0f0f0f;
+    border-radius: 28px 28px 0 0;
+    padding: 20px 24px 34px;
+  }
+  .handle {
+    width: 36px; height: 4px;
+    background: #333;
+    border-radius: 2px;
+    margin: 0 auto 18px;
+  }
+
+  .panel-title { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+  .panel-sub { font-size: 13px; color: #6B7280; margin-bottom: 16px; }
+
+  /* Detected tags */
+  .tags-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .tag {
+    padding: 6px 14px;
+    border-radius: 14px;
+    font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tag-lime { background: rgba(166,240,0,0.15); color: #a6f000; border: 1px solid rgba(166,240,0,0.3); }
+  .tag-white { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.12); }
+
+  /* CTA button */
+  .cta-btn {
+    width: 100%;
+    height: 52px;
+    background: #a6f000;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px;
+    font-size: 16px; font-weight: 800; color: #000;
+    box-shadow: 0 4px 20px rgba(166,240,0,0.35);
+  }
+
+  /* Mini recipe preview */
+  .recipe-preview {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .recipe-preview-emoji { font-size: 32px; }
+  .recipe-preview-info { flex: 1; }
+  .recipe-preview-name { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+  .recipe-preview-meta { font-size: 12px; color: #6B7280; }
+  .recipe-preview-arrow { color: #a6f000; font-size: 20px; }
+</style>
+</head>
+<body>
+
+<!-- Status Bar -->
+<div class="status-bar">
+  <span class="status-time">9:41</span>
+  <div class="status-icons">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><rect x="1" y="6" width="18" height="12" rx="2"/><path d="M23 13v-2a2 2 0 0 0 0 4v-2z"/></svg>
+  </div>
+</div>
+
+<!-- Camera Header -->
+<div class="cam-header">
+  <div class="back-btn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+  </div>
+  <div class="cam-title">Escanear Alimentos</div>
+  <div class="flash-btn">⚡</div>
+</div>
+
+<!-- Viewfinder -->
+<div class="viewfinder">
+  <div class="food-bg">
+    <div class="ingredient-circles">
+      <span class="food-item">🥩</span>
+      <span class="food-item">🧄</span>
+      <span class="food-item">🍅</span>
+      <span class="food-item">🫑</span>
+      <span class="food-item">🥕</span>
+      <span class="food-item">🧅</span>
+    </div>
+  </div>
+
+  <!-- Scan frame -->
+  <div class="scan-frame">
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
+  </div>
+
+  <!-- Scan line -->
+  <div class="scan-line"></div>
+
+  <!-- Labels -->
+  <div class="label-badge label-1">🥩 Carne</div>
+  <div class="label-badge label-2">🍅 Tomate</div>
+  <div class="label-badge label-3">🥕 Cenoura</div>
+
+  <!-- Gradient -->
+  <div class="cam-gradient"></div>
+</div>
+
+<!-- Bottom Panel -->
+<div class="bottom-panel">
+  <div class="handle"></div>
+  <div class="panel-title">5 ingredientes detectados</div>
+  <div class="panel-sub">IA identificou sua despensa</div>
+
+  <div class="tags-row">
+    <div class="tag tag-lime">✓ Carne bovina</div>
+    <div class="tag tag-lime">✓ Tomate</div>
+    <div class="tag tag-lime">✓ Cenoura</div>
+    <div class="tag tag-white">+ Alho</div>
+    <div class="tag tag-white">+ Cebola</div>
+  </div>
+
+  <div class="recipe-preview">
+    <div class="recipe-preview-emoji">🥘</div>
+    <div class="recipe-preview-info">
+      <div class="recipe-preview-name">Carne Refogada com Legumes</div>
+      <div class="recipe-preview-meta">⏱ 25 min · 380 kcal · Alto proteico</div>
+    </div>
+    <div class="recipe-preview-arrow">›</div>
+  </div>
+
+  <div class="cta-btn">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    Gerar Receitas com IA
+  </div>
+</div>
+
+</body>
+</html>
