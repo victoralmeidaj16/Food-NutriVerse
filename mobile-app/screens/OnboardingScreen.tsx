@@ -484,11 +484,14 @@ export const OnboardingScreen = ({
             </View>
 
             <TouchableOpacity
-                style={[styles.primaryButton, (!favoriteDish || !favoriteFastFood || !favoriteSweet) && styles.buttonDisabled]}
+                style={styles.primaryButton}
                 onPress={handleNext}
-                disabled={!favoriteDish || !favoriteFastFood || !favoriteSweet}
             >
-                <Text style={styles.primaryButtonText}>{language === 'en' ? 'Generate my plan' : 'Gerar meu plano'}</Text>
+                <Text style={styles.primaryButtonText}>
+                    {(!favoriteDish && !favoriteFastFood && !favoriteSweet)
+                        ? (language === 'en' ? 'Skip step' : 'Pular etapa')
+                        : (language === 'en' ? 'Generate my plan' : 'Gerar meu plano')}
+                </Text>
             </TouchableOpacity>
         </ScrollView>
     );
