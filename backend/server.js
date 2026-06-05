@@ -367,10 +367,10 @@ app.post('/api/generate-recipe', async (req, res) => {
             normalizedContents = contents;
         }
 
-        // Use gemini-2.0-flash as default (gemini-2.0-flash-exp is deprecated)
-        const resolvedModel = (modelName || 'gemini-2.0-flash')
-            .replace('gemini-2.0-flash-exp', 'gemini-2.0-flash')
-            .replace('gemini-2.5-flash', 'gemini-2.0-flash');
+        // Keep older clients working after Gemini 2.0 Flash was removed.
+        const resolvedModel = (modelName || 'gemini-2.5-flash')
+            .replace('gemini-2.0-flash-exp', 'gemini-2.5-flash')
+            .replace('gemini-2.0-flash', 'gemini-2.5-flash');
 
         console.log(`Generating with model: ${resolvedModel}`);
 

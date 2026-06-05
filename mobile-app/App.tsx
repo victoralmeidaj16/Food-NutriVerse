@@ -16,6 +16,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { iapService, PurchaseResult } from './services/iapService';
 import { useUserData, DEFAULT_PROFILE } from './hooks/useUserData';
 import { useSubscription, applySubscriptionToProfile } from './hooks/useSubscription';
+import { warmBackendIfNeeded } from './services/backendWarmup';
 
 // --- Types ---
 type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL' | 'PAYWALL' | 'RECIPE_PACK';
@@ -91,6 +92,7 @@ export default function App() {
 
     // Monitor Auth State
     useEffect(() => {
+        void warmBackendIfNeeded();
         void iapService.initialize();
 
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -166,6 +168,10 @@ export default function App() {
     // Reconcile on app resume — skipped if a purchase is in progress to avoid race condition
     useEffect(() => {
         const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+            if (nextState === 'active') {
+                void warmBackendIfNeeded();
+            }
+
             if (nextState === 'active' && firebaseUser && userProfile && !isPurchasingRef.current) {
                 void reconcileAppleSubscription(firebaseUser.uid, userProfile, DEFAULT_PROFILE);
             }

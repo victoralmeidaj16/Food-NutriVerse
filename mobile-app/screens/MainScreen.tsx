@@ -783,11 +783,11 @@ export const MainScreen = ({
 
         const mealSlot = weeklyPlanProposal.days[dayIndex].meals[mealIndex];
         setRegeneratingMeal({ dayIndex, mealIndex });
-        
+
         try {
             // Get recent dishes to avoid
             const recentDishes = weeklyPlanProposal.days.flatMap(d => d.meals.map(m => m.recipe?.name).filter(Boolean) as string[]);
-            
+
             const newRecipeProposal = await generateSingleMealProposal(
                 userProfile,
                 mealSlot.timeSlot,
@@ -1082,7 +1082,7 @@ export const MainScreen = ({
                                 <UserIcon size={20} color="#6B7280" />
                             </View>
                         )}
-                        </TouchableOpacity>
+                    </TouchableOpacity>
                 </View>
 
 
@@ -1100,19 +1100,19 @@ export const MainScreen = ({
                                 {t('home.decisionKillerDesc')}
                             </Text>
 
-                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 16 }}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setEditProfileInitialSection('TASTE');
+                                    setShowEditProfile(true);
+                                }}
+                                activeOpacity={0.7}
+                                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 16 }}
+                            >
                                 <SparklesIcon size={12} color="#a6f000" />
-                                <Text style={{ color: '#9CA3AF', fontSize: 13, fontWeight: '500' }}>
-                                    {language === 'en' ? 'Based on your taste' : 'Baseado no seu gosto'}
+                                <Text style={{ color: '#9CA3AF', fontSize: 13, fontWeight: '500', textAlign: 'center' }}>
+                                    {language === 'en' ? 'Based on your taste\n(tap to customize) ✏️' : 'Baseado no seu gosto\n(toque para personalizar) ✏️'}
                                 </Text>
-                                <TouchableOpacity 
-                                    onPress={() => setShowEditProfile(true)}
-                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                    style={{ marginLeft: 2 }}
-                                >
-                                    <Text style={{ fontSize: 12 }}>✏️</Text>
-                                </TouchableOpacity>
-                            </View>
+                            </TouchableOpacity>
 
                             <Animated.View style={{ transform: [{ scale: decisionBtnScale }], width: '100%' }}>
                                 <TouchableOpacity
@@ -1390,7 +1390,7 @@ export const MainScreen = ({
                                     style={styles.desireAttachBtn}
                                     onPress={() => pickDesireImage('camera')}
                                 >
-                                    <CameraIcon size={16} color="#a6f000" />
+                                    <CameraIcon size={16} color="#9CA3AF" />
                                     <Text style={styles.desireAttachText}>
                                         {language === 'en' ? 'Camera' : 'Câmera'}
                                     </Text>
@@ -1399,7 +1399,7 @@ export const MainScreen = ({
                                     style={styles.desireAttachBtn}
                                     onPress={() => pickDesireImage('gallery')}
                                 >
-                                    <UploadIcon size={16} color="#a6f000" />
+                                    <UploadIcon size={16} color="#9CA3AF" />
                                     <Text style={styles.desireAttachText}>
                                         {language === 'en' ? 'Upload' : 'Upload'}
                                     </Text>
@@ -1561,7 +1561,7 @@ export const MainScreen = ({
             <View style={styles.content}>
                 <View style={styles.header}>
                     <Text style={styles.pageTitle}>{language === 'en' ? 'Review Your Plan' : 'Aprove o Plano'}</Text>
-                    <Text style={{color: '#9CA3AF', fontSize: 13, marginTop: 4}}>
+                    <Text style={{ color: '#9CA3AF', fontSize: 13, marginTop: 4 }}>
                         {language === 'en' ? 'Review the proposed meals before finalizing.' : 'Revise as refeições propostas antes de finalizar.'}
                     </Text>
                 </View>
@@ -1617,8 +1617,8 @@ export const MainScreen = ({
                         .map((day, dayIndex) => ({ day, dayIndex }))
                         .filter(({ dayIndex }) => selectedReviewDay === -1 || selectedReviewDay === dayIndex)
                         .map(({ day, dayIndex }) => (
-                            <View key={dayIndex} style={{marginBottom: 24}}>
-                                <Text style={{color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 12}}>
+                            <View key={dayIndex} style={{ marginBottom: 24 }}>
+                                <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>
                                     {day.dayName}
                                 </Text>
                                 {day.meals.map((mealSlot, mealIndex) => {
@@ -1633,40 +1633,40 @@ export const MainScreen = ({
                                             justifyContent: 'space-between',
                                             alignItems: 'center'
                                         }}>
-                                        <View style={{flex: 1, paddingRight: 12}}>
-                                            <Text style={{color: '#9CA3AF', fontSize: 12, fontWeight: 'bold', marginBottom: 4}}>{mealSlot.timeSlot.toUpperCase()}</Text>
-                                            <Text style={{color: 'white', fontSize: 16, fontWeight: '600', marginBottom: 4}}>
-                                                {mealSlot.recipe?.name || (language === 'en' ? 'Unplanned' : 'Não planejado')}
-                                            </Text>
-                                            <View style={{flexDirection: 'row', gap: 12, alignItems: 'center'}}>
-                                                <Text style={{color: '#D1D5DB', fontSize: 12}}>🔥 {mealSlot.recipe?.macros?.calories || 0} kcal</Text>
-                                                <Text style={{color: '#D1D5DB', fontSize: 12}}>⏱️ {mealSlot.recipe?.prepTime || '--'}</Text>
-                                            </View>
-                                        </View>
-                                        <TouchableOpacity
-                                            style={{
-                                                backgroundColor: 'rgba(255,255,255,0.1)',
-                                                borderRadius: 20,
-                                                paddingHorizontal: 16,
-                                                paddingVertical: 8,
-                                                opacity: isRegenerating ? 0.5 : 1
-                                            }}
-                                            disabled={isRegenerating}
-                                            onPress={() => handleRegenerateMealProposal(dayIndex, mealIndex)}
-                                        >
-                                            {isRegenerating ? (
-                                                <ActivityIndicator size="small" color="#a6f000" />
-                                            ) : (
-                                                <Text style={{color: 'white', fontSize: 12, fontWeight: 'bold'}}>
-                                                    {language === 'en' ? 'Swap' : 'Trocar'}
+                                            <View style={{ flex: 1, paddingRight: 12 }}>
+                                                <Text style={{ color: '#9CA3AF', fontSize: 12, fontWeight: 'bold', marginBottom: 4 }}>{mealSlot.timeSlot.toUpperCase()}</Text>
+                                                <Text style={{ color: 'white', fontSize: 16, fontWeight: '600', marginBottom: 4 }}>
+                                                    {mealSlot.recipe?.name || (language === 'en' ? 'Unplanned' : 'Não planejado')}
                                                 </Text>
-                                            )}
-                                        </TouchableOpacity>
-                                    </View>
-                                );
-                            })}
-                        </View>
-                    ))}
+                                                <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                                                    <Text style={{ color: '#D1D5DB', fontSize: 12 }}>🔥 {mealSlot.recipe?.macros?.calories || 0} kcal</Text>
+                                                    <Text style={{ color: '#D1D5DB', fontSize: 12 }}>⏱️ {mealSlot.recipe?.prepTime || '--'}</Text>
+                                                </View>
+                                            </View>
+                                            <TouchableOpacity
+                                                style={{
+                                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                                    borderRadius: 20,
+                                                    paddingHorizontal: 16,
+                                                    paddingVertical: 8,
+                                                    opacity: isRegenerating ? 0.5 : 1
+                                                }}
+                                                disabled={isRegenerating}
+                                                onPress={() => handleRegenerateMealProposal(dayIndex, mealIndex)}
+                                            >
+                                                {isRegenerating ? (
+                                                    <ActivityIndicator size="small" color="#a6f000" />
+                                                ) : (
+                                                    <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>
+                                                        {language === 'en' ? 'Swap' : 'Trocar'}
+                                                    </Text>
+                                                )}
+                                            </TouchableOpacity>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        ))}
                 </ScrollView>
 
                 {/* Fixed bottom validation floating button */}
@@ -1691,7 +1691,7 @@ export const MainScreen = ({
                         }}
                         onPress={handleApproveAllMeals}
                     >
-                        <Text style={{color: 'black', fontSize: 16, fontWeight: 'bold'}}>
+                        <Text style={{ color: 'black', fontSize: 16, fontWeight: 'bold' }}>
                             {language === 'en' ? 'Approve All Meals' : 'Aprovar Todas as Refeições'}
                         </Text>
                     </TouchableOpacity>
@@ -1733,7 +1733,7 @@ export const MainScreen = ({
                             {(() => {
                                 const daysOfWeekPt = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
                                 const daysOfWeekEn = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-                                
+
                                 return Array.from({ length: 7 }).map((_, idx) => {
                                     const day = weeklyPlan.days[idx];
                                     const dayName = language === 'en' ? daysOfWeekEn[idx] : daysOfWeekPt[idx];
@@ -1887,8 +1887,8 @@ export const MainScreen = ({
                                     {language === 'en' ? 'Enjoying your Magic Monday? 💫' : 'Gostou da sua Segunda-feira Mágica? 💫'}
                                 </Text>
                                 <Text style={{ color: '#9CA3AF', fontSize: 13, textAlign: 'center', lineHeight: 18, marginBottom: 16 }}>
-                                    {language === 'en' 
-                                        ? 'Unlock the rest of the week (Tuesday to Sunday) and the consolidated Shopping List with Fitswap Pro.' 
+                                    {language === 'en'
+                                        ? 'Unlock the rest of the week (Tuesday to Sunday) and the consolidated Shopping List with Fitswap Pro.'
                                         : 'Desbloqueie o restante da semana (Terça a Domingo) e a Lista de Compras consolidada com o Fitswap Pro.'}
                                 </Text>
                                 <TouchableOpacity
@@ -1934,14 +1934,14 @@ export const MainScreen = ({
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>{language === 'en' ? 'Shopping List' : 'Lista de Compras'}</Text>
                         <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={async () => {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                     setShowShoppingList(false);
                                     setTimeout(() => {
                                         handleCreateShoppingList();
                                     }, 400);
-                                }} 
+                                }}
                                 style={{ padding: 4 }}
                             >
                                 <RefreshIcon size={20} color="#4B5563" />
@@ -2161,8 +2161,8 @@ export const MainScreen = ({
                     {userProfile?.tasteProfile?.favoriteFoods && userProfile.tasteProfile.favoriteFoods.length > 0 && (
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
                             {userProfile.tasteProfile.favoriteFoods.slice(0, 3).map((food, i) => (
-                                <View key={i} style={[styles.tasteMiniChip, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', borderWidth: 1 }]}>
-                                    <Text style={[styles.tasteMiniChipText, { color: '#15803d' }]}>{food}</Text>
+                                <View key={i} style={styles.profileTasteChip}>
+                                    <Text style={styles.profileTasteChipText}>{food}</Text>
                                 </View>
                             ))}
                             {userProfile.tasteProfile.favoriteFoods.length > 3 && (
@@ -2444,8 +2444,8 @@ export const MainScreen = ({
                 status={loadingStatus || loadingMsg}
                 personalizationText={
                     userProfile?.goal === 'LOSE_WEIGHT' ? (language === 'en' ? 'Adapting to: Weight Loss' : 'Adaptando para: Emagrecimento') :
-                    userProfile?.goal === 'GAIN_MUSCLE' ? (language === 'en' ? 'Goal: High Protein' : 'Meta: Alta Proteína') :
-                    (language === 'en' ? 'Adapting to: Healthy Lifestyle' : 'Adaptando para: Vida Saudável')
+                        userProfile?.goal === 'GAIN_MUSCLE' ? (language === 'en' ? 'Goal: High Protein' : 'Meta: Alta Proteína') :
+                            (language === 'en' ? 'Adapting to: Healthy Lifestyle' : 'Adaptando para: Vida Saudável')
                 }
             />
             {showPlanningWizard && (
@@ -2922,15 +2922,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: 'rgba(166,240,0,0.1)',
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
         borderWidth: 1,
-        borderColor: 'rgba(166,240,0,0.3)',
+        borderColor: 'rgba(255, 255, 255, 0.15)',
         borderRadius: 20,
         paddingHorizontal: 14,
         paddingVertical: 8,
     },
     desireAttachText: {
-        color: '#a6f000',
+        color: '#E5E7EB',
         fontSize: 13,
         fontWeight: '600',
     },
@@ -3319,6 +3319,24 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
         color: '#065F46',
+    },
+    profileTasteChip: {
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        backgroundColor: '#DCFCE7',
+        borderRadius: 10,
+        borderWidth: 1.5,
+        borderColor: '#22C55E',
+        shadowColor: '#16A34A',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
+        elevation: 1,
+    },
+    profileTasteChipText: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: '#166534',
     },
     // Legacy — still used by Library tab
     statsContainer: {

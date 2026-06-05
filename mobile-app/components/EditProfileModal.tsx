@@ -303,7 +303,7 @@ export const EditProfileModal = ({
                     <View key={index} style={styles.favoriteFoodChip}>
                       <Text style={styles.favoriteFoodText}>{item}</Text>
                       <TouchableOpacity onPress={() => removeFavoriteFood(item)}>
-                        <CloseIcon size={12} color="#15803d" />
+                        <CloseIcon size={12} color="#166534" />
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -540,14 +540,19 @@ const styles = StyleSheet.create({
     paddingLeft: 14,
     paddingRight: 10,
     paddingVertical: 8,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#DCFCE7',
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderWidth: 1.5,
+    borderColor: '#22C55E',
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 1,
   },
   favoriteFoodText: {
-    color: '#15803d',
-    fontWeight: '600' as const,
+    color: '#166534',
+    fontWeight: '800' as const,
     fontSize: 14,
   },
 });

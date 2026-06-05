@@ -203,7 +203,7 @@ export const identifyIngredientsFromImage = async (
     try {
         onProgress?.(lang.progress.sendingImage, 0.2);
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
             contents: [{
                 parts: [
                     {
@@ -441,7 +441,7 @@ export const generateFitnessRecipe = async (
     try {
         onProgress?.(lang.progress.analyzing, 0.3);
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
             contents: [{ parts: contentParts }],
             config: {
                 responseMimeType: "application/json",
@@ -548,7 +548,7 @@ export const generateQuickDecision = async (
 
     try {
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
             contents: [{ text: prompt }],
             config: {
                 responseMimeType: "application/json",
@@ -640,7 +640,7 @@ export const analyzeRoutine = async (
 
     try {
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
             contents: [{ text: prompt }],
             config: {
                 responseMimeType: "application/json",
@@ -696,7 +696,7 @@ export const analyzeMealImage = async (
 
     try {
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
             contents: [{
                 parts: [
                     { inlineData: { data: base64Image, mimeType: "image/jpeg" } },
@@ -816,7 +816,7 @@ export const generateWeeklyPlan = async (
 
     try {
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
             contents: [{ text: prompt }],
             config: {
                 responseMimeType: "application/json",
@@ -887,7 +887,7 @@ export const generateSingleMealProposal = async (
 
     try {
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
             contents: [{ text: prompt }],
             config: {
                 responseMimeType: "application/json",
@@ -984,7 +984,7 @@ export const generateShoppingList = async (
 
     try {
         const response = await retryOperation(() => callBackend('/api/generate-recipe', {
-            model: "gemini-2.0-flash",
+            model: "gemini-2.5-flash",
             contents: [{ text: prompt }],
             config: {
                 responseMimeType: "application/json",
