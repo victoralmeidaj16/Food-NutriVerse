@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Animated, Dimensions, Easing, Image } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
-import { SparklesIcon } from './Icons';
+import { SparklesIcon, ActivityIcon, FileTextIcon, LightbulbIcon, ChefHatIcon } from './Icons';
 
 const { width, height } = Dimensions.get('window');
 
@@ -98,6 +98,41 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
 
     const displayPercentage = Math.min(100, Math.round(animatedProgress * 100));
 
+    const steps = [
+        {
+            key: 1,
+            title: language === 'en' ? 'Goal identified' : 'Objetivo identificado',
+            description: language === 'en' ? 'Adjusting to your current focus' : 'Ajustando ao seu foco atual',
+            icon: <ActivityIcon size={16} color={animatedProgress >= 0.25 ? "#a6f000" : "#4B5563"} />,
+            completed: animatedProgress >= 0.25,
+            active: animatedProgress < 0.25,
+        },
+        {
+            key: 2,
+            title: language === 'en' ? 'Recipe analyzed' : 'Receita analisada',
+            description: language === 'en' ? 'Understanding taste, ingredients, and prep' : 'Entendendo sabor, ingredientes e preparo',
+            icon: <FileTextIcon size={16} color={animatedProgress >= 0.55 ? "#a6f000" : (animatedProgress >= 0.25 ? "#000" : "#4B5563")} />,
+            completed: animatedProgress >= 0.55,
+            active: animatedProgress >= 0.25 && animatedProgress < 0.55,
+        },
+        {
+            key: 3,
+            title: language === 'en' ? 'Smart version' : 'Versão inteligente',
+            description: language === 'en' ? 'Adapting for balance and results' : 'Adaptando para equilíbrio e resultado',
+            icon: <LightbulbIcon size={16} color={animatedProgress >= 0.85 ? "#a6f000" : (animatedProgress >= 0.55 ? "#000" : "#4B5563")} />,
+            completed: animatedProgress >= 0.85,
+            active: animatedProgress >= 0.55 && animatedProgress < 0.85,
+        },
+        {
+            key: 4,
+            title: language === 'en' ? 'Finalizing' : 'Finalizando',
+            description: language === 'en' ? 'Organizing everything into a simple recipe' : 'Organizando tudo em uma receita simples',
+            icon: <ChefHatIcon size={16} color={animatedProgress >= 0.98 ? "#a6f000" : (animatedProgress >= 0.85 ? "#000" : "#4B5563")} />,
+            completed: animatedProgress >= 0.98,
+            active: animatedProgress >= 0.85 && animatedProgress < 0.98,
+        },
+    ];
+
     return (
         <Modal transparent visible={visible} animationType="fade">
             <View style={styles.container}>
@@ -154,6 +189,54 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
                     {/* Status Display */}
                     <View style={[styles.statusBox, { opacity: animatedProgress >= 0.05 ? 1 : 0 }]}>
                         <Text style={styles.statusText}>{status.toUpperCase()}</Text>
+                    </View>
+
+                    {/* Checklist Timeline */}
+                    <View style={[styles.timelineContainer, { opacity: animatedProgress >= 0.05 ? 1 : 0 }]}>
+                        {/* Connective Line */}
+                        <View style={styles.timelineLine} />
+                        
+                        {steps.map((stepItem, index) => {
+                            return (
+                                <View key={stepItem.key} style={styles.timelineRow}>
+                                    {/* Left Circle Icon */}
+                                    <View style={[
+                                        styles.iconCircle,
+                                        stepItem.active && styles.iconCircleActive,
+                                        stepItem.completed && styles.iconCircleCompleted
+                                    ]}>
+                                        {stepItem.icon}
+                                    </View>
+                                    
+                                    {/* Text Info */}
+                                    <View style={styles.textContainer}>
+                                        <Text style={[
+                                            styles.stepTitle,
+                                            stepItem.completed && styles.stepTextCompleted,
+                                            stepItem.active && styles.stepTextActive
+                                        ]}>
+                                            {stepItem.title}
+                                        </Text>
+                                        <Text style={styles.stepDesc}>
+                                            {stepItem.description}
+                                        </Text>
+                                    </View>
+                                    
+                                    {/* Right Indicator Status */}
+                                    <View style={styles.indicatorContainer}>
+                                        {stepItem.completed ? (
+                                            <View style={styles.greenCheckCircle}>
+                                                <Text style={styles.checkMark}>✓</Text>
+                                            </View>
+                                        ) : stepItem.active ? (
+                                            <View style={styles.activeDot} />
+                                        ) : (
+                                            <View style={styles.inactiveDot} />
+                                        )}
+                                    </View>
+                                </View>
+                            );
+                        })}
                     </View>
 
                     {/* Progress Bar */}
@@ -355,5 +438,95 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '700',
         color: '#374151',
+    },
+    timelineContainer: {
+        width: '100%',
+        paddingHorizontal: 8,
+        marginBottom: 28,
+        position: 'relative',
+    },
+    timelineLine: {
+        position: 'absolute',
+        left: 27,
+        top: 20,
+        bottom: 20,
+        width: 2,
+        backgroundColor: '#E5E7EB',
+    },
+    timelineRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    iconCircle: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: 'white',
+        borderWidth: 1.5,
+        borderColor: '#E5E7EB',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10,
+    },
+    iconCircleActive: {
+        borderColor: '#a6f000',
+        shadowColor: '#a6f000',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    iconCircleCompleted: {
+        borderColor: '#E5E7EB',
+    },
+    textContainer: {
+        flex: 1,
+        paddingLeft: 12,
+    },
+    stepTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#9CA3AF',
+    },
+    stepTextCompleted: {
+        color: '#1F2937',
+    },
+    stepTextActive: {
+        color: '#000000',
+    },
+    stepDesc: {
+        fontSize: 12,
+        color: '#9CA3AF',
+        marginTop: 2,
+    },
+    indicatorContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 24,
+    },
+    greenCheckCircle: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: '#a6f000',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkMark: {
+        color: 'black',
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    activeDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#a6f000',
+    },
+    inactiveDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#E5E7EB',
     }
 });
