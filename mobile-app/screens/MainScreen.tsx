@@ -3323,20 +3323,15 @@ const styles = StyleSheet.create({
     profileTasteChip: {
         paddingHorizontal: 10,
         paddingVertical: 6,
-        backgroundColor: '#DCFCE7',
+        backgroundColor: '#F3F4F6',
         borderRadius: 10,
-        borderWidth: 1.5,
-        borderColor: '#22C55E',
-        shadowColor: '#16A34A',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.12,
-        shadowRadius: 4,
-        elevation: 1,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
     },
     profileTasteChipText: {
         fontSize: 12,
-        fontWeight: '800',
-        color: '#166534',
+        fontWeight: '600',
+        color: '#1F2937',
     },
     // Legacy — still used by Library tab
     statsContainer: {
