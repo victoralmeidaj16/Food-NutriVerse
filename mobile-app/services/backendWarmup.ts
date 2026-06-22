@@ -1,4 +1,4 @@
-import { BACKEND_URL } from './config';
+import { BACKEND_URL, IS_VERCEL_BACKEND } from './config';
 
 const WARMUP_INTERVAL_MS = 10 * 60 * 1000;
 const WARMUP_TIMEOUT_MS = 15000;
@@ -6,6 +6,12 @@ const WARMUP_TIMEOUT_MS = 15000;
 let lastWarmupAt = 0;
 
 export const warmBackendIfNeeded = async () => {
+    // Vercel functions have no server-wide spin-down, so there is nothing to
+    // warm up — skip the ping entirely once we're off Render.
+    if (IS_VERCEL_BACKEND) {
+        return;
+    }
+
     const now = Date.now();
     if (now - lastWarmupAt < WARMUP_INTERVAL_MS) {
         return;

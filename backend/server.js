@@ -468,7 +468,13 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// Only start a long-running server when executed directly (local dev / Render).
+// On Vercel the app is imported as a serverless handler, so we just export it.
+if (require.main === module) {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+}
+
+module.exports = app;
