@@ -7,7 +7,8 @@
       "Bash(git push:*)",
       "Bash(ls /Users/victoralmeidaj16/Downloads/Food-NutriVerse/mobile-app/ios/*.xcworkspace)",
       "Bash(open /Users/victoralmeidaj16/Downloads/Food-NutriVerse/mobile-app/ios/Fitswap.xcworkspace)",
-      "Bash(npx expo:*)"
+      "Bash(npx expo:*)",
+      "Bash(grep -n \"R\\\\$\\\\|price\\\\|99\\\\|49\\\\|19\\\\|29\\\\|/mês\\\\|/ano\\\\|monthly\\\\|yearly\\\\|trial\\\\|grátis\\\\|dias\" screens/PaywallScreen.tsx)"
     ]
   }
 }

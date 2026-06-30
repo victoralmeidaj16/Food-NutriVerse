@@ -172,8 +172,20 @@ const resolveSubscriptionFromAppleResponse = (responseData, appleConfig) => {
     return candidates[0];
 };
 
-// Initialize Gemini (new SDK)
-const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+// Initialize Gemini lazily so health/status routes still work before secrets
+// are configured in a new deployment environment.
+let genAI;
+const getGenAI = () => {
+    if (!process.env.GOOGLE_API_KEY) {
+        return null;
+    }
+
+    if (!genAI) {
+        genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+    }
+
+    return genAI;
+};
 
 // Root route - API Documentation/Status
 app.get('/', (req, res) => {
@@ -351,6 +363,7 @@ app.post('/api/generate-recipe', async (req, res) => {
             console.error('GOOGLE_API_KEY is missing');
             return res.status(500).json({ error: 'API Key not configured on server' });
         }
+        const ai = getGenAI();
 
         if (!contents) {
             console.error('Missing contents');
@@ -382,7 +395,7 @@ app.post('/api/generate-recipe', async (req, res) => {
             if (config.responseSchema) generationConfig.responseSchema = config.responseSchema;
         }
 
-        const response = await genAI.models.generateContent({
+        const response = await ai.models.generateContent({
             model: resolvedModel,
             contents: normalizedContents,
             config: Object.keys(generationConfig).length > 0 ? generationConfig : undefined
@@ -410,6 +423,7 @@ app.post('/api/generate-image', async (req, res) => {
             console.error('GOOGLE_API_KEY is missing');
             return res.status(500).json({ error: 'API Key not configured on server' });
         }
+        const ai = getGenAI();
 
         if (!prompt) {
             return res.status(400).json({ error: 'prompt is required' });
@@ -425,7 +439,7 @@ app.post('/api/generate-image', async (req, res) => {
             minimalist and modern presentation
         `;
 
-        const response = await genAI.models.generateContent({
+        const response = await ai.models.generateContent({
             model: 'gemini-3-pro-image-preview',
             contents: enhancedPrompt,
             config: {

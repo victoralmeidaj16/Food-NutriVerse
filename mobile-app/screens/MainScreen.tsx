@@ -342,9 +342,8 @@ export const MainScreen = ({
             setPantryImages(prev => [...prev, result.assets[0].uri]);
             setShowPantryPreview(true);
 
-            // Increment usage removed
-            // const updatedProfile = SubscriptionService.incrementPantryScan(userProfile);
-            // onUpdateProfile(updatedProfile);
+            // Count this scan against the free quota (no-op for pro users).
+            onUpdateProfile(SubscriptionService.incrementPantryScan(userProfile));
         }
     };
 
@@ -404,6 +403,9 @@ export const MainScreen = ({
         if (!result.canceled && result.assets[0].uri) {
             setPantryImages(prev => [...prev, result.assets[0].uri]);
             setShowPantryPreview(true);
+
+            // Count this scan against the free quota (no-op for pro users).
+            onUpdateProfile(SubscriptionService.incrementPantryScan(userProfile));
         }
     };
 
@@ -547,20 +549,21 @@ export const MainScreen = ({
     const handleSaveRecipe = async (recipe: Recipe) => {
         if (!userProfile) return;
 
-        // Check Subscription Limit
-        if (!SubscriptionService.canSaveRecipe(userProfile)) {
+        const alreadySaved = savedRecipes.has(recipe.id);
+
+        // Enforce the free quota only when adding a new save; unsaving is always allowed.
+        if (!alreadySaved && !userProfile.isPro &&
+            savedRecipes.size >= SubscriptionService.LIMITS.FREE.SAVED_RECIPES) {
             onShowPaywall();
             return;
         }
 
-        // Proceed with saving
+        // Proceed with toggling the save state
         onToggleSave(recipe);
 
-        // Increment usage removed
-        // const updatedProfile = SubscriptionService.incrementSavedRecipes(userProfile);
-        // onUpdateProfile(updatedProfile);
-
-        showToast(t('messages.recipeSaved'));
+        if (!alreadySaved) {
+            showToast(t('messages.recipeSaved'));
+        }
     };
     const handleGenerateRecipe = async (overrideInput?: string | any) => {
         // overrideInput may be an event object if called directly from onPress without an arrow function, so we check if it's a string
@@ -593,9 +596,14 @@ export const MainScreen = ({
             plan: 'FREE' as any
         };
 
-        // Check Subscription Limit
+        // Check Subscription Limit — a "desire" is a text-mode generation with
+        // attached food images; otherwise it counts against the recipe quota.
+        const isDesire = !explicitInput && exploreMode === 'TEXT' && desireImages.length > 0;
         console.log('✅ Profile created:', profile);
-        if (!SubscriptionService.canGenerateRecipe(profile)) {
+        const allowed = isDesire
+            ? SubscriptionService.canTransformDesire(profile)
+            : SubscriptionService.canGenerateRecipe(profile);
+        if (!allowed) {
             console.log('❌ Subscription limit reached');
             onShowPaywall();
             return;
@@ -662,6 +670,15 @@ export const MainScreen = ({
                 onRecipeClick(result); // Open immediately
                 setDishInput('');
                 setDesireImages([]);
+
+                // Count this generation against the free quota (no-op for pro users).
+                if (userProfile) {
+                    const updatedProfile = isDesire
+                        ? SubscriptionService.incrementDesireCount(userProfile)
+                        : SubscriptionService.incrementRecipeCount(userProfile);
+                    onUpdateProfile(updatedProfile);
+                }
+
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } else {
                 Alert.alert(t('common.error'), t('errors.recipeGenerationFailed'));

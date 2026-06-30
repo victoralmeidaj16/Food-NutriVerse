@@ -88,9 +88,9 @@ const callBackend = async (
     try {
         // Create abort controller for timeout.
         // Render free tier: 120s to absorb cold starts (can take 50-60s).
-        // Vercel: no server-wide cold start, functions are capped at 60s, so 65s.
+        // Vercel: no Render-style server sleep, but AI calls can still be slow.
         // Development: 60s.
-        const timeoutDuration = !isProduction ? 60000 : (IS_VERCEL_BACKEND ? 65000 : 120000);
+        const timeoutDuration = !isProduction ? 60000 : 120000;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
 

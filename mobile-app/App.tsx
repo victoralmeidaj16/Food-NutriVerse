@@ -140,7 +140,9 @@ export default function App() {
                         pendingProfileRef.current = null;
                         setPendingProfile(null);
                         setSignupMessage('');
-                        setCurrentScreen('PAYWALL');
+                        // Freemium: free users go straight into the app and use it
+                        // until they hit a LIMITS.FREE quota, which then shows the paywall.
+                        setCurrentScreen('MAIN');
                         return;
                     }
 
@@ -149,7 +151,9 @@ export default function App() {
                     );
                     setPendingProfile(null);
                     setSignupMessage('');
-                    setCurrentScreen(effectiveProfile?.isPro ? 'MAIN' : 'PAYWALL');
+                    // Freemium: both free and pro users land in the app; the paywall
+                    // is shown on demand when a free user exceeds their quota.
+                    setCurrentScreen('MAIN');
                 } else {
                     clearUserData();
                     setPendingProfile(null);
@@ -184,7 +188,9 @@ export default function App() {
         signupFlowActiveRef.current = true;
         setPendingProfile(profile);
         setSignupMessage('Crie sua conta para salvar seu plano!');
-        setCurrentScreen('SIGNUP');
+        // Show the paywall as the final onboarding step (before login/signup).
+        // Closing it (allowed after a short delay) continues to signup as a free user.
+        setCurrentScreen('PAYWALL');
     };
 
     const renderScreen = () => {
@@ -204,11 +210,10 @@ export default function App() {
                                 const effectiveProfile = await reconcileAppleSubscription(
                                     auth.currentUser.uid, loadedProfile, DEFAULT_PROFILE
                                 );
-                                if (effectiveProfile?.isPro || auth.currentUser.email === '123indiozinhos@gmail.com') {
-                                    setCurrentScreen('MAIN');
-                                } else {
-                                    setCurrentScreen('PAYWALL');
-                                }
+                                // Freemium: everyone enters the app after login; quota
+                                // enforcement happens inside the app via the paywall.
+                                void effectiveProfile;
+                                setCurrentScreen('MAIN');
                             }
                         }}
                     />
@@ -269,7 +274,11 @@ export default function App() {
                             }
                             setCurrentScreen('LOGIN');
                         }}
-                        onClose={() => console.log('Paywall closed')}
+                        onClose={() => {
+                            // Onboarding flow (no account yet) → continue to signup as free.
+                            // On-demand (logged-in user hit a quota) → back to the app.
+                            setCurrentScreen(getAuthenticatedUser() ? 'MAIN' : 'SIGNUP');
+                        }}
                         onLogin={() => setCurrentScreen('LOGIN')}
                     />
                 );

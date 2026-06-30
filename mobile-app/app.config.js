@@ -5,7 +5,7 @@ module.exports = {
         name: "Fitswap",
         slug: "mobile-app",
         scheme: "fitswap",
-        version: "1.4.7",
+        version: "1.4.9",
         orientation: "portrait",
         icon: "./assets/icon.png",
         userInterfaceStyle: "light",
@@ -18,7 +18,7 @@ module.exports = {
         ios: {
             supportsTablet: true,
             bundleIdentifier: "com.victoralmeidaj16.foodnutriverse",
-            buildNumber: "39",
+            buildNumber: "41",
             infoPlist: {
                 NSCameraUsageDescription: "Precisamos de acesso à câmera para você escanear ingredientes e gerar receitas personalizadas.",
                 NSPhotoLibraryUsageDescription: "Precisamos de acesso à galeria para você escolher fotos de ingredientes para análise.",
@@ -31,9 +31,14 @@ module.exports = {
                 backgroundColor: "#ffffff"
             },
             package: "com.victoralmeidaj16.foodnutriverse",
-            versionCode: 39,
+            versionCode: 41,
             edgeToEdgeEnabled: true,
-            predictiveBackGestureEnabled: false
+            predictiveBackGestureEnabled: false,
+            permissions: [
+                "CAMERA",
+                "READ_EXTERNAL_STORAGE",
+                "WRITE_EXTERNAL_STORAGE"
+            ]
         },
         web: {
             favicon: "./assets/favicon.png"
@@ -44,7 +49,8 @@ module.exports = {
             },
             apiKey: process.env.API_KEY,
             openaiApiKey: process.env.OPENAI_API_KEY,
-            googleApiKey: process.env.GOOGLE_API_KEY
+            googleApiKey: process.env.GOOGLE_API_KEY,
+            backendUrl: process.env.EXPO_PUBLIC_BACKEND_URL
         },
         description: "Fitswap: Transforme seus ingredientes em receitas fitness deliciosas com IA. Escaneie alimentos, gere planos semanais e listas de compras personalizadas.",
         privacy: "https://victoralmeidaj16.github.io/Food-NutriVerse/privacy-policy.html",

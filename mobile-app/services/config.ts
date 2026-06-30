@@ -9,16 +9,14 @@ export const API_KEY = extra.apiKey || '';
 export const OPENAI_API_KEY = extra.openaiApiKey || '';
 export const GOOGLE_API_KEY = extra.googleApiKey || '';
 
-// Dynamic Backend URL:
-// ┌─────────────────────────────────────────────────────────────────────┐
-// │ CUTOVER: after deploying the backend to Vercel, switch the line below │
-// │ to the Vercel URL. Render can stay as a fallback during the rollout.  │
-// └─────────────────────────────────────────────────────────────────────┘
-const RENDER_BACKEND_URL = 'https://food-nutriverse.onrender.com';
-// const VERCEL_BACKEND_URL = 'https://<your-project>.vercel.app';
+// Dynamic Backend URL. EXPO_PUBLIC_BACKEND_URL can still override this for
+// emergency rollback or staging builds, but production now defaults to Vercel.
+const VERCEL_BACKEND_URL = 'https://food-nutriverse-backend.vercel.app';
 
-export const BACKEND_URL = RENDER_BACKEND_URL;
+const configuredBackendUrl = extra.backendUrl || '';
 
-// True once we are off Render (Vercel has no 30-60s cold start, so the warmup
-// ping and the long cold-start timeout/messages can be relaxed).
+export const BACKEND_URL = configuredBackendUrl || VERCEL_BACKEND_URL;
+
+// True once we are off Render (Vercel has no Render-style server sleep, so the
+// warmup ping and cold-start copy can be skipped).
 export const IS_VERCEL_BACKEND = BACKEND_URL.includes('vercel.app');
