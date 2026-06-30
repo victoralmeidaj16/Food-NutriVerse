@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Alert, ActivityIndicator, Linking } from 'react-native';
-import { CheckIcon, SparklesIcon } from '../components/Icons';
+import { CheckIcon, SparklesIcon, CloseIcon } from '../components/Icons';
 import * as Haptics from 'expo-haptics';
 import { iapService, PRODUCT_IDS, PurchaseResult } from '../services/iapService';
 import { useLanguage } from '../context/LanguageContext';
@@ -12,6 +12,8 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
     const [selectedPlan, setSelectedPlan] = useState<'YEARLY' | 'MONTHLY'>('YEARLY'); // kept for future plan toggle UI
     const [loading, setLoading] = useState(false);
     const [productsLoaded, setProductsLoaded] = useState(false);
+    // The close button only becomes available 4 seconds after the paywall opens.
+    const [canClose, setCanClose] = useState(false);
 
     // Benefits list - translated
     const benefits = language === 'en' ? [
@@ -51,6 +53,11 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
 
     useEffect(() => {
         void initProducts();
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setCanClose(true), 4000);
+        return () => clearTimeout(timer);
     }, []);
 
     const handlePurchase = async (productId: string) => {
@@ -133,7 +140,13 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* Close button removed */}
+            {canClose && (
+                <View style={styles.closeButtonContainer}>
+                    <TouchableOpacity style={styles.closeButton} onPress={onClose} disabled={loading}>
+                        <CloseIcon size={20} color="#4B5563" />
+                    </TouchableOpacity>
+                </View>
+            )}
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.header}>
                     <View style={styles.iconContainer}>

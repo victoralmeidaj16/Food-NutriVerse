@@ -3,6 +3,24 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = 'user_profile';
 
+// --- Usage window helpers (mirror the reset logic used by the incrementX functions) ---
+
+const dayKey = (iso?: string): string => (iso || '').split('T')[0];
+
+const daysSince = (iso?: string): number => {
+    if (!iso) return Infinity;
+    const diff = Math.abs(Date.now() - new Date(iso).getTime());
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+};
+
+// Daily counter: resets when the stored date is not today.
+const effectiveDailyCount = (count: number, lastDate?: string): number =>
+    dayKey(lastDate) === dayKey(new Date().toISOString()) ? count : 0;
+
+// Weekly counter: resets after 7 days (matches `diffDays > 7` in incrementX).
+const effectiveWeeklyCount = (count: number, lastDate?: string): number =>
+    daysSince(lastDate) > 7 ? 0 : count;
+
 export const SubscriptionService = {
     // Limits
     LIMITS: {
@@ -15,26 +33,42 @@ export const SubscriptionService = {
         }
     },
 
-    // Checkers
-    // Checkers
+    // Checkers — free users are allowed until they hit the LIMITS.FREE quota.
     canGenerateRecipe: (profile: UserProfile): boolean => {
-        return profile.isPro;
+        if (profile.isPro) return true;
+        return effectiveDailyCount(
+            profile.usageStats.recipesGeneratedToday,
+            profile.usageStats.lastGenerationDate
+        ) < SubscriptionService.LIMITS.FREE.RECIPES_PER_DAY;
     },
 
     canTransformDesire: (profile: UserProfile): boolean => {
-        return profile.isPro;
+        if (profile.isPro) return true;
+        return effectiveDailyCount(
+            profile.usageStats.desiresTransformedToday,
+            profile.usageStats.lastDesireDate
+        ) < SubscriptionService.LIMITS.FREE.DESIRES_PER_DAY;
     },
 
     canSaveRecipe: (profile: UserProfile): boolean => {
-        return profile.isPro;
+        if (profile.isPro) return true;
+        return profile.usageStats.savedRecipesCount < SubscriptionService.LIMITS.FREE.SAVED_RECIPES;
     },
 
     canScanPantry: (profile: UserProfile): boolean => {
-        return profile.isPro;
+        if (profile.isPro) return true;
+        return effectiveWeeklyCount(
+            profile.usageStats.pantryScansThisWeek,
+            profile.usageStats.lastScanDate
+        ) < SubscriptionService.LIMITS.FREE.PANTRY_SCANS_PER_WEEK;
     },
 
     canGenerateWeeklyPlan: (profile: UserProfile): boolean => {
-        return profile.isPro || !profile.usageStats.weeklyPlansGeneratedThisWeek || profile.usageStats.weeklyPlansGeneratedThisWeek === 0;
+        if (profile.isPro) return true;
+        return effectiveWeeklyCount(
+            profile.usageStats.weeklyPlansGeneratedThisWeek || 0,
+            profile.usageStats.lastPlanGenerationDate
+        ) < SubscriptionService.LIMITS.FREE.WEEKLY_PLANS_PER_WEEK;
     },
 
     // Actions (Return updated profile)

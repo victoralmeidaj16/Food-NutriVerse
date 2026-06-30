@@ -1,7 +1,7 @@
 import { randomUUID } from 'expo-crypto';
 import { UserGoal, Recipe, UserProfile, WeeklyPlan, ShoppingList, ShoppingItem, QuickDecision, RoutineMeal, MapaAlimentarResult, TasteProfile } from "../types";
 import { generateAndSaveImage, getImageUrl } from './imageService';
-import { BACKEND_URL } from './config';
+import { BACKEND_URL, IS_VERCEL_BACKEND } from './config';
 import { mapHealthTipToReference } from './healthReferences';
 
 // Language type for i18n support
@@ -86,21 +86,24 @@ const callBackend = async (
     const isProduction = !BACKEND_URL.includes('localhost') && !BACKEND_URL.includes('192.168');
 
     try {
-        // Create abort controller for timeout
-        // Production (Render free tier): 120s to handle cold starts (can take up to 50-60s)
-        // Development: 60s
-        const timeoutDuration = isProduction ? 120000 : 60000;
+        // Create abort controller for timeout.
+        // Render free tier: 120s to absorb cold starts (can take 50-60s).
+        // Vercel: no Render-style server sleep, but AI calls can still be slow.
+        // Development: 60s.
+        const timeoutDuration = !isProduction ? 60000 : 120000;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
 
-        // Show cold start message if in production
+        // Show the cold-start message only on Render, where it actually happens.
         if (isProduction && onProgress) {
             onProgress(lang.progress.connecting, 0.05);
 
-            // After 5 seconds, show cold start message
-            setTimeout(() => {
-                onProgress(lang.progress.coldStart, 0.1);
-            }, 5000);
+            if (!IS_VERCEL_BACKEND) {
+                // After 5 seconds, show cold start message
+                setTimeout(() => {
+                    onProgress(lang.progress.coldStart, 0.1);
+                }, 5000);
+            }
         }
 
         const response = await fetch(`${BACKEND_URL}${endpoint}`, {
@@ -727,22 +730,18 @@ export const analyzeMealImage = async (
 
 // --- Weekly Planning Services ---
 
-export const generateWeeklyPlan = async (
+// Generates a SINGLE day of the plan. Each day is its own backend request, so
+// no single call carries the whole week — keeping every request comfortably
+// under serverless time limits (~6s/day vs ~44s for a full week in one shot).
+const generateDayPlan = async (
     userProfile: UserProfile,
-    preference: string, // "Cheap", "Fast", "Varied", etc.
-    mealsCount: number = 3,
-    allowRepeats: boolean = false,
-    language: SupportedLanguage = 'pt'
-): Promise<WeeklyPlan | null> => {
+    preference: string,
+    mealsCount: number,
+    dayName: string,
+    avoidDishes: string[],
+    language: SupportedLanguage
+): Promise<{ dayName: string; meals: any[] } | null> => {
     const lang = AI_PROMPTS[language];
-
-    const repeatInstruction = language === 'en'
-        ? (allowRepeats
-            ? "The user PREFERS to repeat meals for practicality (e.g. Monday's dinner becomes Tuesday's lunch). Repeat dishes strategically."
-            : "The user prefers maximum variety. Avoid repeating the same dish.")
-        : (allowRepeats
-            ? "O usuário PREFERE repetir refeições para praticidade (ex: jantar de segunda vira almoço de terça). Repita pratos estrategicamente."
-            : "O usuário prefere variedade máxima. Evite repetir o mesmo prato.");
 
     const taste = userProfile.tasteProfile;
     const tasteContextEn = taste ? [
@@ -759,59 +758,55 @@ export const generateWeeklyPlan = async (
         taste.usualEatingHabits ? `Hábitos alimentares: ${taste.usualEatingHabits}` : '',
     ].filter(Boolean).join('\n      ') : '';
 
+    const avoidInstruction = avoidDishes.length > 0
+        ? (language === 'en'
+            ? `Do NOT repeat these dishes already used earlier in the week: ${avoidDishes.join(', ')}.`
+            : `NÃO repita estes pratos já usados em outros dias da semana: ${avoidDishes.join(', ')}.`)
+        : '';
+
     const prompt = language === 'en' ? `
-      Create a ${userProfile.isPro ? 'weekly meal plan (Monday to Sunday)' : 'trial 1-day meal plan (Monday only)'} for a user with the following profile:
+      Create the meal plan for ONE day (${dayName}) for a user with the following profile:
       Goal: ${userProfile.goal}
-      Meals per day: ${mealsCount} (Generate exactly this amount of slots per day)
+      Meals for the day: ${mealsCount} (Generate exactly this amount of meal slots)
       Restrictions: ${userProfile.dietaryRestrictions.join(', ') || 'None'}
       Dislikes: ${userProfile.dislikes.join(', ') || 'None'}
       Week preference: ${preference}
       ${tasteContextEn ? `Taste profile:\n      ${tasteContextEn}` : ''}
-      Repetition Strategy: ${repeatInstruction}
+      ${avoidInstruction}
 
       Use the taste profile to suggest dishes that align with the user's preferences.
-      Generate a simplified but complete recipe for each meal of each day.
+      Generate a simplified but complete recipe for each meal of the day.
       ALL TEXT CONTENT MUST BE IN ENGLISH.
     ` : `
-      Crie um plano alimentar ${userProfile.isPro ? 'semanal (Segunda a Domingo)' : 'experimental de APENAS 1 DIA (Segunda-feira)'} para um usuário com o seguinte perfil:
+      Crie o plano alimentar de UM dia (${dayName}) para um usuário com o seguinte perfil:
       Objetivo: ${userProfile.goal}
-      Refeições por dia: ${mealsCount} (Gere exatamente essa quantidade de slots por dia)
+      Refeições do dia: ${mealsCount} (Gere exatamente essa quantidade de slots)
       Restrições: ${userProfile.dietaryRestrictions.join(', ') || 'Nenhuma'}
       Aversões: ${userProfile.dislikes.join(', ') || 'Nenhuma'}
       Preferência da semana: ${preference}
       ${tasteContextPt ? `Perfil de gosto:\n      ${tasteContextPt}` : ''}
-      Estratégia de Repetição: ${repeatInstruction}
+      ${avoidInstruction}
 
       Use o perfil de gosto para sugerir pratos que combinam com as preferências do usuário.
-      Gere uma receita simplificada mas completa para cada refeição de cada dia.
+      Gere uma receita simplificada mas completa para cada refeição do dia.
     `;
 
-    const planSchema: Schema = {
+    const daySchema: Schema = {
         type: Type.OBJECT,
         properties: {
-            days: {
+            meals: {
                 type: Type.ARRAY,
                 items: {
                     type: Type.OBJECT,
                     properties: {
-                        dayName: { type: Type.STRING, enum: [...lang.days] },
-                        meals: {
-                            type: Type.ARRAY,
-                            items: {
-                                type: Type.OBJECT,
-                                properties: {
-                                    timeSlot: { type: Type.STRING, enum: [...lang.timeSlots] },
-                                    recipe: getPlanRecipeSchema(language)
-                                },
-                                required: ["timeSlot", "recipe"]
-                            }
-                        }
+                        timeSlot: { type: Type.STRING, enum: [...lang.timeSlots] },
+                        recipe: getPlanRecipeSchema(language)
                     },
-                    required: ["dayName", "meals"]
+                    required: ["timeSlot", "recipe"]
                 }
             }
         },
-        required: ["days"]
+        required: ["meals"]
     };
 
     try {
@@ -820,45 +815,88 @@ export const generateWeeklyPlan = async (
             contents: [{ text: prompt }],
             config: {
                 responseMimeType: "application/json",
-                responseSchema: planSchema,
+                responseSchema: daySchema,
                 temperature: 0.7,
-                maxOutputTokens: 16384,
+                maxOutputTokens: 4096,
             }
         }, undefined, language));
 
         const text = response.text;
-        if (!text) throw new Error("Empty response");
+        if (!text) return null;
 
         const data = JSON.parse(text);
-
-        // Post-process to add IDs and Images
-        const days = data.days.map((day: any) => ({
-            ...day,
-            meals: day.meals.map((meal: any) => ({
-                id: randomUUID(),
-                timeSlot: meal.timeSlot,
-                recipe: meal.recipe ? {
-                    ...meal.recipe,
-                    ingredients: meal.recipe.ingredients || [],
-                    instructions: meal.recipe.instructions || [],
-                    substitutions: meal.recipe.substitutions || [],
-                    id: randomUUID(),
-                    createdAt: Date.now(),
-                    imageUrl: getImageUrl(meal.recipe.name)
-                } : null
-            }))
-        }));
-
-        return {
-            id: randomUUID(),
-            startDate: Date.now(),
-            days
-        } as WeeklyPlan;
-
+        return { dayName, meals: Array.isArray(data.meals) ? data.meals : [] };
     } catch (error) {
-        console.error("Error generating weekly plan:", error);
+        console.error(`Error generating day "${dayName}":`, error);
         return null;
     }
+};
+
+export const generateWeeklyPlan = async (
+    userProfile: UserProfile,
+    preference: string, // "Cheap", "Fast", "Varied", etc.
+    mealsCount: number = 3,
+    allowRepeats: boolean = false,
+    language: SupportedLanguage = 'pt'
+): Promise<WeeklyPlan | null> => {
+    const lang = AI_PROMPTS[language];
+
+    // Pro users get the full week; trial users only get the first day.
+    const dayNames = userProfile.isPro ? [...lang.days] : [lang.days[0]];
+
+    const usedDishes: string[] = [];
+    const rawDays: { dayName: string; meals: any[] }[] = [];
+
+    // Generate one day per request, sequentially, so we can pass already-used
+    // dishes forward and keep variety when the user wants it.
+    for (const dayName of dayNames) {
+        const day = await generateDayPlan(
+            userProfile,
+            preference,
+            mealsCount,
+            dayName,
+            allowRepeats ? [] : usedDishes,
+            language
+        );
+
+        if (day) {
+            rawDays.push(day);
+            if (!allowRepeats) {
+                for (const meal of day.meals) {
+                    if (meal?.recipe?.name) usedDishes.push(meal.recipe.name);
+                }
+            }
+        }
+    }
+
+    if (rawDays.length === 0) {
+        console.error("Error generating weekly plan: no days were generated");
+        return null;
+    }
+
+    // Post-process to add IDs and Images
+    const days = rawDays.map((day) => ({
+        dayName: day.dayName,
+        meals: day.meals.map((meal: any) => ({
+            id: randomUUID(),
+            timeSlot: meal.timeSlot,
+            recipe: meal.recipe ? {
+                ...meal.recipe,
+                ingredients: meal.recipe.ingredients || [],
+                instructions: meal.recipe.instructions || [],
+                substitutions: meal.recipe.substitutions || [],
+                id: randomUUID(),
+                createdAt: Date.now(),
+                imageUrl: getImageUrl(meal.recipe.name)
+            } : null
+        }))
+    }));
+
+    return {
+        id: randomUUID(),
+        startDate: Date.now(),
+        days
+    } as WeeklyPlan;
 };
 
 export const generateSingleMealProposal = async (

@@ -9,10 +9,32 @@ import {
 } from 'expo-file-system/legacy';
 
 import * as Crypto from 'expo-crypto';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { BACKEND_URL } from './config';
 
 const BASE_DIR = documentDirectory || cacheDirectory;
 const IMAGE_DIR = `${BASE_DIR}images/`;
+
+/**
+ * Resize + compress a local image and return its base64 (JPEG, without the
+ * `data:` prefix). Keeps upload payloads well under the backend's request-size
+ * limit (Vercel rejects bodies > 4.5MB) and makes Gemini vision calls faster.
+ */
+export const uriToCompressedBase64 = async (
+    uri: string,
+    maxWidth: number = 1024,
+    compress: number = 0.6
+): Promise<string> => {
+    const result = await manipulateAsync(
+        uri,
+        [{ resize: { width: maxWidth } }],
+        { compress, format: SaveFormat.JPEG, base64: true }
+    );
+    if (!result.base64) {
+        throw new Error('Failed to encode image to base64');
+    }
+    return result.base64;
+};
 
 const ensureDirExists = async () => {
     try {

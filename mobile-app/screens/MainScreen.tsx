@@ -20,6 +20,7 @@ import {
 } from '../components/Icons';
 import { MOCK_RECIPES } from '../services/mockData';
 import { generateFitnessRecipe, identifyIngredientsFromImage, generateWeeklyPlan, generateShoppingList, SupportedLanguage, generateQuickDecision, analyzeRoutine, analyzeMealImage, generateSingleMealProposal } from '../services/geminiService';
+import { uriToCompressedBase64 } from '../services/imageService';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { LoadingModal } from '../components/LoadingModal';
 import { PlanningWizard } from '../components/PlanningWizard';
@@ -341,9 +342,8 @@ export const MainScreen = ({
             setPantryImages(prev => [...prev, result.assets[0].uri]);
             setShowPantryPreview(true);
 
-            // Increment usage removed
-            // const updatedProfile = SubscriptionService.incrementPantryScan(userProfile);
-            // onUpdateProfile(updatedProfile);
+            // Count this scan against the free quota (no-op for pro users).
+            onUpdateProfile(SubscriptionService.incrementPantryScan(userProfile));
         }
     };
 
@@ -403,6 +403,9 @@ export const MainScreen = ({
         if (!result.canceled && result.assets[0].uri) {
             setPantryImages(prev => [...prev, result.assets[0].uri]);
             setShowPantryPreview(true);
+
+            // Count this scan against the free quota (no-op for pro users).
+            onUpdateProfile(SubscriptionService.incrementPantryScan(userProfile));
         }
     };
 
@@ -446,22 +449,10 @@ export const MainScreen = ({
         const allIngredients: string[] = [...manualIngredients];
 
         try {
-            // Convert URIs to base64 and analyze
+            // Resize + compress URIs to base64 and analyze (keeps payload < 4.5MB)
             for (const uri of pantryImages) {
                 console.log('📷 Processing image:', uri.substring(0, 50) + '...');
-                const response = await fetch(uri);
-                const blob = await response.blob();
-                console.log('📦 Blob size:', blob.size, 'bytes');
-                const reader = new FileReader();
-
-                const base64 = await new Promise<string>((resolve) => {
-                    reader.onloadend = () => {
-                        const base64data = reader.result as string;
-                        resolve(base64data.split(',')[1]);
-                    };
-                    reader.readAsDataURL(blob);
-                });
-
+                const base64 = await uriToCompressedBase64(uri);
                 console.log('📤 Base64 length:', base64.length, 'characters');
 
                 const detected = await identifyIngredientsFromImage(base64, (status, progress) => {
@@ -558,20 +549,21 @@ export const MainScreen = ({
     const handleSaveRecipe = async (recipe: Recipe) => {
         if (!userProfile) return;
 
-        // Check Subscription Limit
-        if (!SubscriptionService.canSaveRecipe(userProfile)) {
+        const alreadySaved = savedRecipes.has(recipe.id);
+
+        // Enforce the free quota only when adding a new save; unsaving is always allowed.
+        if (!alreadySaved && !userProfile.isPro &&
+            savedRecipes.size >= SubscriptionService.LIMITS.FREE.SAVED_RECIPES) {
             onShowPaywall();
             return;
         }
 
-        // Proceed with saving
+        // Proceed with toggling the save state
         onToggleSave(recipe);
 
-        // Increment usage removed
-        // const updatedProfile = SubscriptionService.incrementSavedRecipes(userProfile);
-        // onUpdateProfile(updatedProfile);
-
-        showToast(t('messages.recipeSaved'));
+        if (!alreadySaved) {
+            showToast(t('messages.recipeSaved'));
+        }
     };
     const handleGenerateRecipe = async (overrideInput?: string | any) => {
         // overrideInput may be an event object if called directly from onPress without an arrow function, so we check if it's a string
@@ -604,9 +596,14 @@ export const MainScreen = ({
             plan: 'FREE' as any
         };
 
-        // Check Subscription Limit
+        // Check Subscription Limit — a "desire" is a text-mode generation with
+        // attached food images; otherwise it counts against the recipe quota.
+        const isDesire = !explicitInput && exploreMode === 'TEXT' && desireImages.length > 0;
         console.log('✅ Profile created:', profile);
-        if (!SubscriptionService.canGenerateRecipe(profile)) {
+        const allowed = isDesire
+            ? SubscriptionService.canTransformDesire(profile)
+            : SubscriptionService.canGenerateRecipe(profile);
+        if (!allowed) {
             console.log('❌ Subscription limit reached');
             onShowPaywall();
             return;
@@ -640,17 +637,12 @@ export const MainScreen = ({
         try {
             console.log('🚀 Calling generateFitnessRecipe...');
 
-            // Convert local URIs to base64 for image-aware requests
+            // Resize + compress local URIs to base64 for image-aware requests
+            // (keeps the request body under the backend's 4.5MB limit)
             let base64Images: string[] = [];
             if (exploreMode === 'TEXT' && desireImages.length > 0) {
                 for (const uri of desireImages) {
-                    const response = await fetch(uri);
-                    const blob = await response.blob();
-                    const base64 = await new Promise<string>((resolve) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-                        reader.readAsDataURL(blob);
-                    });
+                    const base64 = await uriToCompressedBase64(uri);
                     base64Images.push(base64);
                 }
             }
@@ -678,6 +670,15 @@ export const MainScreen = ({
                 onRecipeClick(result); // Open immediately
                 setDishInput('');
                 setDesireImages([]);
+
+                // Count this generation against the free quota (no-op for pro users).
+                if (userProfile) {
+                    const updatedProfile = isDesire
+                        ? SubscriptionService.incrementDesireCount(userProfile)
+                        : SubscriptionService.incrementRecipeCount(userProfile);
+                    onUpdateProfile(updatedProfile);
+                }
+
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } else {
                 Alert.alert(t('common.error'), t('errors.recipeGenerationFailed'));
@@ -996,8 +997,8 @@ export const MainScreen = ({
         }
 
         const result = source === 'camera'
-            ? await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true })
-            : await ImagePicker.launchImageLibraryAsync({ quality: 0.5, base64: true, allowsMultipleSelection: true });
+            ? await ImagePicker.launchCameraAsync({ quality: 0.5 })
+            : await ImagePicker.launchImageLibraryAsync({ quality: 0.5, allowsMultipleSelection: true });
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
             setScanningImages(result.assets.map(a => a.uri));
@@ -1007,8 +1008,9 @@ export const MainScreen = ({
             try {
                 const newMeals: RoutineMeal[] = [];
                 for (const asset of result.assets) {
-                    if (asset.base64) {
-                        const analysis = await analyzeMealImage(asset.base64, language as SupportedLanguage);
+                    if (asset.uri) {
+                        const base64 = await uriToCompressedBase64(asset.uri);
+                        const analysis = await analyzeMealImage(base64, language as SupportedLanguage);
                         if (analysis && analysis.name && analysis.calories && analysis.macros) {
                             newMeals.push({
                                 id: Math.random().toString(36).substr(2, 9),
