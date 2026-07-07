@@ -123,49 +123,27 @@ export function useSubscription(
                 return resolved;
             };
 
-            const validation = await validateSubscriptionWithBackend({
-                transactionId: profile?.subscriptionTransactionId || localStatus.transactionId,
-                originalTransactionId: profile?.subscriptionOriginalTransactionId || localStatus.originalTransactionId,
+            if (localStatus.isActive && localStatus.productId) {
+                return await applyAndPersist(
+                    localStatus.productId, localStatus.transactionReceipt,
+                    localStatus.expiryDate, localStatus.transactionId, localStatus.originalTransactionId
+                );
+            }
+
+            if (!profile?.isPro) return baseProfile;
+
+            const downgraded = removeSubscriptionFromProfile(baseProfile);
+            await updateUserProfile(uid, {
+                isPro: false, plan: SubscriptionPlan.FREE,
+                subscriptionExpiry: undefined, transactionReceipt: undefined,
+                subscriptionTransactionId: undefined, subscriptionOriginalTransactionId: undefined,
             });
-
-            if (!validation.ok) {
-                console.warn('Subscription validation skipped:', validation.error);
-                if (localStatus.isActive && localStatus.productId) {
-                    return await applyAndPersist(
-                        localStatus.productId, localStatus.transactionReceipt,
-                        localStatus.expiryDate, localStatus.transactionId, localStatus.originalTransactionId
-                    );
-                }
-                return profile || baseProfile;
-            }
-
-            if (!validation.isActive || !validation.productId) {
-                if (localStatus.isActive && localStatus.productId) {
-                    return await applyAndPersist(
-                        localStatus.productId, localStatus.transactionReceipt,
-                        localStatus.expiryDate, localStatus.transactionId, localStatus.originalTransactionId
-                    );
-                }
-                if (!profile?.isPro) return baseProfile;
-
-                const downgraded = removeSubscriptionFromProfile(baseProfile);
-                await updateUserProfile(uid, {
-                    isPro: false, plan: SubscriptionPlan.FREE,
-                    subscriptionExpiry: undefined, transactionReceipt: undefined,
-                    subscriptionTransactionId: undefined, subscriptionOriginalTransactionId: undefined,
-                });
-                await storageService.saveProfile(downgraded);
-                setUserProfile(downgraded);
-                setUser({ name: downgraded.name });
-                return downgraded;
-            }
-
-            return await applyAndPersist(
-                validation.productId, baseProfile.transactionReceipt,
-                validation.expiryDate, validation.transactionId, validation.originalTransactionId
-            );
+            await storageService.saveProfile(downgraded);
+            setUserProfile(downgraded);
+            setUser({ name: downgraded.name });
+            return downgraded;
         } catch (error) {
-            console.error('Error reconciling Apple subscription:', error);
+            console.error('Error reconciling RevenueCat subscription:', error);
             return profile;
         }
     };

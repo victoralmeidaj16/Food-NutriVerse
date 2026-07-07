@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, Animated, Dimensions, Easing, Image } from 'react-native';
+import { View, Text, StyleSheet, Modal, Animated, Dimensions, Easing, Image, AccessibilityInfo } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useLanguage } from '../context/LanguageContext';
 import { SparklesIcon, ActivityIcon, FileTextIcon, LightbulbIcon, ChefHatIcon } from './Icons';
+
+// Marcos de conclusão de cada etapa (alinhados aos thresholds do checklist)
+const STEP_THRESHOLDS = [0.25, 0.55, 0.85, 0.98];
 
 const { width, height } = Dimensions.get('window');
 
@@ -20,7 +24,18 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
     const spinAnim = useRef(new Animated.Value(0)).current;
     const shimmerAnim = useRef(new Animated.Value(-1)).current;
 
+    // Motion refs para as transições da Parte 2
+    const statusOpacity = useRef(new Animated.Value(1)).current;   // cross-fade do texto de status
+    const statusTranslate = useRef(new Animated.Value(0)).current; // slide sutil no cross-fade
+    const stepScales = useRef([0, 1, 2, 3].map(() => new Animated.Value(1))).current; // "pop" ao concluir etapa
+    const milestoneGlow = useRef(new Animated.Value(0)).current;   // flash orgânico na barra a cada marco
+    const coreScale = useRef(new Animated.Value(1)).current;       // celebração de conclusão no core
+
+    const reduceMotionRef = useRef(false);   // respeita Reduce Motion do sistema
+    const prevCompletedRef = useRef(0);      // quantas etapas já haviam completado
+
     const [animatedProgress, setAnimatedProgress] = useState(0);
+    const [displayedStatus, setDisplayedStatus] = useState(status); // status atualmente visível (troca via cross-fade)
 
     // Smooth fake progress bar animation
     useEffect(() => {
@@ -44,6 +59,76 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
             useNativeDriver: false, // width doesn't support true
             easing: Easing.out(Easing.ease)
         }).start();
+    }, [animatedProgress]);
+
+    // Detecta (e observa) a preferência de Reduce Motion do sistema
+    useEffect(() => {
+        let mounted = true;
+        AccessibilityInfo.isReduceMotionEnabled().then(v => { if (mounted) reduceMotionRef.current = v; });
+        const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', v => { reduceMotionRef.current = v; });
+        return () => { mounted = false; sub?.remove?.(); };
+    }, []);
+
+    // Cross-fade + slide sutil na troca do texto de status (nunca corte seco)
+    useEffect(() => {
+        if (status === displayedStatus) return;
+        if (reduceMotionRef.current) { setDisplayedStatus(status); return; }
+
+        Animated.parallel([
+            Animated.timing(statusOpacity, { toValue: 0, duration: 160, useNativeDriver: true, easing: Easing.in(Easing.ease) }),
+            Animated.timing(statusTranslate, { toValue: -6, duration: 160, useNativeDriver: true, easing: Easing.in(Easing.ease) }),
+        ]).start(({ finished }) => {
+            if (!finished) return;
+            setDisplayedStatus(status);
+            statusTranslate.setValue(6); // entra por baixo
+            Animated.parallel([
+                Animated.timing(statusOpacity, { toValue: 1, duration: 240, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
+                Animated.timing(statusTranslate, { toValue: 0, duration: 240, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
+            ]).start();
+        });
+    }, [status]);
+
+    // Marcos: haptic leve + "pop" da etapa + glow orgânico na barra + celebração final
+    useEffect(() => {
+        const completed = STEP_THRESHOLDS.filter(t => animatedProgress >= t).length;
+
+        if (completed > prevCompletedRef.current) {
+            const justFinished = completed - 1; // índice da etapa recém-concluída
+            const isFinal = completed >= STEP_THRESHOLDS.length;
+
+            // Haptic com parcimônia: toque leve nos marcos, sucesso ao finalizar
+            if (isFinal) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+            } else {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            }
+
+            if (!reduceMotionRef.current) {
+                // "pop" spring no indicador da etapa concluída (~250ms, físico)
+                if (stepScales[justFinished]) {
+                    stepScales[justFinished].setValue(0.5);
+                    Animated.spring(stepScales[justFinished], {
+                        toValue: 1, useNativeDriver: true, tension: 140, friction: 6,
+                    }).start();
+                }
+
+                // Glow "respirando" na barra ao fechar a etapa (700ms)
+                milestoneGlow.setValue(1);
+                Animated.timing(milestoneGlow, {
+                    toValue: 0, duration: 700, useNativeDriver: true, easing: Easing.out(Easing.ease),
+                }).start();
+
+                // Celebração de conclusão: leve bump no core antes do handoff para a receita
+                if (isFinal) {
+                    Animated.sequence([
+                        Animated.spring(coreScale, { toValue: 1.08, useNativeDriver: true, tension: 120, friction: 5 }),
+                        Animated.spring(coreScale, { toValue: 1, useNativeDriver: true, tension: 120, friction: 6 }),
+                    ]).start();
+                }
+            }
+        }
+
+        prevCompletedRef.current = completed;
     }, [animatedProgress]);
 
     // Looping animations
@@ -88,6 +173,15 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
             shimmerAnim.setValue(-1);
             setAnimatedProgress(0); // Reset when hidden
             progressAnim.setValue(0);
+
+            // Reset das animações da Parte 2
+            statusOpacity.setValue(1);
+            statusTranslate.setValue(0);
+            milestoneGlow.setValue(0);
+            coreScale.setValue(1);
+            stepScales.forEach(s => s.setValue(1));
+            prevCompletedRef.current = 0;
+            setDisplayedStatus(status);
         }
     }, [visible]);
 
@@ -150,7 +244,7 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
                     )}
 
                     {/* Visual AI Core */}
-                    <View style={[styles.coreContainer, { opacity: animatedProgress >= 0.05 ? 1 : 0 }]}>
+                    <Animated.View style={[styles.coreContainer, { opacity: animatedProgress >= 0.05 ? 1 : 0, transform: [{ scale: coreScale }] }]}>
                         {/* Shadow/Glow */}
                         <Animated.View style={[
                             styles.glow,
@@ -178,7 +272,7 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
                                 resizeMode="contain"
                             />
                         </View>
-                    </View>
+                    </Animated.View>
 
                     {/* Animated Percentage */}
                     <View style={[styles.percentageRow, { opacity: animatedProgress >= 0.05 ? 1 : 0 }]}>
@@ -186,9 +280,14 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
                         <Text style={styles.percentageSym}>%</Text>
                     </View>
 
-                    {/* Status Display */}
+                    {/* Status Display (cross-fade + slide na troca) */}
                     <View style={[styles.statusBox, { opacity: animatedProgress >= 0.05 ? 1 : 0 }]}>
-                        <Text style={styles.statusText}>{status.toUpperCase()}</Text>
+                        <Animated.Text style={[
+                            styles.statusText,
+                            { opacity: statusOpacity, transform: [{ translateY: statusTranslate }] }
+                        ]}>
+                            {displayedStatus.toUpperCase()}
+                        </Animated.Text>
                     </View>
 
                     {/* Checklist Timeline */}
@@ -222,8 +321,8 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
                                         </Text>
                                     </View>
                                     
-                                    {/* Right Indicator Status */}
-                                    <View style={styles.indicatorContainer}>
+                                    {/* Right Indicator Status ("pop" spring ao concluir) */}
+                                    <Animated.View style={[styles.indicatorContainer, { transform: [{ scale: stepScales[index] }] }]}>
                                         {stepItem.completed ? (
                                             <View style={styles.greenCheckCircle}>
                                                 <Text style={styles.checkMark}>✓</Text>
@@ -233,7 +332,7 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
                                         ) : (
                                             <View style={styles.inactiveDot} />
                                         )}
-                                    </View>
+                                    </Animated.View>
                                 </View>
                             );
                         })}
@@ -258,6 +357,14 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, progress, s
                                     outputRange: ['-100%', '200%']
                                 })
                             }]} />
+                            {/* Flash orgânico ao concluir cada etapa */}
+                            <Animated.View
+                                pointerEvents="none"
+                                style={[StyleSheet.absoluteFill, {
+                                    backgroundColor: '#FFFFFF',
+                                    opacity: milestoneGlow.interpolate({ inputRange: [0, 1], outputRange: [0, 0.55] })
+                                }]}
+                            />
                         </Animated.View>
                     </View>
 

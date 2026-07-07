@@ -2,17 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Alert, ActivityIndicator, Linking } from 'react-native';
 import { CheckIcon, SparklesIcon, CloseIcon } from '../components/Icons';
 import * as Haptics from 'expo-haptics';
-import { iapService, PRODUCT_IDS, PurchaseResult } from '../services/iapService';
+import Purchases, { PurchasesPackage } from 'react-native-purchases';
+import { iapService, PurchaseResult } from '../services/iapService';
 import { useLanguage } from '../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
 export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onPurchase: (result: PurchaseResult) => void | Promise<void>, onRestore: (result: PurchaseResult) => void | Promise<void>, onClose: () => void, onLogin?: () => void }) => {
     const { t, language } = useLanguage();
-    const [selectedPlan, setSelectedPlan] = useState<'YEARLY' | 'MONTHLY'>('YEARLY'); // kept for future plan toggle UI
     const [loading, setLoading] = useState(false);
+    const [activePackages, setActivePackages] = useState<{ monthly?: PurchasesPackage; yearly?: PurchasesPackage }>({});
     const [productsLoaded, setProductsLoaded] = useState(false);
-    // The close button only becomes available 4 seconds after the paywall opens.
     const [canClose, setCanClose] = useState(false);
 
     // Benefits list - translated
@@ -38,15 +38,25 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
 
     const initProducts = async () => {
         setLoadError(false);
-        // Products may already be loaded from App.tsx initialization
-        if (iapService.getAllProducts().length > 0) {
-            setProductsLoaded(true);
-            return;
-        }
-        await iapService.initialize();
-        if (iapService.getAllProducts().length > 0) {
-            setProductsLoaded(true);
-        } else {
+        try {
+            await iapService.initialize();
+            const offering = await iapService.getActiveOffering();
+            if (offering) {
+                const packagesMap: typeof activePackages = {};
+                offering.availablePackages.forEach((pkg) => {
+                    if (pkg.packageType === 'ANNUAL' || pkg.product.identifier.includes('yearly') || pkg.product.identifier.includes('anual')) {
+                        packagesMap.yearly = pkg;
+                    } else if (pkg.packageType === 'MONTHLY' || pkg.product.identifier.includes('monthly') || pkg.product.identifier.includes('mensal')) {
+                        packagesMap.monthly = pkg;
+                    }
+                });
+                setActivePackages(packagesMap);
+                setProductsLoaded(true);
+            } else {
+                setLoadError(true);
+            }
+        } catch (err) {
+            console.error('Error loading offerings:', err);
             setLoadError(true);
         }
     };
@@ -60,12 +70,16 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
         return () => clearTimeout(timer);
     }, []);
 
-    const handlePurchase = async (productId: string) => {
+    const handlePurchase = async (pkg?: PurchasesPackage) => {
+        if (!pkg) {
+            Alert.alert(t('common.error'), language === 'en' ? 'Product not available.' : 'Produto não disponível.');
+            return;
+        }
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setLoading(true);
 
         try {
-            const result = await iapService.purchaseProduct(productId);
+            const result = await iapService.purchasePackage(pkg);
 
             if (result.success) {
                 await onPurchase(result);
@@ -115,9 +129,9 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
         Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
     };
 
-    // Get formatted prices from IAP
-    const yearlyPrice = productsLoaded ? iapService.formatPrice(PRODUCT_IDS.YEARLY) : (language === 'en' ? '$29.99' : 'R$ 79,90');
-    const monthlyPrice = productsLoaded ? iapService.formatPrice(PRODUCT_IDS.MONTHLY) : (language === 'en' ? '$4.99' : 'R$ 19,90');
+    // Get formatted prices from IAP Packages
+    const yearlyPrice = activePackages.yearly?.product.priceString || (language === 'en' ? '$29.99' : 'R$ 79,90');
+    const monthlyPrice = activePackages.monthly?.product.priceString || (language === 'en' ? '$4.99' : 'R$ 19,90');
 
     const paywallTitle = language === 'en'
         ? "Eat well every day. Without thinking."
@@ -137,6 +151,7 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
     const perYear = language === 'en' ? "/year" : "/ano";
     const perMonth = language === 'en' ? "/month" : "/mês";
     const equivalentText = language === 'en' ? "Equivalent to $2.50/month" : "Equivalente a R$ 6,66/mês";
+
 
     return (
         <SafeAreaView style={styles.container}>
@@ -168,7 +183,7 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
 
                 <View style={styles.plansContainer}>
                     <TouchableOpacity
-                        onPress={() => handlePurchase(PRODUCT_IDS.YEARLY)}
+                        onPress={() => handlePurchase(activePackages.yearly)}
                         style={[styles.planCard, styles.planCardActive]} // Always look active/interactive
                         disabled={loading}
                     >
@@ -184,7 +199,7 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        onPress={() => handlePurchase(PRODUCT_IDS.MONTHLY)}
+                        onPress={() => handlePurchase(activePackages.monthly)}
                         style={[styles.planCard, styles.planCardActive]} // Always look active/interactive
                         disabled={loading}
                     >

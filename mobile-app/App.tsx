@@ -93,13 +93,16 @@ export default function App() {
     // Monitor Auth State
     useEffect(() => {
         void warmBackendIfNeeded();
-        void iapService.initialize();
 
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             try {
                 setFirebaseUser(currentUser);
 
                 if (currentUser) {
+                    // Initialize and bind RevenueCat with User ID
+                    await iapService.initialize(currentUser.uid);
+                    await iapService.login(currentUser.uid);
+
                     // Test account — grant PRO directly
                     if (currentUser.email === '123indiozinhos@gmail.com') {
                         const profile = await getUserProfile(currentUser.uid);
@@ -155,6 +158,7 @@ export default function App() {
                     // is shown on demand when a free user exceeds their quota.
                     setCurrentScreen('MAIN');
                 } else {
+                    await iapService.logout();
                     clearUserData();
                     setPendingProfile(null);
                     setSignupMessage('');

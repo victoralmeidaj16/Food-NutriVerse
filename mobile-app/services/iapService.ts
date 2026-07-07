@@ -1,21 +1,28 @@
-// In-App Purchase Service
-// Handles StoreKit integration for iOS subscriptions using react-native-iap
-// Auto-detects environment: Mock mode for Expo Go/Dev, Real IAP for Production
-
-import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
-import * as RNIAP from 'react-native-iap';
+import Purchases, { LOG_LEVEL, PurchasesOffering, CustomerInfo } from 'react-native-purchases';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
-// Product IDs - MUST match exactly what's configured in App Store Connect
+// Configurações e Identificadores do RevenueCat
+export const REVENUECAT_API_KEYS = {
+    IOS: 'appl_CDZEKMCNJiwTmzQcwHBmvqWHIta',
+    ANDROID: 'appl_CDZEKMCNJiwTmzQcwHBmvqWHIta' // Substitua pela Android API Key se for lançar na Play Store
+};
+
+// Entitlements definidos no Painel do RevenueCat
+export const ENTITLEMENTS = {
+    PRO: 'Fitswap Pro'
+};
+
+// IDs dos Produtos que devem bater com o App Store Connect / Play Store e RevenueCat
 export const PRODUCT_IDS = {
-    MONTHLY: 'Plano_Pro_Nutriverse',  // Match App Store Connect: Plano Pro - Mensal
-    YEARLY: 'Plano_Pro_Anual',        // Match App Store Connect: Plano Pro - Anual
+    MONTHLY: 'monthly',
+    YEARLY: 'yearly'
 };
 
 export interface PurchaseResult {
     success: boolean;
     productId?: string;
-    transactionReceipt?: string;
+    transactionReceipt?: string; // RevenueCat abstracts this, but kept for compatibility
     transactionId?: string;
     originalTransactionId?: string;
     error?: string;
@@ -31,252 +38,231 @@ export interface SubscriptionStatusResult {
     verificationState: 'verified_active' | 'verified_inactive' | 'unknown';
 }
 
-// Mock products for development (used when RNIAP fails or in Expo Go)
-const MOCK_PRODUCTS: any[] = [
-    {
-        productId: PRODUCT_IDS.MONTHLY,
-        title: 'Plano Pro - Mensal',
-        description: 'Acesso ilimitado a todas as funcionalidades por 1 mês',
-        localizedPrice: 'R$ 19,90',
-        type: 'subs'
-    },
-    {
-        productId: PRODUCT_IDS.YEARLY,
-        title: 'Plano Pro - Anual',
-        description: 'Acesso ilimitado a todas as funcionalidades por 1 ano (economize 50%)',
-        localizedPrice: 'R$ 179,90',
-        type: 'subs'
-    }
-];
-
-class IAPService {
+class RevenueCatService {
     private isInitialized = false;
-    private initializingPromise: Promise<boolean> | null = null;
-    private products: RNIAP.Product[] = [];
     private useMockMode = false;
-    private purchaseUpdateSubscription: any = null;
-    private purchaseErrorSubscription: any = null;
-    private pendingPurchasePromise: { resolve: (res: PurchaseResult) => void, productId: string } | null = null;
 
     /**
-     * Initialize IAP connection
+     * Inicializa o RevenueCat SDK
      */
-    async initialize(): Promise<boolean> {
+    async initialize(userId?: string): Promise<boolean> {
         if (this.isInitialized) return true;
-        // Prevent concurrent initializations
-        if (this.initializingPromise) return this.initializingPromise;
-        this.initializingPromise = this._doInitialize();
-        const result = await this.initializingPromise;
-        this.initializingPromise = null;
-        return result;
-    }
 
-    private async _doInitialize(): Promise<boolean> {
         try {
-            if (this.isInitialized) return true;
-
+            // Verifica se está rodando em Expo Go (Mock) ou Build Nativa (Produção/Dev Client)
             const isExpoGo =
                 Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
                 Constants.appOwnership === 'expo';
             this.useMockMode = isExpoGo;
 
             if (isExpoGo) {
-                console.log('🎭 IAP: Running in Expo Go - Using Mock Mode');
+                console.log('🎭 RevenueCat: Executando em Expo Go - Modo Mock Ativo');
                 this.isInitialized = true;
                 return true;
             }
 
-            console.log('💳 IAP: Initializing react-native-iap...');
-            await RNIAP.initConnection();
-            
-            // Setup Listeners
-            this.setupListeners();
-            
+            // Habilita logs detalhados em desenvolvimento
+            if (__DEV__) {
+                Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+            } else {
+                Purchases.setLogLevel(LOG_LEVEL.ERROR);
+            }
+
+            const apiKey = Platform.select({
+                ios: REVENUECAT_API_KEYS.IOS,
+                android: REVENUECAT_API_KEYS.ANDROID,
+                default: ''
+            });
+
+            if (!apiKey) {
+                console.warn('RevenueCat: Chave de API não configurada para esta plataforma.');
+                return false;
+            }
+
+            // Configura o SDK
+            Purchases.configure({ apiKey, appUserID: userId });
+            console.log(`💳 RevenueCat: Inicializado com sucesso para o usuário: ${userId || 'Anonimo'}`);
             this.isInitialized = true;
-            await this.loadProducts();
-            
             return true;
         } catch (error) {
-            console.error('IAP: Failed to initialize', error);
-            this.useMockMode = true; // Fallback to mock if init fails (likely development)
+            console.error('RevenueCat: Falha ao inicializar o SDK', error);
+            this.useMockMode = true; // Fallback mock em caso de erro crítico
             return false;
         }
     }
 
-    private setupListeners() {
-        if (this.purchaseUpdateSubscription) return;
-
-        this.purchaseUpdateSubscription = RNIAP.purchaseUpdatedListener(async (purchase: RNIAP.Purchase) => {
-            console.log('IAP: Purchase updated', purchase.productId || (purchase as any).productIds?.[0]);
-            
-            const receipt = (purchase as any).transactionReceipt || purchase.transactionId;
-            const normalizedTransactionId = purchase.transactionId ?? undefined;
-            const normalizedOriginalTransactionId =
-                (purchase as any).originalTransactionIdIOS ?? purchase.transactionId ?? undefined;
-            if (receipt) {
-                try {
-                    // Tell the store that we have delivered what has been paid for
-                    await RNIAP.finishTransaction({ purchase, isConsumable: false });
-                    
-                    if (this.pendingPurchasePromise && this.pendingPurchasePromise.productId === (purchase.productId || (purchase as any).productIds?.[0])) {
-                        this.pendingPurchasePromise.resolve({
-                            success: true,
-                            productId: purchase.productId || (purchase as any).productIds?.[0],
-                            transactionReceipt: receipt,
-                            transactionId: normalizedTransactionId,
-                            originalTransactionId: normalizedOriginalTransactionId
-                        });
-                        this.pendingPurchasePromise = null;
-                    }
-                } catch (ackErr) {
-                    console.warn('IAP: Ack Error', ackErr);
-                }
-            }
-        });
-
-        this.purchaseErrorSubscription = RNIAP.purchaseErrorListener((error: RNIAP.PurchaseError) => {
-            console.warn('IAP: Purchase error', error);
-            if (this.pendingPurchasePromise) {
-                this.pendingPurchasePromise.resolve({
-                    success: false,
-                    error: error.message || 'Erro ao processar compra'
-                });
-                this.pendingPurchasePromise = null;
-            }
-        });
-    }
-
-    async loadProducts(): Promise<void> {
-        if (this.useMockMode) {
-            this.products = MOCK_PRODUCTS as any;
-            return;
-        }
-
-        try {
-            const skus = Object.values(PRODUCT_IDS);
-            const items = await RNIAP.fetchProducts({ skus, type: 'subs' }) || [];
-            this.products = items as any;
-            console.log('IAP: Loaded products:', items.map((i: any) => i.productId || i.id));
-        } catch (err) {
-            console.error('IAP: Error loading products', err);
-        }
-    }
-
-    async purchaseProduct(productId: string): Promise<PurchaseResult> {
+    /**
+     * Faz login do usuário (essencial para sincronizar compras e rastreamento de afiliados)
+     */
+    async login(userId: string): Promise<CustomerInfo | null> {
+        if (this.useMockMode) return null;
         if (!this.isInitialized) await this.initialize();
+        try {
+            const { customerInfo } = await Purchases.logIn(userId);
+            return customerInfo;
+        } catch (error) {
+            console.error('RevenueCat: Erro ao fazer login do usuário', error);
+            return null;
+        }
+    }
 
+    /**
+     * Faz logout
+     */
+    async logout(): Promise<void> {
+        if (this.useMockMode) return;
+        try {
+            await Purchases.logOut();
+        } catch (error) {
+            console.error('RevenueCat: Erro ao efetuar logout', error);
+        }
+    }
+
+    /**
+     * Retorna a oferta ativa (Offerings) contendo os pacotes configurados
+     */
+    async getActiveOffering(): Promise<PurchasesOffering | null> {
+        if (this.useMockMode) return null;
+        if (!this.isInitialized) await this.initialize();
+        try {
+            const offerings = await Purchases.getOfferings();
+            return offerings.current;
+        } catch (error) {
+            console.error('RevenueCat: Erro ao buscar ofertas disponíveis', error);
+            return null;
+        }
+    }
+
+    /**
+     * Compra um pacote do RevenueCat
+     */
+    async purchasePackage(pack: any): Promise<PurchaseResult> {
         if (this.useMockMode) {
-            console.log('🎭 IAP: Mock purchase starting for', productId);
+            console.log('🎭 RevenueCat: Mock de compra iniciado para', pack.product?.identifier);
             return new Promise(resolve => setTimeout(() => resolve({
                 success: true,
-                productId,
-                transactionReceipt: 'MOCK_RECEIPT',
-                transactionId: 'MOCK_ID'
+                productId: pack.product?.identifier || PRODUCT_IDS.YEARLY,
+                transactionReceipt: 'MOCK_RC_RECEIPT',
+                transactionId: 'MOCK_RC_TX_ID',
+                originalTransactionId: 'MOCK_RC_ORIG_TX_ID'
             }), 1000));
         }
 
-        const PURCHASE_TIMEOUT_MS = 60_000;
+        try {
+            const { customerInfo, transaction } = await Purchases.purchasePackage(pack);
+            const isPro = customerInfo.entitlements.active[ENTITLEMENTS.PRO] !== undefined;
 
-        return new Promise(async (resolve) => {
-            this.pendingPurchasePromise = { resolve, productId };
-
-            const timeout = setTimeout(() => {
-                if (this.pendingPurchasePromise?.productId === productId) {
-                    this.pendingPurchasePromise = null;
-                    resolve({ success: false, error: 'Tempo limite excedido. Tente novamente.' });
-                }
-            }, PURCHASE_TIMEOUT_MS);
-
-            const resolveOnce = (result: PurchaseResult) => {
-                clearTimeout(timeout);
-                resolve(result);
-            };
-
-            // Replace the resolve in pendingPurchasePromise so the listener uses resolveOnce
-            this.pendingPurchasePromise = { resolve: resolveOnce, productId };
-
-            try {
-                await RNIAP.requestPurchase({
-                    type: 'subs',
-                    request: {
-                        ios: { sku: productId },
-                        android: { skus: [productId] }
-                    }
-                });
-            } catch (err: any) {
-                clearTimeout(timeout);
-                this.pendingPurchasePromise = null;
-                resolve({ success: false, error: err.message });
+            if (isPro) {
+                return {
+                    success: true,
+                    productId: transaction.productIdentifier,
+                    transactionId: transaction.transactionIdentifier,
+                    originalTransactionId: transaction.transactionIdentifier, // RC normaliza IDs
+                    transactionReceipt: 'REVENUECAT_MANAGED'
+                };
             }
-        });
+            return { success: false, error: 'Compra concluída mas o acesso premium não foi ativado.' };
+        } catch (error: any) {
+            if (error.userCancelled) {
+                return { success: false, error: 'Compra cancelada pelo usuário.' };
+            }
+            console.error('RevenueCat: Erro na compra do pacote', error);
+            return { success: false, error: error.message || 'Erro ao realizar transação.' };
+        }
     }
 
+    /**
+     * Verifica o status da assinatura ativa do usuário
+     */
     async checkSubscriptionStatus(): Promise<SubscriptionStatusResult> {
-        if (this.useMockMode) return { isActive: false, verificationState: 'verified_inactive' };
+        if (this.useMockMode) {
+            return { isActive: false, verificationState: 'verified_inactive' };
+        }
 
         try {
-            const purchases = await RNIAP.getAvailablePurchases();
+            if (!this.isInitialized) await this.initialize();
+            const customerInfo = await Purchases.getCustomerInfo();
+            const entitlement = customerInfo.entitlements.active[ENTITLEMENTS.PRO];
 
-            for (const purchase of purchases) {
-                const productId = (purchase as any).productId || (purchase as any).productIds?.[0];
-                if (productId !== PRODUCT_IDS.MONTHLY && productId !== PRODUCT_IDS.YEARLY) continue;
-
-                // Check expiry if available (StoreKit provides subscriptionExpirationDateMS on iOS)
-                const expiryMs: number | undefined = (purchase as any).subscriptionExpirationDateMS;
-                if (expiryMs !== undefined && expiryMs < Date.now()) continue; // expired
-
+            if (entitlement) {
+                const expiryDate = entitlement.expirationDate ? new Date(entitlement.expirationDate).getTime() : undefined;
                 return {
                     isActive: true,
-                    productId,
-                    expiryDate: expiryMs,
-                    transactionId: purchase.transactionId ?? undefined,
-                    originalTransactionId: (purchase as any).originalTransactionIdIOS ?? purchase.transactionId ?? undefined,
-                    transactionReceipt: (purchase as any).transactionReceipt || purchase.transactionId || undefined,
+                    productId: entitlement.productIdentifier,
+                    expiryDate,
+                    transactionId: entitlement.latestPurchaseDate, // Use data ou id correspondente
+                    originalTransactionId: entitlement.originalPurchaseDate,
+                    transactionReceipt: 'REVENUECAT_MANAGED',
                     verificationState: 'verified_active'
                 };
             }
+
             return { isActive: false, verificationState: 'verified_inactive' };
-        } catch (err) {
-            console.error('IAP: Check status error', err);
+        } catch (error) {
+            console.error('RevenueCat: Erro ao verificar status da assinatura', error);
             return { isActive: false, verificationState: 'unknown' };
         }
     }
 
+    /**
+     * Restaura compras anteriores
+     */
     async restorePurchases(): Promise<PurchaseResult> {
-        if (!this.isInitialized) await this.initialize();
-        const status = await this.checkSubscriptionStatus();
-        if (status.isActive) {
-            return {
-                success: true,
-                productId: status.productId,
-                transactionReceipt: status.transactionReceipt,
-                transactionId: status.transactionId
-            };
+        if (this.useMockMode) {
+            return { success: false, error: 'Funcionalidade indisponível no simulador Expo Go.' };
         }
-        return { success: false, error: 'Nenhuma assinatura ativa encontrada' };
+
+        try {
+            if (!this.isInitialized) await this.initialize();
+            const customerInfo = await Purchases.restorePurchases();
+            const entitlement = customerInfo.entitlements.active[ENTITLEMENTS.PRO];
+
+            if (entitlement) {
+                return {
+                    success: true,
+                    productId: entitlement.productIdentifier,
+                    transactionReceipt: 'REVENUECAT_MANAGED',
+                    transactionId: entitlement.latestPurchaseDate
+                };
+            }
+            return { success: false, error: 'Nenhuma assinatura ativa foi encontrada para restaurar.' };
+        } catch (error: any) {
+            console.error('RevenueCat: Erro ao restaurar compras', error);
+            return { success: false, error: error.message || 'Falha ao restaurar compras.' };
+        }
     }
 
-    getAllProducts() { return this.products; }
-    
-    formatPrice(productId: string): string {
-        const p = this.products.find((i: any) => (i.productId === productId || i.id === productId));
-        return p ? (p as any).localizedPrice || (p as any).displayPrice || 'R$ 0,00' : 'Carregando...';
+    /**
+     * Sincroniza informações de compras com o Firebase/Backend do app
+     */
+    async getCustomerInfo(): Promise<CustomerInfo | null> {
+        if (this.useMockMode) return null;
+        try {
+            if (!this.isInitialized) await this.initialize();
+            return await Purchases.getCustomerInfo();
+        } catch (error) {
+            console.error('RevenueCat: Erro ao buscar informações do cliente', error);
+            return null;
+        }
     }
 
-    async disconnect() {
-        if (this.purchaseUpdateSubscription) {
-            this.purchaseUpdateSubscription.remove();
-            this.purchaseUpdateSubscription = null;
+    /**
+     * Exibe o Customer Center nativo (Gestão de Assinatura, Cancelamentos e Reclamações)
+     */
+    presentCustomerCenter(): void {
+        if (this.useMockMode) {
+            console.log('🎭 RevenueCat: Mock do Customer Center exibido');
+            return;
         }
-        if (this.purchaseErrorSubscription) {
-            this.purchaseErrorSubscription.remove();
-            this.purchaseErrorSubscription = null;
+        try {
+            // Importação dinâmica para não travar builds antigas
+            const { PurchasesCustomerCenter } = require('react-native-purchases-ui');
+            PurchasesCustomerCenter.presentCustomerCenter();
+        } catch (error) {
+            console.error('RevenueCat: Falha ao abrir o Customer Center', error);
         }
-        if (!this.useMockMode) {
-            await RNIAP.endConnection();
-        }
-        this.isInitialized = false;
     }
 }
 
-export const iapService = new IAPService();
+export const iapService = new RevenueCatService();
+export default iapService;

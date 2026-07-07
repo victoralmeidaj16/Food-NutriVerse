@@ -41,6 +41,7 @@ import { auth } from '../services/firebaseConfig';
 import { useLanguage } from '../context/LanguageContext';
 import { SourcesScreen } from '../components/SourcesScreen';
 import { getRecipeCategories } from '../types'; // Import getRecipeCategories
+import { iapService } from '../services/iapService';
 
 export const MainScreen = ({
     user,
@@ -2203,6 +2204,18 @@ export const MainScreen = ({
                         <ArrowRightIcon size={16} color="#9CA3AF" />
                     </TouchableOpacity>
                 </View>
+
+                {userProfile?.isPro && (
+                    <TouchableOpacity style={[styles.menuItem, { marginTop: 12 }]} onPress={() => iapService.presentCustomerCenter()}>
+                        <View style={[styles.menuIconBox, { backgroundColor: '#FEF3C7' }]}>
+                            <SparklesIcon size={20} color="#D97706" />
+                        </View>
+                        <Text style={styles.menuItemText}>
+                            {language === 'en' ? 'Manage Subscription' : 'Gerenciar Assinatura'}
+                        </Text>
+                        <ArrowRightIcon size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+                )}
 
                 <TouchableOpacity style={styles.menuItem} onPress={() => setLanguage(language === 'pt' ? 'en' : 'pt')}>
                     <View style={[styles.menuIconBox, { backgroundColor: '#EEF2FF' }]}>
