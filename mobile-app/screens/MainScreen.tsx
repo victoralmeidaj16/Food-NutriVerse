@@ -15,7 +15,7 @@ import { RecipeCard } from '../components/RecipeCard';
 import {
     HomeIcon, SearchIcon, CalendarIcon, UserIcon, CameraIcon, ActivityIcon,
     ChefHatIcon, SparklesIcon, ArrowRightIcon, PlusIcon, CheckIcon,
-    CloseIcon, BookHeartIcon, ShoppingBagIcon, TrashIcon, TimerIcon, FlameIcon, CopyIcon, RefreshIcon, SettingsIcon,
+    CloseIcon, PencilIcon, BookHeartIcon, ShoppingBagIcon, TrashIcon, TimerIcon, FlameIcon, CopyIcon, RefreshIcon, SettingsIcon,
     FileTextIcon, HelpCircleIcon, LockIcon, UploadIcon, GalleryIcon
 } from '../components/Icons';
 import { MOCK_RECIPES } from '../services/mockData';
@@ -28,6 +28,7 @@ import { RoutineMeal, QuickDecision, MapaAlimentarResult, RoutineDiagnostic } fr
 // DailyTipCard removed
 import { EditProfileModal } from '../components/EditProfileModal';
 import { SubscriptionService } from '../services/subscriptionService';
+import { UsageSummary } from '../components/UsageSummary';
 import { CopyMealModal } from '../components/CopyMealModal';
 import { WeeklyPlanIntro } from '../components/WeeklyPlanIntro';
 import { PantryImagePreview } from '../components/PantryImagePreview';
@@ -1072,7 +1073,7 @@ export const MainScreen = ({
         return (
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Header */}
-                <View style={styles.header}>
+                <View style={[styles.header, { marginTop: 0, marginBottom: 20 }]}>
                     <View>
                         <Text style={styles.greeting}>Olá, {userProfile?.name?.split(' ')[0] || 'Atleta'}!</Text>
                         <Text style={styles.subGreeting}>{userProfile?.goal === UserGoal.LOSE_WEIGHT ? 'Foco: Perder Peso' : 'Foco: Saúde'}</Text>
@@ -1089,37 +1090,35 @@ export const MainScreen = ({
                 </View>
 
 
+                {userProfile && <UsageSummary profile={userProfile} savedRecipesCount={savedRecipes.size} onShowPaywall={onShowPaywall} />}
+
                 {/* Decision Killer Card */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>{t('home.decisionKiller')}</Text>
                 </View>
-                <LinearGradient
-                    colors={['#111827', '#1F2937']}
-                    style={[styles.decisionCard, { marginBottom: 16, padding: 16, borderRadius: 24 }]}
-                >
+                <View style={styles.decisionCard}>
                     {!quickDecision ? (
                         <View style={styles.decisionPlaceholder}>
-                            <Text style={[styles.decisionText, { color: 'white', textAlign: 'center', marginBottom: 8, fontSize: 16 }]}>
-                                {t('home.decisionKillerDesc')}
-                            </Text>
-
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setEditProfileInitialSection('TASTE');
-                                    setShowEditProfile(true);
-                                }}
-                                activeOpacity={0.7}
-                                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 16 }}
-                            >
-                                <SparklesIcon size={12} color="#a6f000" />
-                                <Text style={{ color: '#9CA3AF', fontSize: 13, fontWeight: '500', textAlign: 'center' }}>
-                                    {language === 'en' ? 'Based on your taste\n(tap to customize) ✏️' : 'Baseado no seu gosto\n(toque para personalizar) ✏️'}
-                                </Text>
-                            </TouchableOpacity>
-
-                            <Animated.View style={{ transform: [{ scale: decisionBtnScale }], width: '100%' }}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.decisionText}>{t('home.decisionKillerTitle')}</Text>
+                                <Text style={styles.decisionSubtext}>{t('home.decisionKillerSubtitle')}</Text>
                                 <TouchableOpacity
-                                    style={[styles.decisionButton, { justifyContent: 'center' }]}
+                                    onPress={() => {
+                                        setEditProfileInitialSection('TASTE');
+                                        setShowEditProfile(true);
+                                    }}
+                                    activeOpacity={0.6}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    style={styles.decisionTasteRow}
+                                >
+                                    <Text style={styles.decisionSubtext}>{t('home.basedOnTaste')}</Text>
+                                    <PencilIcon size={12} color="#9CA3AF" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <Animated.View style={[styles.decisionSide, { transform: [{ scale: decisionBtnScale }] }]}>
+                                <TouchableOpacity
+                                    style={styles.decisionButton}
                                     activeOpacity={0.8}
                                     onPressIn={() => animateButtonPress(decisionBtnScale)}
                                     onPressOut={() => animateButtonRelease(decisionBtnScale)}
@@ -1127,28 +1126,29 @@ export const MainScreen = ({
                                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                         handleGetQuickDecision();
                                     }}
+                                    accessibilityLabel={t('home.suggestSomething')}
                                 >
-                                    <SparklesIcon size={18} color="black" />
-                                    <Text style={styles.decisionButtonText}>{t('home.suggestSomething')}</Text>
+                                    <SparklesIcon size={28} color="black" />
                                 </TouchableOpacity>
+                                <Text style={styles.decisionButtonText}>{t('home.suggestShort')}</Text>
                             </Animated.View>
                         </View>
                     ) : (
                         <View style={styles.decisionResult}>
                             <View style={styles.decisionHeader}>
-                                <Text style={[styles.decisionTitle, { color: 'white' }]}>{quickDecision.dishName}</Text>
-                                <TouchableOpacity onPress={() => setQuickDecision(null)}>
+                                <Text style={[styles.decisionTitle, { flex: 1, paddingRight: 12 }]}>{quickDecision.dishName}</Text>
+                                <TouchableOpacity onPress={() => setQuickDecision(null)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                                     <RefreshIcon size={16} color="#9CA3AF" />
                                 </TouchableOpacity>
                             </View>
-                            <Text style={[styles.decisionReason, { color: '#D1D5DB' }]}>{quickDecision.reason}</Text>
-                            <View style={[styles.decisionFooter, { borderTopColor: 'rgba(255, 255, 255, 0.1)' }]}>
+                            <Text style={styles.decisionReason}>{quickDecision.reason}</Text>
+                            <View style={styles.decisionFooter}>
                                 <View style={styles.decisionMeta}>
                                     <FlameIcon size={14} color="#9CA3AF" />
-                                    <Text style={[styles.decisionMetaText, { color: '#9CA3AF' }]}>{quickDecision.calories} kcal</Text>
+                                    <Text style={styles.decisionMetaText}>{quickDecision.calories} kcal</Text>
                                 </View>
                                 <TouchableOpacity
-                                    style={[styles.decisionAction, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}
+                                    style={styles.decisionAction}
                                     onPress={() => {
                                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                         setDishInput(quickDecision.dishName);
@@ -1159,12 +1159,13 @@ export const MainScreen = ({
                                         }, 400); // Wait for transition
                                     }}
                                 >
-                                    <Text style={[styles.decisionActionText, { color: 'white' }]}>{t('home.getRecipe')}</Text>
+                                    <Text style={styles.decisionActionText}>{t('home.getRecipe')}</Text>
+                                    <ArrowRightIcon size={14} color="black" />
                                 </TouchableOpacity>
                             </View>
                         </View>
                     )}
-                </LinearGradient>
+                </View>
 
 
 
@@ -1206,9 +1207,9 @@ export const MainScreen = ({
                 >
                     <Image
                         source={
-                            userProfile?.goal === UserGoal.LOSE_WEIGHT ? require('../assets/images/recipes/omelete.png') :
-                                userProfile?.goal === UserGoal.GAIN_MUSCLE ? require('../assets/images/recipes/frango.png') :
-                                    require('../assets/images/recipes/bowl.png')
+                            userProfile?.goal === UserGoal.LOSE_WEIGHT ? require('../assets/images/recipes/omelete.jpg') :
+                                userProfile?.goal === UserGoal.GAIN_MUSCLE ? require('../assets/images/recipes/frango.jpg') :
+                                    require('../assets/images/recipes/bowl.jpg')
                         }
                         style={styles.packCardBackground}
                         resizeMode="cover"
@@ -2103,6 +2104,8 @@ export const MainScreen = ({
                     </TouchableOpacity>
                 </View>
 
+                {userProfile && <UsageSummary profile={userProfile} savedRecipesCount={savedRecipes.size} onShowPaywall={onShowPaywall} />}
+
                 <View style={styles.profileCard}>
                     <View style={styles.profileImageContainer}>
                         {userProfile?.profilePicture ? (
@@ -2744,15 +2747,14 @@ const styles = StyleSheet.create({
     bottomNav: {
         flexDirection: 'row',
         backgroundColor: 'white',
-        paddingVertical: 12, // Reduced height
-        paddingHorizontal: 24,
-        justifyContent: 'space-between',
+        height: 68,
+        paddingHorizontal: 8,
         alignItems: 'center',
         position: 'absolute',
-        bottom: 32,
-        left: 24,
-        right: 24,
-        borderRadius: 32,
+        bottom: Platform.OS === 'ios' ? 28 : 20,
+        left: 20,
+        right: 20,
+        borderRadius: 34,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.1,
@@ -2760,11 +2762,15 @@ const styles = StyleSheet.create({
         elevation: 10,
     },
     navItem: {
+        flex: 1,
+        height: '100%',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 4,
     },
     navLabel: {
-        fontSize: 10,
+        fontSize: 11,
+        lineHeight: 14,
         fontWeight: '700',
         color: '#9CA3AF',
     },
@@ -2772,7 +2778,8 @@ const styles = StyleSheet.create({
         color: '#1F2937',
     },
     fabContainer: {
-        top: -24,
+        width: 72,
+        marginTop: -36,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -3996,36 +4003,54 @@ const styles = StyleSheet.create({
     },
     // Decision Killer
     decisionCard: {
-        shadowColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: '#111827',
+        borderRadius: 28,
+        padding: 20,
+        marginBottom: 16,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.2,
         shadowRadius: 20,
         elevation: 10,
     },
     decisionPlaceholder: {
+        flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 10,
+        gap: 16,
     },
     decisionText: {
         fontSize: 18,
-        fontWeight: '700',
-        color: '#FFFFFF',
-        marginBottom: 24,
-        lineHeight: 26,
+        fontWeight: '800',
+        color: 'white',
+        marginBottom: 4,
     },
-    decisionButton: {
+    decisionSubtext: {
+        fontSize: 13,
+        color: '#D1D5DB',
+        lineHeight: 18,
+    },
+    decisionTasteRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        alignSelf: 'flex-start',
+        gap: 6,
+    },
+    decisionSide: {
+        alignItems: 'center',
+        gap: 6,
+    },
+    decisionButton: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
         backgroundColor: '#a6f000',
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderRadius: 16,
-        gap: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     decisionButtonText: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: 'black',
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#9CA3AF',
     },
     decisionResult: {
         gap: 12,
@@ -4038,11 +4063,11 @@ const styles = StyleSheet.create({
     decisionTitle: {
         fontSize: 20,
         fontWeight: '900',
-        color: '#111827',
+        color: 'white',
     },
     decisionReason: {
         fontSize: 14,
-        color: '#4B5563',
+        color: '#D1D5DB',
         lineHeight: 20,
     },
     decisionFooter: {
@@ -4052,7 +4077,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
+        borderTopColor: 'rgba(255,255,255,0.1)',
     },
     decisionMeta: {
         flexDirection: 'row',
@@ -4062,18 +4087,21 @@ const styles = StyleSheet.create({
     decisionMetaText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#6B7280',
+        color: '#9CA3AF',
     },
     decisionAction: {
-        backgroundColor: '#F3F4F6',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: '#a6f000',
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 12,
     },
     decisionActionText: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#111827',
+        color: 'black',
     },
     // Mapa Alimentar
     mapaHero: {

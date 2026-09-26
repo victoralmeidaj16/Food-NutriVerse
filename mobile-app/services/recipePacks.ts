@@ -13,7 +13,7 @@ const LOSE_WEIGHT_RECIPES: Recipe[] = [
         id: 'lw_1',
         name: 'Omelete Proteico de Espinafre e Cogumelos',
         description: 'Comece o dia com energia total! Esta omelete é uma bomba de nutrientes, combinando a leveza do espinafre com o sabor terroso dos cogumelos.',
-        imageSource: require('../assets/images/recipes/omelete.png'),
+        imageSource: require('../assets/images/recipes/omelete.jpg'),
         prepTime: '15 min',
         difficulty: 'Fácil',
         category: 'Café da Manhã',
@@ -33,7 +33,7 @@ const LOSE_WEIGHT_RECIPES: Recipe[] = [
         id: 'lw_2',
         name: 'Frango Grelhado com Abobrinha e Limão',
         description: 'Simplicidade que funciona. O limão traz um frescor incrível ao frango, enquanto a abobrinha garante volume ao prato sem adicionar calorias extras.',
-        imageSource: require('../assets/images/recipes/frango_abobrinha.png'),
+        imageSource: require('../assets/images/recipes/frango_abobrinha.jpg'),
         prepTime: '20 min',
         difficulty: 'Fácil',
         category: 'Almoço',
@@ -53,7 +53,7 @@ const LOSE_WEIGHT_RECIPES: Recipe[] = [
         id: 'lw_3',
         name: 'Salada de Atum com Grão de Bico',
         description: 'Praticidade em forma de refeição. Uma salada robusta que não te deixa com fome 1 hora depois, graças à combinação de fibras e proteínas.',
-        imageSource: require('../assets/images/recipes/salada_atum.png'),
+        imageSource: require('../assets/images/recipes/salada_atum.jpg'),
         prepTime: '10 min',
         difficulty: 'Fácil',
         category: 'Jantar',
@@ -73,7 +73,7 @@ const LOSE_WEIGHT_RECIPES: Recipe[] = [
         id: 'lw_4',
         name: 'Espaguete de Abobrinha à Bolonhesa',
         description: 'Sinta o prazer de comer uma macarronada sem a culpa dos carboidratos. O molho à bolonhesa caseiro transforma a abobrinha em um prato de chef.',
-        imageSource: require('../assets/images/recipes/espaguete_abobrinha.png'),
+        imageSource: require('../assets/images/recipes/espaguete_abobrinha.jpg'),
         prepTime: '25 min',
         difficulty: 'Médio',
         category: 'Jantar',
@@ -93,7 +93,7 @@ const LOSE_WEIGHT_RECIPES: Recipe[] = [
         id: 'lw_5',
         name: 'Smoothie Verde Detox',
         description: 'O botão de reset para o seu corpo. Ideal para desinchar e começar o dia leve, mas nutrido.',
-        imageSource: require('../assets/images/recipes/smoothie_verde.png'),
+        imageSource: require('../assets/images/recipes/smoothie_verde.jpg'),
         prepTime: '5 min',
         difficulty: 'Fácil',
         category: 'Lanches',
@@ -116,7 +116,7 @@ const GAIN_MUSCLE_RECIPES: Recipe[] = [
         id: 'gm_1',
         name: 'Frango Cremoso com Cottage',
         description: 'A cremosidade que você ama, com a proteína que você precisa. O queijo cottage eleva o teor proteico deste prato sem adicionar gorduras pesadas.',
-        imageSource: require('../assets/images/recipes/frango.png'),
+        imageSource: require('../assets/images/recipes/frango.jpg'),
         prepTime: '25 min',
         difficulty: 'Médio',
         category: 'Almoço',
@@ -215,7 +215,7 @@ const HEALTHY_RECIPES: Recipe[] = [
         id: 'h_1',
         name: 'Buddha Bowl Colorido',
         description: 'Um arco-íris no seu prato. Cada cor representa um nutriente diferente, garantindo uma refeição completa, vibrante e cheia de vida.',
-        imageSource: require('../assets/images/recipes/bowl.png'),
+        imageSource: require('../assets/images/recipes/bowl.jpg'),
         prepTime: '20 min',
         difficulty: 'Fácil',
         category: 'Almoço',
@@ -235,7 +235,7 @@ const HEALTHY_RECIPES: Recipe[] = [
         id: 'h_2',
         name: 'Salmão ao Molho de Maracujá',
         description: 'Elegância e saúde. O azedinho do maracujá corta a gordura do salmão, criando um equilíbrio de sabores digno de restaurante.',
-        imageSource: require('../assets/images/recipes/bowl.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/bowl.jpg'), // Placeholder
         prepTime: '25 min',
         difficulty: 'Médio',
         category: 'Jantar',
@@ -255,7 +255,7 @@ const HEALTHY_RECIPES: Recipe[] = [
         id: 'h_3',
         name: 'Wrap de Couve com Frango e Ricota',
         description: 'Leveza absoluta. Substituímos a massa pela folha de couve crocante, criando um wrap refrescante e ultra nutritivo.',
-        imageSource: require('../assets/images/recipes/smoothie_verde.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/smoothie_verde.jpg'), // Placeholder
         prepTime: '15 min',
         difficulty: 'Fácil',
         category: 'Lanches',
@@ -275,7 +275,7 @@ const HEALTHY_RECIPES: Recipe[] = [
         id: 'h_4',
         name: 'Risoto de Quinoa com Cogumelos',
         description: 'Cremosidade sem culpa. A quinoa traz uma textura incrível e muito mais proteína que o arroz arbóreo tradicional.',
-        imageSource: require('../assets/images/recipes/omelete.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/omelete.jpg'), // Placeholder
         prepTime: '30 min',
         difficulty: 'Médio',
         category: 'Jantar',
@@ -295,7 +295,7 @@ const HEALTHY_RECIPES: Recipe[] = [
         id: 'h_5',
         name: 'Tacos de Alface com Carne Desfiada',
         description: 'Diversão na hora de comer. Crocante, saboroso e perfeito para compartilhar, sem a farinha das tortillas tradicionais.',
-        imageSource: require('../assets/images/recipes/salada_atum.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/salada_atum.jpg'), // Placeholder
         prepTime: '20 min',
         difficulty: 'Fácil',
         category: 'Jantar',

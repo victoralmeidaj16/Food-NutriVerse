@@ -8,7 +8,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '1',
         name: 'Panqueca de Banana e Aveia',
         description: 'Energia limpa para começar o dia, rica em fibras e potássio.',
-        imageSource: require('../assets/images/recipes/panqueca_banana.png'),
+        imageSource: require('../assets/images/recipes/panqueca_banana.jpg'),
         prepTime: '15 min',
         difficulty: 'Fácil',
         category: 'Café da Manhã',
@@ -37,7 +37,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '2',
         name: 'Ovos Mexidos Cremosos',
         description: 'Proteína pura com cremosidade sem excesso de gordura.',
-        imageSource: require('../assets/images/recipes/ovos_mexidos.png'),
+        imageSource: require('../assets/images/recipes/ovos_mexidos.jpg'),
         prepTime: '10 min',
         difficulty: 'Fácil',
         category: 'Café da Manhã',
@@ -62,7 +62,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '3',
         name: 'Bowl de Salmão e Quinoa',
         description: 'Refeição completa com proteínas de alto valor biológico.',
-        imageSource: require('../assets/images/recipes/bowl_salmao.png'),
+        imageSource: require('../assets/images/recipes/bowl_salmao.jpg'),
         prepTime: '25 min',
         difficulty: 'Médio',
         category: 'Almoço',
@@ -91,7 +91,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '4',
         name: 'Escondidinho de Patinho e Abóbora',
         description: 'Confort food em versão fit e low carb.',
-        imageSource: require('../assets/images/recipes/escondidinho_patinho.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/escondidinho_patinho.jpg'), // Placeholder
         prepTime: '40 min',
         difficulty: 'Médio',
         category: 'Almoço',
@@ -115,7 +115,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '5',
         name: 'Crepioca de Frango',
         description: 'Lanche proteico prático para levar.',
-        imageSource: require('../assets/images/recipes/crepioca_frango.png'),
+        imageSource: require('../assets/images/recipes/crepioca_frango.jpg'),
         prepTime: '15 min',
         difficulty: 'Fácil',
         category: 'Lanches',
@@ -139,7 +139,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '6',
         name: 'Iogurte com Whey e Frutas',
         description: 'Pós-treino rápido e refrescante.',
-        imageSource: require('../assets/images/recipes/iogurte_whey.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/iogurte_whey.jpg'), // Placeholder
         prepTime: '5 min',
         difficulty: 'Fácil',
         category: 'Lanches',
@@ -162,7 +162,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '7',
         name: 'Chips de Coco',
         description: 'Snack crocante rico em gorduras boas.',
-        imageSource: require('../assets/images/recipes/chips_coco.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/chips_coco.jpg'), // Placeholder
         prepTime: '20 min',
         difficulty: 'Fácil',
         category: 'Lanches',
@@ -185,7 +185,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '8',
         name: 'Omelete de Forno com Vegetais',
         description: 'Jantar leve para aproveitar sobras de vegetais.',
-        imageSource: require('../assets/images/recipes/omelete_forno.png'),
+        imageSource: require('../assets/images/recipes/omelete_forno.jpg'),
         prepTime: '25 min',
         difficulty: 'Fácil',
         category: 'Jantar',
@@ -210,7 +210,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '9',
         name: 'Sopa de Abóbora com Gengibre',
         description: 'Jantar leve e termogênico.',
-        imageSource: require('../assets/images/recipes/sopa_abobora.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/sopa_abobora.jpg'), // Placeholder
         prepTime: '30 min',
         difficulty: 'Fácil',
         category: 'Jantar',
@@ -234,7 +234,7 @@ export const MOCK_RECIPES: Recipe[] = [
         id: '10',
         name: 'Salada Caesar com Iogurte',
         description: 'Versão leve do clássico, sem maionese.',
-        imageSource: require('../assets/images/recipes/salada_caesar.png'), // Placeholder
+        imageSource: require('../assets/images/recipes/salada_caesar.jpg'), // Placeholder
         prepTime: '15 min',
         difficulty: 'Fácil',
         category: 'Jantar',

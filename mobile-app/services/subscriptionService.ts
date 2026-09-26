@@ -1,7 +1,4 @@
-import { UserProfile, SubscriptionPlan, UserUsageStats } from '../types';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const STORAGE_KEY = 'user_profile';
+import { UserProfile } from '../types';
 
 // --- Usage window helpers (mirror the reset logic used by the incrementX functions) ---
 
@@ -31,6 +28,20 @@ export const SubscriptionService = {
             PANTRY_SCANS_PER_WEEK: 2,
             WEEKLY_PLANS_PER_WEEK: 1,
         }
+    },
+
+    // Shared with the usage UI so remaining allowances follow enforcement windows.
+    getRemainingUsage: (profile: UserProfile, savedRecipesCount: number) => {
+        const stats = profile.usageStats;
+        const limits = SubscriptionService.LIMITS.FREE;
+        const remaining = (limit: number, used: number) => Math.max(0, limit - used);
+        return {
+            recipes: remaining(limits.RECIPES_PER_DAY, effectiveDailyCount(stats.recipesGeneratedToday, stats.lastGenerationDate)),
+            desires: remaining(limits.DESIRES_PER_DAY, effectiveDailyCount(stats.desiresTransformedToday, stats.lastDesireDate)),
+            pantry: remaining(limits.PANTRY_SCANS_PER_WEEK, effectiveWeeklyCount(stats.pantryScansThisWeek, stats.lastScanDate)),
+            plans: remaining(limits.WEEKLY_PLANS_PER_WEEK, effectiveWeeklyCount(stats.weeklyPlansGeneratedThisWeek || 0, stats.lastPlanGenerationDate)),
+            saved: remaining(limits.SAVED_RECIPES, savedRecipesCount),
+        };
     },
 
     // Checkers — free users are allowed until they hit the LIMITS.FREE quota.
@@ -171,46 +182,5 @@ export const SubscriptionService = {
                 lastPlanGenerationDate: now.toISOString()
             }
         };
-    },
-
-    upgradeToPro: async (profile: UserProfile, plan: SubscriptionPlan.MONTHLY | SubscriptionPlan.YEARLY): Promise<UserProfile> => {
-        // Import IAP service
-        const { iapService, PRODUCT_IDS } = require('./iapService');
-
-        // Map plan to product ID
-        const productId = plan === SubscriptionPlan.MONTHLY
-            ? PRODUCT_IDS.MONTHLY
-            : PRODUCT_IDS.YEARLY;
-
-        try {
-            // Initialize IAP if not already
-            await iapService.initialize();
-
-            // Attempt purchase
-            const result = await iapService.purchaseProduct(productId);
-
-            if (result.success) {
-                // Calculate expiry based on plan
-                const now = new Date();
-                const expiryDate = plan === SubscriptionPlan.MONTHLY
-                    ? new Date(now.setMonth(now.getMonth() + 1))
-                    : new Date(now.setFullYear(now.getFullYear() + 1));
-
-                return {
-                    ...profile,
-                    plan: plan,
-                    isPro: true,
-                    subscriptionExpiry: expiryDate.toISOString(),
-                    transactionReceipt: result.transactionReceipt
-                };
-            } else {
-                // Purchase failed or was cancelled
-                console.error('Purchase failed:', result.error);
-                throw new Error(result.error || 'Purchase failed');
-            }
-        } catch (error: any) {
-            console.error('upgradeToPro error:', error);
-            throw error;
-        }
     }
 };
