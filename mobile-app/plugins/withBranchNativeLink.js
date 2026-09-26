@@ -18,14 +18,19 @@ module.exports = function withBranchNativeLink(config) {
   return withXcodeProject(config, (config) => {
     const project = config.modResults;
     const fileName = 'branch.json';
+    const resourcePath = `${config.modRequest.projectName}/${fileName}`;
     const fileReferences = project.pbxFileReferenceSection();
-    const alreadyIncluded = Object.values(fileReferences).some((value) =>
-      typeof value === 'object' && value.path === fileName
+    const existing = Object.values(fileReferences).find((value) =>
+      typeof value === 'object' && String(value.path).replaceAll('"', '').split('/').pop() === fileName
     );
+    if (existing) {
+      existing.path = `"${resourcePath}"`;
+      existing.lastKnownFileType = 'text.json';
+    }
 
-    if (!alreadyIncluded) {
+    if (!existing) {
       IOSConfig.XcodeUtils.addResourceFileToGroup({
-        filepath: fileName,
+        filepath: resourcePath,
         groupName: config.modRequest.projectName,
         project,
         isBuildFile: true,
