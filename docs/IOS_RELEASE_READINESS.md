@@ -24,11 +24,11 @@ Verificado em 26/09/2026. Preparação técnica validada; build assinado de dist
 - Xcode Debug para simulador iOS ARM64: **BUILD SUCCEEDED**, com Branch e RevenueCat. `branch.json` presente no bundle. Isso não valida assinatura de distribuição nem compras reais/sandbox.
 - Log local temporário: `/private/tmp/fitswap-native-build-final.log`.
 
-## Privacidade e publicação pendentes
+## App Privacy publicada; política do site pendente
 
-O histórico de compras foi publicado na App Privacy como vinculado à identidade, para análise/funcionalidade, sem rastreamento. A publicação de saúde foi bloqueada pela revisão automática, exigindo aprovação explícita das declarações; o formulário foi deixado aberto.
+O histórico de compras foi publicado na App Privacy como vinculado à identidade, para análise/funcionalidade, sem rastreamento. Após autorização explícita do usuário, saúde, condicionamento físico e ID do dispositivo também foram publicados. O App Store Connect confirmou a publicação e não apresenta mais tipos de dados com configuração pendente.
 
-Declarações restantes propostas, todas vinculadas à identidade e sem rastreamento publicitário:
+Declarações publicadas com autorização, todas vinculadas à identidade e sem rastreamento publicitário:
 
 | Dados | Finalidades |
 | --- | --- |
@@ -42,7 +42,7 @@ A ausência de rastreamento publicitário pressupõe o uso atual de Branch para 
 
 ## Próximas etapas
 
-1. Concluir a App Privacy após aprovação das declarações e publicar a política atualizada.
+1. Publicar a política de privacidade atualizada no site; as declarações da App Privacy já estão concluídas.
 2. Autenticar a CLI EAS (o navegador está autenticado) e gerar o build iOS com o perfil production. Conferir a numeração remota e a assinatura no processo.
 3. Enviar ao TestFlight e testar compra mensal/anual sandbox, restauração, falha/cancelamento de compra e indicação com app instalado e após instalação/login.
 4. Antes da revisão Apple, atualizar screenshots e descrição para refletir o plano gratuito e a assinatura atuais.
