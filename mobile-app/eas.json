@@ -16,7 +16,8 @@
       "node": "20.18.0",
       "env": {
         "EAS_NO_YARN": "1"
-      }
+      },
+      "environment": "production"
     }
   },
   "submit": {

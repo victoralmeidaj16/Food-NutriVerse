@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import Purchases, { LOG_LEVEL, PurchasesOffering, CustomerInfo } from 'react-native-purchases';
+import Purchases, { LOG_LEVEL, PurchasesOffering, PurchasesPackage, CustomerInfo } from 'react-native-purchases';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 // Configurações e Identificadores do RevenueCat
@@ -15,8 +15,8 @@ export const ENTITLEMENTS = {
 
 // IDs dos Produtos que devem bater com o App Store Connect / Play Store e RevenueCat
 export const PRODUCT_IDS = {
-    MONTHLY: 'monthly',
-    YEARLY: 'yearly'
+    MONTHLY: 'Plano_Pro_Nutriverse',
+    YEARLY: 'Plano_Pro_Anual'
 };
 
 export interface PurchaseResult {
@@ -86,7 +86,7 @@ class RevenueCatService {
             return true;
         } catch (error) {
             console.error('RevenueCat: Falha ao inicializar o SDK', error);
-            this.useMockMode = true; // Fallback mock em caso de erro crítico
+            this.useMockMode = false; // Falhas nativas nunca autorizam compras simuladas.
             return false;
         }
     }
@@ -96,8 +96,9 @@ class RevenueCatService {
      */
     async login(userId: string): Promise<CustomerInfo | null> {
         if (this.useMockMode) return null;
-        if (!this.isInitialized) await this.initialize();
         try {
+            if (!this.isInitialized && !await this.initialize()) throw new Error('RevenueCat indisponível');
+            if (this.useMockMode) return null;
             const { customerInfo } = await Purchases.logIn(userId);
             return customerInfo;
         } catch (error) {
@@ -123,8 +124,9 @@ class RevenueCatService {
      */
     async getActiveOffering(): Promise<PurchasesOffering | null> {
         if (this.useMockMode) return null;
-        if (!this.isInitialized) await this.initialize();
         try {
+            if (!this.isInitialized && !await this.initialize()) throw new Error('RevenueCat indisponível');
+            if (this.useMockMode) return null;
             const offerings = await Purchases.getOfferings();
             return offerings.current;
         } catch (error) {
@@ -136,7 +138,7 @@ class RevenueCatService {
     /**
      * Compra um pacote do RevenueCat
      */
-    async purchasePackage(pack: any): Promise<PurchaseResult> {
+    async purchasePackage(pack: PurchasesPackage): Promise<PurchaseResult> {
         if (this.useMockMode) {
             console.log('🎭 RevenueCat: Mock de compra iniciado para', pack.product?.identifier);
             return new Promise(resolve => setTimeout(() => resolve({
@@ -149,6 +151,7 @@ class RevenueCatService {
         }
 
         try {
+            if (!this.isInitialized && !await this.initialize()) throw new Error('RevenueCat indisponível');
             const { customerInfo, transaction } = await Purchases.purchasePackage(pack);
             const isPro = customerInfo.entitlements.active[ENTITLEMENTS.PRO] !== undefined;
 
@@ -157,7 +160,6 @@ class RevenueCatService {
                     success: true,
                     productId: transaction.productIdentifier,
                     transactionId: transaction.transactionIdentifier,
-                    originalTransactionId: transaction.transactionIdentifier, // RC normaliza IDs
                     transactionReceipt: 'REVENUECAT_MANAGED'
                 };
             }
@@ -180,7 +182,7 @@ class RevenueCatService {
         }
 
         try {
-            if (!this.isInitialized) await this.initialize();
+            if (!this.isInitialized && !await this.initialize()) throw new Error('RevenueCat indisponível');
             const customerInfo = await Purchases.getCustomerInfo();
             const entitlement = customerInfo.entitlements.active[ENTITLEMENTS.PRO];
 
@@ -190,8 +192,6 @@ class RevenueCatService {
                     isActive: true,
                     productId: entitlement.productIdentifier,
                     expiryDate,
-                    transactionId: entitlement.latestPurchaseDate, // Use data ou id correspondente
-                    originalTransactionId: entitlement.originalPurchaseDate,
                     transactionReceipt: 'REVENUECAT_MANAGED',
                     verificationState: 'verified_active'
                 };
@@ -213,7 +213,7 @@ class RevenueCatService {
         }
 
         try {
-            if (!this.isInitialized) await this.initialize();
+            if (!this.isInitialized && !await this.initialize()) throw new Error('RevenueCat indisponível');
             const customerInfo = await Purchases.restorePurchases();
             const entitlement = customerInfo.entitlements.active[ENTITLEMENTS.PRO];
 
@@ -221,8 +221,7 @@ class RevenueCatService {
                 return {
                     success: true,
                     productId: entitlement.productIdentifier,
-                    transactionReceipt: 'REVENUECAT_MANAGED',
-                    transactionId: entitlement.latestPurchaseDate
+                    transactionReceipt: 'REVENUECAT_MANAGED'
                 };
             }
             return { success: false, error: 'Nenhuma assinatura ativa foi encontrada para restaurar.' };
@@ -238,7 +237,7 @@ class RevenueCatService {
     async getCustomerInfo(): Promise<CustomerInfo | null> {
         if (this.useMockMode) return null;
         try {
-            if (!this.isInitialized) await this.initialize();
+            if (!this.isInitialized && !await this.initialize()) throw new Error('RevenueCat indisponível');
             return await Purchases.getCustomerInfo();
         } catch (error) {
             console.error('RevenueCat: Erro ao buscar informações do cliente', error);
@@ -249,15 +248,15 @@ class RevenueCatService {
     /**
      * Exibe o Customer Center nativo (Gestão de Assinatura, Cancelamentos e Reclamações)
      */
-    presentCustomerCenter(): void {
+    async presentCustomerCenter(): Promise<void> {
         if (this.useMockMode) {
             console.log('🎭 RevenueCat: Mock do Customer Center exibido');
             return;
         }
         try {
             // Importação dinâmica para não travar builds antigas
-            const { PurchasesCustomerCenter } = require('react-native-purchases-ui');
-            PurchasesCustomerCenter.presentCustomerCenter();
+            const { default: RevenueCatUI } = await import('react-native-purchases-ui');
+            await RevenueCatUI.presentCustomerCenter();
         } catch (error) {
             console.error('RevenueCat: Falha ao abrir o Customer Center', error);
         }

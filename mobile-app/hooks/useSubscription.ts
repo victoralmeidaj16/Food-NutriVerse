@@ -2,7 +2,6 @@ import { useRef } from 'react';
 import { updateUserProfile } from '../services/userService';
 import { storageService } from '../services/storage';
 import { iapService } from '../services/iapService';
-import { validateSubscriptionWithBackend } from '../services/subscriptionValidationService';
 import { UserProfile, SubscriptionPlan } from '../types';
 import { PRODUCT_IDS } from '../services/iapService';
 
@@ -130,6 +129,8 @@ export function useSubscription(
                 );
             }
 
+            // Uma falha de rede/SDK não é evidência de cancelamento.
+            if (localStatus.verificationState === 'unknown') return baseProfile;
             if (!profile?.isPro) return baseProfile;
 
             const downgraded = removeSubscriptionFromProfile(baseProfile);

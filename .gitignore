@@ -24,3 +24,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local affiliate integration workspace; excluded from Git and EAS archives
+.afiliados-work/

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Alert, ActivityIndicator, Linking } from 'react-native';
 import { CheckIcon, SparklesIcon, CloseIcon } from '../components/Icons';
 import * as Haptics from 'expo-haptics';
-import Purchases, { PurchasesPackage } from 'react-native-purchases';
+import { PurchasesPackage } from 'react-native-purchases';
 import { iapService, PurchaseResult } from '../services/iapService';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -38,20 +38,19 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
 
     const initProducts = async () => {
         setLoadError(false);
+        setProductsLoaded(false);
+        setActivePackages({});
         try {
             await iapService.initialize();
             const offering = await iapService.getActiveOffering();
             if (offering) {
                 const packagesMap: typeof activePackages = {};
-                offering.availablePackages.forEach((pkg) => {
-                    if (pkg.packageType === 'ANNUAL' || pkg.product.identifier.includes('yearly') || pkg.product.identifier.includes('anual')) {
-                        packagesMap.yearly = pkg;
-                    } else if (pkg.packageType === 'MONTHLY' || pkg.product.identifier.includes('monthly') || pkg.product.identifier.includes('mensal')) {
-                        packagesMap.monthly = pkg;
-                    }
-                });
+                packagesMap.monthly = offering.monthly ?? undefined;
+                packagesMap.yearly = offering.annual ?? undefined;
                 setActivePackages(packagesMap);
-                setProductsLoaded(true);
+                const hasPackages = !!(packagesMap.monthly || packagesMap.yearly);
+                setProductsLoaded(hasPackages);
+                setLoadError(!hasPackages);
             } else {
                 setLoadError(true);
             }
@@ -130,8 +129,8 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
     };
 
     // Get formatted prices from IAP Packages
-    const yearlyPrice = activePackages.yearly?.product.priceString || (language === 'en' ? '$29.99' : 'R$ 79,90');
-    const monthlyPrice = activePackages.monthly?.product.priceString || (language === 'en' ? '$4.99' : 'R$ 19,90');
+    const yearlyPrice = activePackages.yearly?.product.priceString || '—';
+    const monthlyPrice = activePackages.monthly?.product.priceString || '—';
 
     const paywallTitle = language === 'en'
         ? "Eat well every day. Without thinking."
@@ -145,12 +144,21 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
         ? "Subscription renews automatically. Cancel anytime in store settings."
         : "A assinatura é renovada automaticamente. Cancele a qualquer momento nas configurações da loja.";
     const bestChoiceText = language === 'en' ? "BEST CHOICE" : "MELHOR ESCOLHA";
-    const saveText = language === 'en' ? "Save 70%" : "Economize 70%";
+    const annual = activePackages.yearly?.product;
+    const monthly = activePackages.monthly?.product;
+    const savings = annual && monthly && monthly.price > 0 && annual.currencyCode === monthly.currencyCode
+        ? Math.floor((1 - annual.price / (monthly.price * 12)) * 100) : 0;
+    const saveText = savings > 0 ? (language === 'en' ? `Save ${savings}%` : `Economize ${savings}%`) : '';
     const yearlyLabel = language === 'en' ? "Yearly" : "Anual";
     const monthlyLabel = language === 'en' ? "Monthly" : "Mensal";
     const perYear = language === 'en' ? "/year" : "/ano";
     const perMonth = language === 'en' ? "/month" : "/mês";
-    const equivalentText = language === 'en' ? "Equivalent to $2.50/month" : "Equivalente a R$ 6,66/mês";
+    const equivalentPrice = annual ? new Intl.NumberFormat(language === 'en' ? 'en-US' : 'pt-BR', {
+        style: 'currency', currency: annual.currencyCode,
+    }).format(annual.price / 12) : '';
+    const equivalentText = annual ? (language === 'en'
+        ? `Equivalent to ${equivalentPrice}/month, billed yearly`
+        : `Equivalente a ${equivalentPrice}/mês, cobrado anualmente`) : '';
 
 
     return (
@@ -185,23 +193,23 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
                     <TouchableOpacity
                         onPress={() => handlePurchase(activePackages.yearly)}
                         style={[styles.planCard, styles.planCardActive]} // Always look active/interactive
-                        disabled={loading}
+                        disabled={loading || !activePackages.yearly}
                     >
                         <View style={styles.bestValueBadge}>
                             <Text style={styles.bestValueText}>{bestChoiceText}</Text>
                         </View>
                         <View style={styles.planHeader}>
                             <Text style={styles.planTitle}>{yearlyLabel}</Text>
-                            <Text style={styles.planSave}>{saveText}</Text>
+                            {!!saveText && <Text style={styles.planSave}>{saveText}</Text>}
                         </View>
                         <Text style={styles.planPrice}>{yearlyPrice}<Text style={styles.planPerMonth}>{perYear}</Text></Text>
-                        <Text style={styles.planBilled}>{equivalentText}</Text>
+                        {!!equivalentText && <Text style={styles.planBilled}>{equivalentText}</Text>}
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         onPress={() => handlePurchase(activePackages.monthly)}
                         style={[styles.planCard, styles.planCardActive]} // Always look active/interactive
-                        disabled={loading}
+                        disabled={loading || !activePackages.monthly}
                     >
                         <View style={styles.planHeader}>
                             <Text style={styles.planTitle}>{monthlyLabel}</Text>
@@ -224,7 +232,7 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
                         <Text style={styles.footerLink}>{t('profile.terms')}</Text>
                     </TouchableOpacity>
                     <Text style={styles.footerDivider}>•</Text>
-                    <TouchableOpacity onPress={() => handleOpenLink('https://victoralmeidaj16.github.io/Food-NutriVerse/privacy.html')}>
+                    <TouchableOpacity onPress={() => handleOpenLink('https://victoralmeidaj16.github.io/Food-NutriVerse/privacy-policy.html')}>
                         <Text style={styles.footerLink}>{t('profile.privacy')}</Text>
                     </TouchableOpacity>
                 </View>

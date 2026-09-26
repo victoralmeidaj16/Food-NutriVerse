@@ -20,3 +20,9 @@ export const BACKEND_URL = configuredBackendUrl || VERCEL_BACKEND_URL;
 // True once we are off Render (Vercel has no Render-style server sleep, so the
 // warmup ping and cold-start copy can be skipped).
 export const IS_VERCEL_BACKEND = BACKEND_URL.includes('vercel.app');
+
+// URL of the Affiliates platform
+export const AFFILIATES_API_URL =
+    process.env.EXPO_PUBLIC_AFFILIATES_API_URL ||
+    extra.affiliatesApiUrl ||
+    'https://afiliados-app.vercel.app';

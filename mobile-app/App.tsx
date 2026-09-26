@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, Component } from 'react';
-import { AppState, AppStateStatus, StyleSheet, View, StatusBar, Text, TouchableOpacity } from 'react-native';
+import { AppState, AppStateStatus, StyleSheet, View, StatusBar, Text, TouchableOpacity, Linking } from 'react-native';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from './services/firebaseConfig';
 import { getUserProfile } from './services/userService';
@@ -17,6 +17,8 @@ import { iapService, PurchaseResult } from './services/iapService';
 import { useUserData, DEFAULT_PROFILE } from './hooks/useUserData';
 import { useSubscription, applySubscriptionToProfile } from './hooks/useSubscription';
 import { warmBackendIfNeeded } from './services/backendWarmup';
+import { referralService } from './services/referralService';
+import branch from 'react-native-branch';
 
 // --- Types ---
 type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL' | 'PAYWALL' | 'RECIPE_PACK';
@@ -90,6 +92,43 @@ export default function App() {
         }
     };
 
+    // Deep Link & Universal Link Listener for Affiliates / Referrals
+    useEffect(() => {
+        const unsubscribeBranch = branch.subscribe(({ error, params }) => {
+            if (error) {
+                console.error('❌ Branch referral error:', error);
+                return;
+            }
+
+            const code = params?.affiliate_referral_code;
+            if (params?.['+clicked_branch_link'] === true && typeof code === 'string') {
+                const currentUid = auth.currentUser?.uid || firebaseUser?.uid;
+                void referralService.handleReferralCode(code, currentUid);
+            }
+        });
+
+        // 1. Cold start URL
+        Linking.getInitialURL().then((url: string | null) => {
+            if (url) {
+                const currentUid = auth.currentUser?.uid || firebaseUser?.uid;
+                void referralService.handleIncomingUrl(url, currentUid);
+            }
+        }).catch((err: unknown) => console.error('❌ Error getting initial URL:', err));
+
+        // 2. Foreground / Background URL listener
+        const subscription = Linking.addEventListener('url', (event: { url: string }) => {
+            if (event?.url) {
+                const currentUid = auth.currentUser?.uid || firebaseUser?.uid;
+                void referralService.handleIncomingUrl(event.url, currentUid);
+            }
+        });
+
+        return () => {
+            subscription.remove();
+            unsubscribeBranch();
+        };
+    }, [firebaseUser]);
+
     // Monitor Auth State
     useEffect(() => {
         void warmBackendIfNeeded();
@@ -102,6 +141,9 @@ export default function App() {
                     // Initialize and bind RevenueCat with User ID
                     await iapService.initialize(currentUser.uid);
                     await iapService.login(currentUser.uid);
+
+                    // Check and submit pending affiliate attribution
+                    void referralService.checkPendingAttribution(currentUser.uid);
 
                     // Test account — grant PRO directly
                     if (currentUser.email === '123indiozinhos@gmail.com') {
