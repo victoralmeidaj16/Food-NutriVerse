@@ -30,7 +30,8 @@ module.exports = {
         ios: {
             supportsTablet: true,
             bundleIdentifier: "com.victoralmeidaj16.foodnutriverse",
-            buildNumber: "42",
+            appleTeamId: "NT62CSCP9D",
+            buildNumber: "60",
             associatedDomains: ["applinks:afiliados-app.vercel.app", ...branchDomains.map((domain) => `applinks:${domain}`)],
             infoPlist: {
                 NSCameraUsageDescription: "Precisamos de acesso à câmera para você escanear ingredientes e gerar receitas personalizadas.",
@@ -44,7 +45,7 @@ module.exports = {
                 backgroundColor: "#ffffff"
             },
             package: "com.victoralmeidaj16.foodnutriverse",
-            versionCode: 42,
+            versionCode: 60,
             edgeToEdgeEnabled: true,
             predictiveBackGestureEnabled: false,
             permissions: [
