@@ -26,9 +26,17 @@ function service(sdk = {}) {
 }
 test('native initialization failure never grants a simulated purchase', async () => {
   const { iapService } = service({ configure() { throw new Error('configuration failed'); } });
-  assert.equal(await iapService.initialize(), false);
+  assert.equal(await iapService.initialize('firebase-uid'), false);
   assert.equal((await iapService.purchasePackage({ product: { identifier: 'Plano_Pro_Anual' } })).success, false);
   assert.equal((await iapService.checkSubscriptionStatus()).verificationState, 'unknown');
+});
+test('native RevenueCat initialization requires a Firebase UID', async () => {
+  const configured = [];
+  const { iapService } = service({ configure(options) { configured.push(options); } });
+  assert.equal(await iapService.initialize(), false);
+  assert.equal(configured.length, 0);
+  assert.equal(await iapService.initialize('firebase-uid'), true);
+  assert.equal(configured[0].appUserID, 'firebase-uid');
 });
 test('only a verified Pro entitlement grants purchase success', async () => {
   const { iapService } = service({ purchasePackage: async () => ({ customerInfo: { entitlements: { active: {} } }, transaction: {} }) });

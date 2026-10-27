@@ -41,7 +41,6 @@ export const PaywallScreen = ({ onPurchase, onRestore, onClose, onLogin }: { onP
         setProductsLoaded(false);
         setActivePackages({});
         try {
-            await iapService.initialize();
             const offering = await iapService.getActiveOffering();
             if (offering) {
                 const packagesMap: typeof activePackages = {};

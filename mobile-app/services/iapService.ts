@@ -61,6 +61,11 @@ class RevenueCatService {
                 return true;
             }
 
+            if (!userId) {
+                console.warn('RevenueCat: Firebase UID obrigatório antes da inicialização nativa.');
+                return false;
+            }
+
             // Habilita logs detalhados em desenvolvimento
             if (__DEV__) {
                 Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
@@ -81,7 +86,7 @@ class RevenueCatService {
 
             // Configura o SDK
             Purchases.configure({ apiKey, appUserID: userId });
-            console.log(`💳 RevenueCat: Inicializado com sucesso para o usuário: ${userId || 'Anonimo'}`);
+            console.log(`💳 RevenueCat: Inicializado com sucesso para o usuário autenticado.`);
             this.isInitialized = true;
             return true;
         } catch (error) {
@@ -94,16 +99,16 @@ class RevenueCatService {
     /**
      * Faz login do usuário (essencial para sincronizar compras e rastreamento de afiliados)
      */
-    async login(userId: string): Promise<CustomerInfo | null> {
-        if (this.useMockMode) return null;
+    async login(userId: string): Promise<boolean> {
+        if (this.useMockMode) return true;
         try {
-            if (!this.isInitialized && !await this.initialize()) throw new Error('RevenueCat indisponível');
-            if (this.useMockMode) return null;
-            const { customerInfo } = await Purchases.logIn(userId);
-            return customerInfo;
+            if (!this.isInitialized && !await this.initialize(userId)) throw new Error('RevenueCat indisponível');
+            if (this.useMockMode) return true;
+            await Purchases.logIn(userId);
+            return true;
         } catch (error) {
             console.error('RevenueCat: Erro ao fazer login do usuário', error);
-            return null;
+            return false;
         }
     }
 
@@ -125,7 +130,7 @@ class RevenueCatService {
     async getActiveOffering(): Promise<PurchasesOffering | null> {
         if (this.useMockMode) return null;
         try {
-            if (!this.isInitialized && !await this.initialize()) throw new Error('RevenueCat indisponível');
+            if (!this.isInitialized) throw new Error('RevenueCat não foi preparado para um usuário autenticado');
             if (this.useMockMode) return null;
             const offerings = await Purchases.getOfferings();
             return offerings.current;
@@ -151,7 +156,7 @@ class RevenueCatService {
         }
 
         try {
-            if (!this.isInitialized && !await this.initialize()) throw new Error('RevenueCat indisponível');
+            if (!this.isInitialized) throw new Error('RevenueCat não foi preparado para um usuário autenticado');
             const { customerInfo, transaction } = await Purchases.purchasePackage(pack);
             const isPro = customerInfo.entitlements.active[ENTITLEMENTS.PRO] !== undefined;
 
@@ -182,7 +187,7 @@ class RevenueCatService {
         }
 
         try {
-            if (!this.isInitialized && !await this.initialize()) throw new Error('RevenueCat indisponível');
+            if (!this.isInitialized) throw new Error('RevenueCat não foi preparado para um usuário autenticado');
             const customerInfo = await Purchases.getCustomerInfo();
             const entitlement = customerInfo.entitlements.active[ENTITLEMENTS.PRO];
 
@@ -213,7 +218,7 @@ class RevenueCatService {
         }
 
         try {
-            if (!this.isInitialized && !await this.initialize()) throw new Error('RevenueCat indisponível');
+            if (!this.isInitialized) throw new Error('RevenueCat não foi preparado para um usuário autenticado');
             const customerInfo = await Purchases.restorePurchases();
             const entitlement = customerInfo.entitlements.active[ENTITLEMENTS.PRO];
 
@@ -237,7 +242,7 @@ class RevenueCatService {
     async getCustomerInfo(): Promise<CustomerInfo | null> {
         if (this.useMockMode) return null;
         try {
-            if (!this.isInitialized && !await this.initialize()) throw new Error('RevenueCat indisponível');
+            if (!this.isInitialized) throw new Error('RevenueCat não foi preparado para um usuário autenticado');
             return await Purchases.getCustomerInfo();
         } catch (error) {
             console.error('RevenueCat: Erro ao buscar informações do cliente', error);

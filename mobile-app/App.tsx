@@ -7,6 +7,7 @@ import { storageService } from './services/storage';
 import { RecipeDetailScreen } from './screens/RecipeDetailScreen';
 import { OnboardingScreen } from './screens/OnboardingScreen';
 import { PaywallScreen } from './screens/PaywallScreen';
+import { AffiliateSetupScreen } from './screens/AffiliateSetupScreen';
 import { RecipePackScreen } from './screens/RecipePackScreen';
 import { MainScreen } from './screens/MainScreen';
 import { LoginScreen } from './screens/LoginScreen';
@@ -18,10 +19,11 @@ import { useUserData, DEFAULT_PROFILE } from './hooks/useUserData';
 import { useSubscription, applySubscriptionToProfile } from './hooks/useSubscription';
 import { warmBackendIfNeeded } from './services/backendWarmup';
 import { referralService } from './services/referralService';
+import { preparePurchaseIdentity, resolveOnboardingDestination, type PurchaseReadinessResult } from './services/purchaseReadiness';
 import branch from 'react-native-branch';
 
 // --- Types ---
-type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL' | 'PAYWALL' | 'RECIPE_PACK';
+type Screen = 'LOGIN' | 'SIGNUP' | 'ONBOARDING' | 'MAIN' | 'RECIPE_DETAIL' | 'PAYWALL' | 'AFFILIATE_SETUP' | 'RECIPE_PACK';
 
 // --- ErrorBoundary ---
 class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean }> {
@@ -57,6 +59,7 @@ export default function App() {
     const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
     const [pendingProfile, setPendingProfile] = useState<UserProfile | null>(null);
     const [signupMessage, setSignupMessage] = useState('');
+    const [affiliateSetupResult, setAffiliateSetupResult] = useState<Extract<PurchaseReadinessResult,{status:'retryable_error'|'invalid_referral'}>>({status:'retryable_error',message:'Não foi possível confirmar a indicação.'});
     // Prevents reconciliation from running mid-purchase (race condition guard)
     const isPurchasingRef = useRef(false);
 
@@ -76,6 +79,16 @@ export default function App() {
     } = useSubscription(setUserProfile, setUser);
 
     const getAuthenticatedUser = () => auth.currentUser || firebaseUser;
+
+    const openPreparedPaywall = async (userId:string) => {
+        const result=await preparePurchaseIdentity(userId);
+        if (result.status==='ready'||result.status==='ready_without_referral') {
+            setCurrentScreen('PAYWALL');
+            return;
+        }
+        setAffiliateSetupResult(result);
+        setCurrentScreen('AFFILIATE_SETUP');
+    };
 
     const unlockProAccess = async (profile: UserProfile) => {
         const authenticatedUser = getAuthenticatedUser();
@@ -142,9 +155,6 @@ export default function App() {
                     await iapService.initialize(currentUser.uid);
                     await iapService.login(currentUser.uid);
 
-                    // Check and submit pending affiliate attribution
-                    void referralService.checkPendingAttribution(currentUser.uid);
-
                     // Test account — grant PRO directly
                     if (currentUser.email === '123indiozinhos@gmail.com') {
                         const profile = await getUserProfile(currentUser.uid);
@@ -185,9 +195,7 @@ export default function App() {
                         pendingProfileRef.current = null;
                         setPendingProfile(null);
                         setSignupMessage('');
-                        // Freemium: free users go straight into the app and use it
-                        // until they hit a LIMITS.FREE quota, which then shows the paywall.
-                        setCurrentScreen('MAIN');
+                        await openPreparedPaywall(currentUser.uid);
                         return;
                     }
 
@@ -234,9 +242,7 @@ export default function App() {
         signupFlowActiveRef.current = true;
         setPendingProfile(profile);
         setSignupMessage('Crie sua conta para salvar seu plano!');
-        // Show the paywall as the final onboarding step (before login/signup).
-        // Closing it (allowed after a short delay) continues to signup as a free user.
-        setCurrentScreen('PAYWALL');
+        setCurrentScreen(resolveOnboardingDestination(Boolean(getAuthenticatedUser())));
     };
 
     const renderScreen = () => {
@@ -329,6 +335,22 @@ export default function App() {
                     />
                 );
 
+            case 'AFFILIATE_SETUP':
+                return <AffiliateSetupScreen
+                    result={affiliateSetupResult}
+                    onRetry={async()=>{
+                        const authenticatedUser=getAuthenticatedUser();
+                        if (!authenticatedUser) { setCurrentScreen('SIGNUP'); return; }
+                        await openPreparedPaywall(authenticatedUser.uid);
+                    }}
+                    onContinueWithoutReferral={async()=>{
+                        await referralService.clearPendingReferral();
+                        const authenticatedUser=getAuthenticatedUser();
+                        if (!authenticatedUser) { setCurrentScreen('SIGNUP'); return; }
+                        await openPreparedPaywall(authenticatedUser.uid);
+                    }}
+                />;
+
             case 'RECIPE_PACK':
                 return (
                     <RecipePackScreen
@@ -353,7 +375,11 @@ export default function App() {
                         onUpdateProfile={(profile) => handleUpdateProfile(profile, uid)}
                         onUpdateHistory={(recipes) => handleUpdateHistory(recipes, uid)}
                         generatedRecipes={generatedRecipes}
-                        onShowPaywall={() => setCurrentScreen('PAYWALL')}
+                        onShowPaywall={() => {
+                            const authenticatedUser=getAuthenticatedUser();
+                            if (!authenticatedUser) { setCurrentScreen('LOGIN'); return; }
+                            void openPreparedPaywall(authenticatedUser.uid);
+                        }}
                         onOpenRecipePack={() => setCurrentScreen('RECIPE_PACK')}
                         weeklyPlan={weeklyPlan}
                         setWeeklyPlan={(plan) => setWeeklyPlan(plan, uid)}

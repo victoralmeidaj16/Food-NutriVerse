@@ -10,6 +10,13 @@ export interface CreatorInfo {
     app_id?: string;
 }
 
+export type AttributionAttempt =
+    | { status: 'attributed' }
+    | { status: 'already_attributed' }
+    | { status: 'no_referral' }
+    | { status: 'invalid_referral'; error: string }
+    | { status: 'retryable_error'; error: string };
+
 const STORAGE_KEYS = {
     REFERRAL_CODE: '@fitswap_referral_code',
     PENDING_OWNER: '@fitswap_referral_pending_owner',
@@ -170,20 +177,20 @@ class ReferralService {
         userId?: string,
         codeOverride?: string,
         source: 'deep_link' | 'referral_code' | 'first_launch' = 'deep_link'
-    ): Promise<{ success: boolean; data?: any; error?: string }> {
+    ): Promise<AttributionAttempt> {
         try {
             const currentUser = auth.currentUser;
-            if (!currentUser || !userId || currentUser.uid !== userId) return { success: false, error: 'login_required' };
+            if (!currentUser || !userId || currentUser.uid !== userId) return { status: 'retryable_error', error: 'Faça login novamente para continuar.' };
             const referralCode = codeOverride || await this.getStoredReferralCode();
             if (!referralCode) {
-                return { success: false, error: 'no_referral_code' };
+                return { status: 'no_referral' };
             }
 
             // Evitar re-enviar atribuição se este usuário já foi atribuído
             if (userId) {
                 const attributedUid = await AsyncStorage.getItem(STORAGE_KEYS.ATTRIBUTED_UID);
                 if (attributedUid === userId) {
-                    return { success: true, data: { already_attributed: true } };
+                    return { status: 'already_attributed' };
                 }
             }
 
@@ -227,15 +234,20 @@ class ReferralService {
                     await AsyncStorage.setItem(STORAGE_KEYS.CREATOR_INFO, JSON.stringify(creatorInfo));
                 }
 
-                return { success: true, data: result.data };
+                return { status: result.data.attributed ? 'attributed' : 'already_attributed' };
             }
 
             console.warn('⚠️ [ReferralService] Resposta da API de atribuição:', result);
-            return { success: false, error: result?.error || 'Erro na atribuição' };
+            if (response.status === 404) return { status: 'invalid_referral', error: 'O link de indicação não é mais válido.' };
+            return { status: 'retryable_error', error: result?.error || 'Não foi possível confirmar a indicação. Tente novamente.' };
         } catch (error: any) {
             console.error('❌ [ReferralService] Falha ao enviar requisição de atribuição:', error);
-            return { success: false, error: error?.message || 'Falha de conexão' };
+            return { status: 'retryable_error', error: 'Falha de conexão. Verifique sua internet e tente novamente.' };
         }
+    }
+
+    async clearPendingReferral(): Promise<void> {
+        await AsyncStorage.multiRemove([STORAGE_KEYS.REFERRAL_CODE, STORAGE_KEYS.PENDING_OWNER, STORAGE_KEYS.CREATOR_INFO]);
     }
 
     /**
@@ -276,17 +288,17 @@ class ReferralService {
     /**
      * Verifica e dispara atribuição pendente para um usuário recém-autenticado
      */
-    async checkPendingAttribution(userId: string): Promise<void> {
-        if (!userId) return;
+    async checkPendingAttribution(userId: string): Promise<AttributionAttempt> {
+        if (!userId) return { status: 'retryable_error', error: 'Faça login novamente para continuar.' };
 
         const storedCode = await this.getStoredReferralCode();
-        if (!storedCode) return;
+        if (!storedCode) return { status: 'no_referral' };
 
         const attributedUid = await AsyncStorage.getItem(STORAGE_KEYS.ATTRIBUTED_UID);
-        if (attributedUid === userId) return;
+        if (attributedUid === userId) return { status: 'already_attributed' };
 
         console.log(`🔄 [ReferralService] Verificando atribuição pendente para o usuário: ${userId}`);
-        await this.attributeUser(userId, storedCode, 'deep_link');
+        return this.attributeUser(userId, storedCode, 'deep_link');
     }
 }
 

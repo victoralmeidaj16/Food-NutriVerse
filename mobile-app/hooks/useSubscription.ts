@@ -84,7 +84,7 @@ export function useSubscription(
         baseProfileFallback: UserProfile
     ): Promise<UserProfile | null> => {
         try {
-            await iapService.initialize();
+            await iapService.initialize(uid);
             const localStatus = await iapService.checkSubscriptionStatus();
             const baseProfile = profile || baseProfileFallback;
 
